@@ -12,3 +12,8 @@ __pycache__/
 venv/
 .DS_Store
 .idea/
+
+# Kişisel çalışma verileri (çalışma takibi, hedef, hatırlatıcılar)
+ahmet_soru_takip.json
+arex_calisma_ayarlari.json
+arex_hatirlaticilar.json

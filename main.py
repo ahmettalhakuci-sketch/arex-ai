@@ -420,6 +420,18 @@ def sistemi_baslat():
     if m15_mobil is not None:
         m15_mobil.mobil_stilleri_yukle()
 
+    # ⏰ Hatırlatıcı denetleyicisi: uygulama açıkken 30 sn'de bir zamanı gelenleri ekranda bildirir
+    if hasattr(st, "fragment"):
+        @st.fragment(run_every="30s")
+        def _hatirlatici_denetle():
+            try:
+                import modul_18_calisma_kocu as _m18k
+                for _h in _m18k.zamani_gelen_hatirlaticilar():
+                    st.toast(f"⏰ **Hatırlatma:** {_h['baslik']}", icon="🔔")
+            except Exception:
+                pass
+        _hatirlatici_denetle()
+
     # GÜVENLİK KATMANI 0: Harici Siber Güvenlik Datası & FAIL-CLOSED Acil Kilit Kontrolü
     m11_guvenlik.siber_guvenlik_datasini_yukle()
     acil_kilit = m11_guvenlik.acil_kilit_durumu_oku()
@@ -650,9 +662,9 @@ def sistemi_baslat():
         _HIZLI_ONERILER = [
             ("🌍 Son Depremler", "son depremler"),
             ("🌤️ Hava Durumu", "İstanbul hava durumu ve hava kalitesi"),
-            ("🎉 Bayramlar", "resmi tatiller ve bayramlar"),
-            ("📜 Tarihte Bugün", "bugün tarihte ne oldu"),
-            ("🧮 Denklem Çöz", "x^2-5x+6=0"),
+            ("📝 Mini Test", "bana 5 matematik sorusu sor"),
+            ("📊 Haftalık Rapor", "bu hafta ne kadar çalıştım"),
+            ("📈 Grafik Çiz", "y = x^2 - 4 grafiğini çiz"),
             ("🤝 Neler Yapabilirim?", "help"),
         ]
         with st.container(key="arex_hizli"):
