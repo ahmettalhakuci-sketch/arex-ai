@@ -64,13 +64,16 @@ Kodda varsayılan şifre yoktur; tanımlamazsan bulutta yan menüde uyarı gör�
 
 1. Kodu GitHub'a gönder: `git push -u origin mobil-premium-v14`
 2. [share.streamlit.io](https://share.streamlit.io) → **New app** → depo, dal `mobil-premium-v14`, dosya `main.py`
-3. **Advanced settings → Secrets** kısmına `GROQ_API_KEY = "..."` ve `AREX_ERISIM_SIFRESI = "..."` yaz → **Deploy**
+3. **Advanced settings → Python version: 3.12**, **Secrets** kısmına `GROQ_API_KEY = "..."` ve `AREX_ERISIM_SIFRESI = "..."` yaz → **Deploy**
    (`packages.txt` sayesinde Tesseract ve ffmpeg otomatik kurulur)
 4. Telefonda adresi Chrome'da aç → ⋮ → **Ana ekrana ekle** → AREX ikonuyla tam ekran açılır
 5. İstersen [pwabuilder.com](https://www.pwabuilder.com)'a adresi verip Android paketi (APK/AAB) üretebilirsin
 
 > ⚠️ Bulutta uygulama yeniden başladığında dosyalar sıfırlanabilir. Yan menüdeki
 > **💾 Verilerimi Yedekle / Geri Yükle** ile ara sıra yedek indir.
+
+> 📌 `requirements.txt` sürümleri test edilen sürümlere sabitlidir (Streamlit 1.50). Güncellemek
+> istersen önce yerelde yükseltip testleri ve arayüzü kontrol et.
 
 ## Testler
 

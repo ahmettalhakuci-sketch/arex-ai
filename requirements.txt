@@ -1,9 +1,12 @@
-streamlit>=1.40
-gTTS
-edge-tts
-thefuzz
-SpeechRecognition
-googletrans
-pytesseract
-youtube-transcript-api
-Pillow
+# Sürümler, uygulamanın test edildiği sürümlere sabitlenmiştir.
+# (Sabitlenmezse Streamlit Cloud en yeni sürümleri kurar; ör. Streamlit 1.67 → arayüz/CSS bozulabilir.)
+# Streamlit Cloud → Advanced settings → Python 3.12 önerilir (3.9–3.13 uyumlu).
+streamlit==1.50.0
+gTTS==2.5.4
+edge-tts==7.3.1
+thefuzz==0.22.1
+SpeechRecognition==3.17.0
+googletrans==4.0.2
+pytesseract==0.3.13
+youtube-transcript-api==1.2.5
+Pillow==11.3.0
