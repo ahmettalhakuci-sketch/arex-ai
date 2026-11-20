@@ -4147,7 +4147,8 @@ YARDIM_VE_HELP_YANITI = """🤝 **Elbette Ahmet! İşte seninle neler yapabilece
 * 🧮 **Net hesaplama:** *"40 doğru 12 yanlış kaç net"*, *"lgs 15 doğru 3 yanlış"*
 * 📅 **Sınav geri sayımı:** *"fizik sınavım 5 aralıkta"*, *"sınavlarıma kaç gün kaldı"*
 * 🍅 **Pomodoro:** *"pomodoro başlat"*, *"50 dakika pomodoro"*
-* 🃏 **Kelime kartları:** *"kart ekle: apple = elma; book = kitap"*, *"kartları çalış"*
+* 🃏 **Kelime kartları:** *"kart ekle: apple = elma; book = kitap"*, *"kartları çalış"*, *"hazır desteler"*
+* 📈 **Deneme takibi:** *"deneme: türkçe 30 doğru 6 yanlış matematik 22 doğru 8 yanlış"*, *"denemelerim"*
 
 *Hangisiyle başlamak istersin canım kardeşim?* ⚡"""
 

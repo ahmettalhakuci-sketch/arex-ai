@@ -37,6 +37,7 @@ YEDEK_DOSYALARI = {
     "arex_hatirlaticilar.json": "⏰ Hatırlatıcılar",
     "arex_sinavlar.json": "📅 Sınav takvimi",
     "arex_kartlar.json": "🃏 Kelime kartları",
+    "arex_denemeler.json": "📈 Deneme sonuçları",
     "tdk_anlam_onbellek.json": "📕 TDK önbelleği",
 }
 _EN_FAZLA_BAYT = 20 * 1024 * 1024

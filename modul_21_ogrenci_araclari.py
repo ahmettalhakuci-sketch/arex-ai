@@ -11,6 +11,9 @@ AREX AI STUDIO — MODÜL 21: ÖĞRENCİ ARAÇLARI (modul_21_ogrenci_araclari.py
   3. 🍅 Pomodoro         : "pomodoro başlat", "50 dakika pomodoro" → süre bitince hatırlatır
   4. 🃏 Kelime kartları  : "kart ekle: apple = elma; book = kitap", "kartlarım",
                           "kartları çalış" (Leitner kutuları: bildiklerin seyrek, bilmediklerin sık gelir)
+                          hazır desteler: "hazır desteler", "başkentler destesini yükle"
+  5. 📈 Deneme takibi    : "deneme: türkçe 30 doğru 6 yanlış matematik 22 doğru 8 yanlış"
+                          → net kaydedilir; "denemelerim" → gelişim grafiği + ders ortalamaları
 
 Giriş noktası: ogrenci_araclari_yanitla(metin, oturum) -> (yanıt, etiket) | (None, None)
 Hiçbir dış servis kullanılmaz; veriler yerel JSON dosyalarında tutulur.
@@ -26,6 +29,7 @@ import modul_18_calisma_kocu as m18
 _KOK = os.path.dirname(os.path.abspath(__file__))
 SINAV_DOSYASI = os.path.join(_KOK, "arex_sinavlar.json")
 KART_DOSYASI = os.path.join(_KOK, "arex_kartlar.json")
+DENEME_DOSYASI = os.path.join(_KOK, "arex_denemeler.json")
 
 _AYLAR = m18._AYLAR
 _AY_NO = m18._AY_NO
@@ -71,6 +75,16 @@ def _net_hesapla(t: str):
             ad = " ".join(kelimeler).title()
         satirlar.append((ad, d, y, int(b) if b else None, net))
     baslik = f"🧮 **Net Hesabı** — {sinav} ({bolen} yanlış 1 doğruyu götürür)"
+    if re.search(r"\bdeneme|kaydet", t):
+        kayit_notu = _deneme_kaydet(sinav, satirlar, toplam_net)
+    else:
+        kayit_notu = ("\n\n📈 Deneme sonucuysa başına *\"deneme:\"* yaz; kaydedip gelişimini grafikle göstereyim."
+                      if len(satirlar) > 1 else "")
+    yanit, etiket = _net_metni(baslik, satirlar, bolen, toplam_d, toplam_y, toplam_net)
+    return yanit + kayit_notu, etiket
+
+
+def _net_metni(baslik, satirlar, bolen, toplam_d, toplam_y, toplam_net):
     if len(satirlar) == 1:
         ad, d, y, b, net = satirlar[0]
         kayip = y / bolen
@@ -91,6 +105,97 @@ def _net_hesapla(t: str):
     if en_iyi[0]:
         metin.append(f"\n🌟 En yüksek netin **{en_iyi[0]}** dersinde. Tebrikler!")
     return "\n".join(metin), "🧮 Net Hesaplama"
+
+
+def _ayni_tur(deneme, sinav, dersler) -> bool:
+    """Netler yalnızca aynı sınav türü ve aynı ders yapısındaki denemeler arasında karşılaştırılır."""
+    return deneme["sinav"] == sinav and sorted(deneme.get("dersler", {})) == sorted(dersler)
+
+
+def _deneme_kaydet(sinav, satirlar, toplam_net) -> str:
+    liste = _oku(DENEME_DOSYASI, [])
+    no = max([d["no"] for d in liste] + [0]) + 1
+    dersler = ({"Genel": round(toplam_net, 2)} if len(satirlar) == 1 and not satirlar[0][0] else
+               {(ad or f"{i}. bölüm"): round(net, 2) for i, (ad, _d, _y, _b, net) in enumerate(satirlar, 1)})
+    onceki = next((d for d in reversed(liste) if _ayni_tur(d, sinav, dersler)), None)
+    liste.append({"no": no, "sinav": sinav, "tarih": _simdi().date().isoformat(), "net": round(toplam_net, 2),
+                  "dersler": dersler})
+    _yaz(DENEME_DOSYASI, liste)
+    notu = f"\n\n📈 **Deneme #{no} kaydedildi.**"
+    if onceki:
+        fark = toplam_net - onceki["net"]
+        notu += (f" Önceki {sinav} denemene göre **{'+' if fark >= 0 else ''}{_sayi(fark)} net** "
+                 + ("📈 yükseliş, harika!" if fark > 0 else "— aynı seviyedesin." if fark == 0 else "📉 düşüş; moral bozma, yanlışlarını analiz et."))
+    return notu + " Gelişim grafiği için: *\"denemelerim\"*"
+
+
+def _deneme_grafigi(denemeler):
+    G, Y, kx, ust, alt = 640, 300, 48, 44, 44
+    netler = [d["net"] for d in denemeler]
+    en_kucuk, en_buyuk = min(netler + [0]), max(netler + [1])
+    aralik = (en_buyuk - en_kucuk) or 1
+    taban, yuk = Y - alt, Y - alt - ust
+    adim = (G - 2 * kx) / max(1, len(denemeler) - 1)
+    noktalar = [(kx + i * adim if len(denemeler) > 1 else G / 2, taban - (n - en_kucuk) / aralik * yuk) for i, n in enumerate(netler)]
+    p = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {G} {Y}" style="width:100%;max-width:640px;height:auto;'
+         f'display:block;margin:6px 0;background:rgba(15,23,42,.55);border-radius:14px;border:1px solid rgba(148,163,184,.25)" '
+         f'font-family="Inter,system-ui,sans-serif" role="img" aria-label="Deneme netleri">',
+         f'<text x="{G / 2}" y="26" fill="#e2e8f0" font-size="14" font-weight="600" text-anchor="middle">'
+         f'{denemeler[-1]["sinav"]} denemeleri · toplam net</text>',
+         f'<line x1="{kx}" y1="{taban}" x2="{G - kx}" y2="{taban}" stroke="#475569"/>']
+    if len(noktalar) > 1:
+        yol = " ".join(f"{x:.1f},{y:.1f}" for x, y in noktalar)
+        p.append(f'<polygon points="{noktalar[0][0]:.1f},{taban} {yol} {noktalar[-1][0]:.1f},{taban}" fill="rgba(56,189,248,.12)"/>')
+        p.append(f'<polyline points="{yol}" fill="none" stroke="#38bdf8" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>')
+    for i, ((x, y), d) in enumerate(zip(noktalar, denemeler)):
+        son = i == len(noktalar) - 1
+        p.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{6 if son else 4.5}" fill="{"#a78bfa" if son else "#38bdf8"}" stroke="#0f172a" stroke-width="2"/>')
+        p.append(f'<text x="{x:.1f}" y="{y - 11:.1f}" fill="#e2e8f0" font-size="12" font-weight="600" text-anchor="middle">{_sayi(d["net"])}</text>')
+        t = date.fromisoformat(d["tarih"])
+        p.append(f'<text x="{x:.1f}" y="{taban + 18}" fill="#94a3b8" font-size="11" text-anchor="middle">{t.day}.{t.month:02d}</text>')
+    p.append("</svg>")
+    return "".join(p)
+
+
+def _denemeler(t: str):
+    liste = _oku(DENEME_DOSYASI, [])
+    m = re.search(r"#?(\d+)\s*(?:nolu|numaralı)?\s*deneme\w*\s*sil", t)
+    if m:
+        no = int(m.group(1))
+        yeni = [d for d in liste if d["no"] != no]
+        if len(yeni) == len(liste):
+            return f"📈 #{no} numaralı deneme kaydı bulamadım.", "📈 Deneme Takibi"
+        _yaz(DENEME_DOSYASI, yeni)
+        return f"🗑️ Deneme #{no} silindi.", "📈 Deneme Takibi"
+    if not re.search(r"denemelerim|deneme\s*(?:sonuçlarım|grafiğ|geçmiş|takib|analiz)|netlerim", t):
+        return None
+    if not liste:
+        return ("📈 Henüz kayıtlı denemen yok. Örnek: *\"deneme: türkçe 30 doğru 6 yanlış matematik 22 doğru 8 yanlış\"*",
+                "📈 Deneme Takibi")
+    son = liste[-1]
+    sinav = son["sinav"]
+    ayni = [d for d in liste if _ayni_tur(d, sinav, son.get("dersler", {}))][-12:]
+    satirlar = [f"📈 **{sinav} Deneme Gelişimin** ({len(ayni)} deneme)", ""]
+    farkli = len(liste) - len(ayni)
+    if farkli > 0:
+        satirlar.append(f"- ℹ️ Farklı sınav/ders yapısındaki {farkli} deneme karşılaştırmaya katılmadı.")
+    if len(ayni) >= 2:
+        fark = ayni[-1]["net"] - ayni[0]["net"]
+        satirlar.append(f"- İlk denemeden bu yana: **{'+' if fark >= 0 else ''}{_sayi(fark)} net**")
+    satirlar.append(f"- En yüksek: **{_sayi(max(d['net'] for d in ayni))}** · Ortalama: **{_sayi(sum(d['net'] for d in ayni) / len(ayni))}**")
+    dersler = {}
+    for d in ayni:
+        for ad, n in d.get("dersler", {}).items():
+            dersler.setdefault(ad, []).append(n)
+    if len(dersler) > 1:
+        satirlar += ["", "| Ders | Ortalama | Son |", "|---|---|---|"]
+        for ad, ns in dersler.items():
+            satirlar.append(f"| {ad} | {_sayi(sum(ns) / len(ns))} | **{_sayi(ns[-1])}** |")
+        zayif = min(dersler, key=lambda a: sum(dersler[a]) / len(dersler[a]))
+        if not zayif.endswith("bölüm"):
+            satirlar.append(f"\n💡 Ortalaması en düşük ders **{zayif}** — bu hafta biraz daha ona zaman ayırabilirsin.")
+    satirlar.append("\nSilmek için: *\"#2 denemeyi sil\"*")
+    return "\n".join(satirlar) + m18._svg_isaretle(_deneme_grafigi(ayni)), "📈 Deneme Takibi"
 
 
 def _sayi(x: float) -> str:
@@ -240,6 +345,70 @@ def _pomodoro(t: str):
 # 4. KELİME / BİLGİ KARTLARI (LEITNER)
 # ==============================================================================
 _ARALIK_GUN = {1: 0, 2: 1, 3: 3, 4: 7, 5: 14}
+
+HAZIR_DESTELER = {
+    "ingilizce": ("🇬🇧 Temel İngilizce kelimeler (YDT/LGS)", [
+        ("achieve", "başarmak"), ("improve", "geliştirmek"), ("consider", "düşünmek, göz önünde bulundurmak"),
+        ("increase", "artırmak, artış"), ("decrease", "azaltmak, azalma"), ("require", "gerektirmek"),
+        ("provide", "sağlamak"), ("prevent", "önlemek"), ("reduce", "azaltmak"), ("support", "desteklemek"),
+        ("however", "ancak, fakat"), ("therefore", "bu yüzden"), ("although", "rağmen, -e rağmen"),
+        ("despite", "rağmen, -e rağmen"), ("whereas", "oysa, -iken"), ("moreover", "üstelik, ayrıca"),
+        ("evidence", "kanıt"), ("research", "araştırma"), ("environment", "çevre"), ("knowledge", "bilgi"),
+        ("ancient", "antik, eski"), ("available", "mevcut, uygun"), ("significant", "önemli, anlamlı"),
+        ("various", "çeşitli"), ("common", "yaygın, ortak"), ("rapidly", "hızla"), ("eventually", "sonunda"),
+        ("approximately", "yaklaşık olarak"), ("decline", "düşüş, azalmak"), ("survive", "hayatta kalmak"),
+        ("occur", "meydana gelmek"), ("affect", "etkilemek"), ("discover", "keşfetmek"), ("establish", "kurmak"),
+        ("contain", "içermek"), ("feature", "özellik"), ("purpose", "amaç"), ("benefit", "fayda, yarar"),
+        ("damage", "hasar, zarar vermek"), ("issue", "konu, sorun"),
+    ]),
+    "başkentler": ("🌍 Ülke başkentleri", [
+        ("Almanya", "Berlin"), ("Fransa", "Paris"), ("İtalya", "Roma"), ("İspanya", "Madrid"), ("Portekiz", "Lizbon"),
+        ("Yunanistan", "Atina"), ("Bulgaristan", "Sofya"), ("Rusya", "Moskova"), ("Ukrayna", "Kiev"),
+        ("Polonya", "Varşova"), ("Macaristan", "Budapeşte"), ("Avusturya", "Viyana"), ("İsviçre", "Bern"),
+        ("Hollanda", "Amsterdam"), ("Belçika", "Brüksel"), ("İsveç", "Stockholm"), ("Norveç", "Oslo"),
+        ("Finlandiya", "Helsinki"), ("Danimarka", "Kopenhag"), ("Azerbaycan", "Bakü"), ("Gürcistan", "Tiflis"),
+        ("İran", "Tahran"), ("Irak", "Bağdat"), ("Suriye", "Şam"), ("Mısır", "Kahire"), ("Japonya", "Tokyo"),
+        ("Çin", "Pekin"), ("Hindistan", "Yeni Delhi"), ("Kanada", "Ottava"), ("Avustralya", "Kanberra"),
+        ("Brezilya", "Brasilia"), ("Arjantin", "Buenos Aires"), ("Kazakistan", "Astana"), ("Özbekistan", "Taşkent"),
+        ("Pakistan", "İslamabad"),
+    ]),
+    "elementler": ("⚗️ Element sembolleri", [
+        ("H", "Hidrojen"), ("He", "Helyum"), ("Li", "Lityum"), ("Be", "Berilyum"), ("B", "Bor"), ("C", "Karbon"),
+        ("N", "Azot"), ("O", "Oksijen"), ("F", "Flor"), ("Ne", "Neon"), ("Na", "Sodyum"), ("Mg", "Magnezyum"),
+        ("Al", "Alüminyum"), ("Si", "Silisyum"), ("P", "Fosfor"), ("S", "Kükürt"), ("Cl", "Klor"), ("Ar", "Argon"),
+        ("K", "Potasyum"), ("Ca", "Kalsiyum"), ("Fe", "Demir"), ("Cu", "Bakır"), ("Zn", "Çinko"), ("Ag", "Gümüş"),
+        ("Au", "Altın"), ("Hg", "Cıva"), ("Pb", "Kurşun"), ("Sn", "Kalay"), ("Mn", "Mangan"), ("Cr", "Krom"),
+        ("Ni", "Nikel"), ("Co", "Kobalt"), ("Br", "Brom"), ("I", "İyot"), ("U", "Uranyum"),
+    ]),
+}
+_DESTE_ESANLAM = {"ingilizce": "ingilizce", "kelime": "ingilizce", "başkent": "başkentler", "baskent": "başkentler",
+                  "element": "elementler", "periyodik": "elementler", "kimya": "elementler"}
+
+
+def _hazir_deste(t: str):
+    if re.search(r"hazır\s*deste|desteler(?:i|im)?\b", t) and not re.search(r"yükle|ekle", t):
+        satirlar = ["🃏 **Hazır Kart Desteleri**", ""]
+        for anahtar, (ad, kartlar) in HAZIR_DESTELER.items():
+            satirlar.append(f"- {ad} — {len(kartlar)} kart · *\"{anahtar} destesini yükle\"*")
+        satirlar.append("\nYüklenen kartlar mevcut kartlarına eklenir; *\"kartları çalış\"* ile tekrar edersin.")
+        return "\n".join(satirlar), "🃏 Kelime Kartları"
+    if not re.search(r"deste\w*\s*(?:yükle|ekle)", t):
+        return None
+    anahtar = next((v for k, v in _DESTE_ESANLAM.items() if k in t), None)
+    if not anahtar:
+        return "🃏 Hangi deste? *\"hazır desteler\"* yazarak listeyi görebilirsin.", "🃏 Kelime Kartları"
+    ad, hazir = HAZIR_DESTELER[anahtar]
+    kartlar = _oku(KART_DOSYASI, [])
+    mevcut = {_kart_norm(k["on"]) for k in kartlar}
+    bugun = _simdi().date().isoformat()
+    yeni = [{"on": on, "arka": arka, "kutu": 1, "sonraki": bugun, "deste": anahtar}
+            for on, arka in hazir if _kart_norm(on) not in mevcut]
+    kartlar.extend(yeni)
+    _yaz(KART_DOSYASI, kartlar)
+    if not yeni:
+        return f"🃏 {ad} destesi zaten kartlarında var. *\"kartları çalış\"* ile tekrar edebilirsin.", "🃏 Kelime Kartları"
+    return (f"🃏 **{ad}** yüklendi: **{len(yeni)} yeni kart** (toplam {len(kartlar)}).\n\n"
+            "Her tekrarda en fazla 10 kart sorarım; *\"kartları çalış\"* ile başla. 💪"), "🃏 Kelime Kartları"
 
 
 def _kart_norm(s: str) -> str:
@@ -398,8 +567,8 @@ def ogrenci_araclari_yanitla(metin: str, oturum):
     if len(metin) > 400 and not re.match(r"\s*(?:kart|kelime)\s*ekle", metin, flags=re.I):
         return None, None
     t = _kucult(metin)
-    for fonk in (lambda: _kartlar(t, metin, oturum), lambda: _pomodoro(t), lambda: _net_hesapla(t),
-                 lambda: _sinav(t, metin)):
+    for fonk in (lambda: _kartlar(t, metin, oturum), lambda: _hazir_deste(t), lambda: _pomodoro(t),
+                 lambda: _denemeler(t), lambda: _net_hesapla(t), lambda: _sinav(t, metin)):
         try:
             sonuc = fonk()
         except Exception:

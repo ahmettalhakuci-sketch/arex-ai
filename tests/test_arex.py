@@ -231,6 +231,7 @@ class OgrenciAraclari(unittest.TestCase):
         m18.HATIRLATICI_DOSYASI = os.path.join(self.klasor, "hat.json")
         m21.SINAV_DOSYASI = os.path.join(self.klasor, "sinav.json")
         m21.KART_DOSYASI = os.path.join(self.klasor, "kart.json")
+        m21.DENEME_DOSYASI = os.path.join(self.klasor, "deneme.json")
         self.oturum = {}
 
     def tearDown(self):
@@ -270,6 +271,21 @@ class OgrenciAraclari(unittest.TestCase):
             kutular = sorted(k["kutu"] for k in json.load(f))
         self.assertEqual(kutular, [1, 2])
 
+    def test_deneme_takibi(self):
+        self.assertIn("Deneme #1 kaydedildi", self._y("deneme: tyt türkçe 28 doğru 8 yanlış matematik 18 doğru 10 yanlış")[0])
+        self.assertIn("+8,75 net", self._y("deneme: tyt türkçe 31 doğru 5 yanlış matematik 22 doğru 6 yanlış")[0])
+        # farklı ders yapısı karşılaştırılmaz
+        self.assertNotIn("Önceki", self._y("tyt deneme 40 doğru 12 yanlış")[0])
+        self.assertIn("<!--AREX_SVG:", self._y("deneme: tyt türkçe 33 doğru 3 yanlış matematik 25 doğru 5 yanlış")[0] + self._y("denemelerim")[0])
+        self.assertIn("Matematik", self._y("denemelerim")[0])
+        self.assertIsNone(self._y("deneme sınavında stres yapıyorum ne yapmalıyım")[0])
+
+    def test_hazir_deste(self):
+        self.assertIn("35 yeni kart", self._y("başkentler destesini yükle")[0])
+        self.assertIn("zaten", self._y("başkentler destesini yükle")[0])
+        for anahtar, (_ad, kartlar) in m21.HAZIR_DESTELER.items():
+            self.assertEqual(len({k[0] for k in kartlar}), len(kartlar), anahtar)
+
     def test_ilgisiz_sorulara_karismaz(self):
         for soru in ("internet nedir", "2+3*4", "fotosentez nedir", "yks ne zaman", "bana 5 matematik sorusu sor"):
             self.assertIsNone(self._y(soru)[0], soru)
@@ -290,6 +306,7 @@ class SohbetYonlendirme(unittest.TestCase):
         m8._m18.HATIRLATICI_DOSYASI = os.path.join(klasor, "h.json")
         m8._m21.SINAV_DOSYASI = os.path.join(klasor, "s.json")
         m8._m21.KART_DOSYASI = os.path.join(klasor, "k.json")
+        m8._m21.DENEME_DOSYASI = os.path.join(klasor, "d.json")
         m8._m21.m18.AYAR_DOSYASI = os.path.join(klasor, "a.json")
         m8._m21.m18.HATIRLATICI_DOSYASI = os.path.join(klasor, "h.json")
         st.session_state["messages"] = []
@@ -310,6 +327,8 @@ class SohbetYonlendirme(unittest.TestCase):
         self.assertIn("Çalışma", self._etiket("bugün 10 fizik sorusu çözdüm"))
         self.assertIn("Net", self._etiket("40 doğru 12 yanlış kaç net"))
         self.assertIn("Pomodoro", self._etiket("pomodoro başlat"))
+        self.assertIn("Deneme", self._etiket("denemelerim"))
+        self.assertIn("Kart", self._etiket("hazır desteler"))
 
 
 if __name__ == "__main__":

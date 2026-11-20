@@ -19,6 +19,7 @@ arex_calisma_ayarlari.json
 arex_hatirlaticilar.json
 arex_sinavlar.json
 arex_kartlar.json
+arex_denemeler.json
 
 # Geri yükleme öncesi otomatik güvenlik kopyaları (kişisel veri)
 ar_acil_yedekler/geri_yukleme_oncesi_*/
