@@ -12,11 +12,15 @@ AREX AI STUDIO — MODÜL 22: ÇALIŞMA PROGRAMI & FORMÜL KARTLARI (modul_22_pl
                           "fizik formülleri", "kimya formülleri", "formül kartları"
                           → internetsiz, anında, doğrulanmış özet
 
+  3. 🎯 Panelim         : "panelim", "durumum", "bugünkü özetim" → sınav geri sayımı, bugünkü program,
+                          günlük hedef, seri, son deneme, yanlış defteri, kart tekrarı, sıradaki hatırlatıcı
+                          ve "sıradaki adım" önerisi tek kartta
+
 Giriş noktası: plan_ve_formul_yanitla(metin) -> (yanıt, etiket) | (None, None)
 """
 
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 import modul_18_calisma_kocu as m18
 import modul_21_ogrenci_araclari as m21
@@ -294,6 +298,104 @@ def _formuller(t: str):
     return "\n".join(satirlar), "📐 Formül Kartı"
 
 
+# ==============================================================================
+# PANELİM — tüm öğrenci verilerinin tek bakışta özeti
+# ==============================================================================
+def _panel(t: str):
+    if not re.search(r"^(?:benim\s*)?(?:panelim|panel|durumum|özetim|ozetim|bugünkü\s*özetim|genel\s*durumum)\W*$"
+                     r"|^(?:bugün\w*\s*)?(?:öğrenci|çalışma)\s*panel", t):
+        return None
+    bugun = m18._simdi().date()
+    simdi = m18._simdi()
+    s = [f"🎯 **Panelin** — {bugun.day} {m18._AYLAR[bugun.month - 1]} {_GUNLER[bugun.weekday()]}", ""]
+    oneriler = []
+
+    # Sınav
+    sinavlar = sorted((x for x in m18._oku(m21.SINAV_DOSYASI, []) if date.fromisoformat(x["tarih"]) >= bugun),
+                      key=lambda x: x["tarih"])
+    if sinavlar:
+        x = sinavlar[0]
+        s.append(f"📅 **{x['ad']}**: {m21._kalan_yazi(date.fromisoformat(x['tarih']))}"
+                 + (f" · +{len(sinavlar) - 1} sınav daha" if len(sinavlar) > 1 else ""))
+    else:
+        oneriler.append("sınav tarihini kaydet: *\"YKS sınavım 20.06.2027\"*")
+
+    # Bugün çalışma + hedef + seri
+    gunler, _, kayitlar = m18._gunluk_toplamlar()
+    b = gunler.get(bugun, {"soru": 0, "dk": 0})
+    hedef = int(m18._oku(m18.AYAR_DOSYASI, {}).get("gunluk_soru_hedefi", 0) or 0)
+    satir = f"📊 Bugün: **{b['soru']} soru · {b['dk']} dk**"
+    if hedef:
+        oran = min(100, round(b["soru"] / hedef * 100))
+        satir += f" · hedef `{'█' * round(oran / 10)}{'░' * (10 - round(oran / 10))}` %{oran}"
+    seri = m18._seri_hesapla(kayitlar)
+    if seri >= 2:
+        satir += f" · 🔥 {seri} gün seri"
+    s.append(satir)
+    hafta = sum(v["soru"] for v in gunler.values())
+    if hafta:
+        s.append(f"🗓️ Son 7 gün: **{hafta} soru · {sum(v['dk'] for v in gunler.values())} dk**")
+
+    # Program
+    plan = m18._oku(m18.AYAR_DOSYASI, {}).get("haftalik_plan")
+    sira_ders = None
+    if plan:
+        gun = plan["gunler"][bugun.weekday()]
+        s.append("📚 Bugünkü program: " + (" → ".join(gun) if gun else "dinlenme 🛋️"))
+        sira_ders = next((d for d in gun if not d.startswith("📝")), None)
+    else:
+        oneriler.append("kendine program çıkar: *\"haftalık çalışma programı hazırla\"*")
+
+    # Pomodoro
+    pom = m18._oku(m18.AYAR_DOSYASI, {}).get("pomodoro", {}).get(bugun.isoformat(), 0)
+    if pom:
+        s.append(f"🍅 Bugün **{pom}** pomodoro")
+
+    # Deneme
+    denemeler = m18._oku(m21.DENEME_DOSYASI, [])
+    if denemeler:
+        son = denemeler[-1]
+        onceki = next((d for d in reversed(denemeler[:-1]) if m21._ayni_tur(d, son["sinav"], son.get("dersler", {}))), None)
+        fark = f" ({'+' if son['net'] >= onceki['net'] else ''}{m21._sayi(son['net'] - onceki['net'])})" if onceki else ""
+        s.append(f"📈 Son {son['sinav']} denemen: **{m21._sayi(son['net'])} net**{fark}")
+
+    # Yanlış defteri + kartlar
+    defter = m18._oku(m18.YANLIS_DOSYASI, [])
+    sorulabilir = sum(1 for k in defter if k.get("cevap"))
+    if defter:
+        s.append(f"📒 Yanlış defteri: **{len(defter)}** kayıt" + (f" ({sorulabilir} tekrar edilebilir)" if sorulabilir else ""))
+    kartlar = m18._oku(m21.KART_DOSYASI, [])
+    vadeli = sum(1 for k in kartlar if k["sonraki"] <= bugun.isoformat())
+    if kartlar:
+        s.append(f"🃏 Kartlar: bugün **{vadeli}** tekrar · toplam {len(kartlar)}")
+
+    # Sıradaki hatırlatıcı
+    hat = sorted((h for h in m18._oku(m18.HATIRLATICI_DOSYASI, []) if not h.get("silindi")
+                  and datetime.fromisoformat(h["zaman"]) >= simdi), key=lambda h: h["zaman"])
+    if hat:
+        z = datetime.fromisoformat(hat[0]["zaman"])
+        ne_zaman = f"{z:%H:%M}" if z.date() == bugun else f"{z.day} {m18._AYLAR[z.month - 1]} {z:%H:%M}"
+        s.append(f"⏰ Sıradaki: {hat[0]['baslik']} — {ne_zaman}")
+
+    # Sıradaki adım (öncelik sırasıyla tek net öneri)
+    if vadeli:
+        adim = f"🃏 Önce **{min(vadeli, 10)} kartını** tekrar et → *\"kartları çalış\"*"
+    elif sorulabilir:
+        adim = "📒 Yanlışlarını kapat → *\"yanlışlarımı tekrar et\"*"
+    elif hedef and b["soru"] < hedef:
+        adim = f"🎯 Hedefe **{hedef - b['soru']} soru** kaldı" + (f" — {sira_ders} ile başla" if sira_ders else "")
+    elif sira_ders and b["dk"] == 0:
+        adim = f"📚 Programına göre **{sira_ders}** ile başla → *\"pomodoro 40 dakika\"*"
+    elif b["soru"] or b["dk"]:
+        adim = "🌟 Bugün iyi iş çıkardın; kısa bir mini test ile kapat → *\"bana 5 matematik sorusu sor\"*"
+    else:
+        adim = "🚀 Güne kısa bir başlangıç yap → *\"pomodoro başlat\"*"
+    s += ["", f"➡️ **Sıradaki adım:** {adim}"]
+    if oneriler:
+        s += ["", "💡 Paneli doldurmak için: " + " · ".join(oneriler[:2])]
+    return "\n".join(x if not x or x.startswith(("➡️", "💡", "🎯 **")) else f"- {x}" for x in s), "🎯 Panelim"
+
+
 def plan_ve_formul_yanitla(metin: str):
     if not metin or len(metin) > 300:
         return None, None
@@ -304,7 +406,7 @@ def plan_ve_formul_yanitla(metin: str):
             return _program_olustur(t)
         except Exception:
             return None, None
-    for fonk in (_bugun_ne_calisayim, _formuller):
+    for fonk in (_panel, _bugun_ne_calisayim, _formuller):
         try:
             sonuc = fonk(t)
         except Exception:

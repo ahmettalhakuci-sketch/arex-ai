@@ -312,6 +312,9 @@ class PlanVeFormuller(unittest.TestCase):
     def setUp(self):
         self.klasor = tempfile.mkdtemp()
         self._eski = (m18.AYAR_DOSYASI, m18.TAKIP_DOSYASI, m21.SINAV_DOSYASI, m21.DENEME_DOSYASI)
+        m18.YANLIS_DOSYASI = os.path.join(self.klasor, "yanlis.json")
+        m18.HATIRLATICI_DOSYASI = os.path.join(self.klasor, "hat.json")
+        m21.KART_DOSYASI = os.path.join(self.klasor, "kart.json")
         m18.AYAR_DOSYASI = os.path.join(self.klasor, "ayar.json")
         m18.TAKIP_DOSYASI = os.path.join(self.klasor, "takip.json")
         m21.SINAV_DOSYASI = os.path.join(self.klasor, "sinav.json")
@@ -332,6 +335,18 @@ class PlanVeFormuller(unittest.TestCase):
         self.assertIn("Deneme sınavı", program)
         self.assertEqual(program.count("| **"), 7)
         self.assertIn("programın:", self._y("bugün ne çalışayım")[0])
+
+    def test_panelim(self):
+        bos = self._y("panelim")[0]
+        self.assertIn("Sıradaki adım", bos)
+        self.assertNotIn("- \n", bos)
+        m21.ogrenci_araclari_yanitla("YKS sınavım 20.06.2027", {})
+        m21.ogrenci_araclari_yanitla("kart ekle: apple = elma", {})
+        dolu = self._y("panelim")[0]
+        self.assertIn("**YKS**", dolu)
+        self.assertIn("kartları çalış", dolu)
+        for soru in ("panel nasıl yapılır", "güneş paneli fiyatları", "durumum kötü"):
+            self.assertIsNone(self._y(soru)[0], soru)
 
     def test_formuller(self):
         self.assertIn("Zincir", self._y("türev formülleri")[0])
@@ -360,6 +375,9 @@ class SohbetYonlendirme(unittest.TestCase):
         m8._m21.DENEME_DOSYASI = os.path.join(klasor, "d.json")
         m8._m22.m18.AYAR_DOSYASI = os.path.join(klasor, "a.json")
         m8._m22.m18.TAKIP_DOSYASI = os.path.join(klasor, "t.json")
+        m8._m22.m18.YANLIS_DOSYASI = os.path.join(klasor, "y.json")
+        m8._m22.m18.HATIRLATICI_DOSYASI = os.path.join(klasor, "h.json")
+        m8._m22.m21.KART_DOSYASI = os.path.join(klasor, "k.json")
         m8._m22.m21.SINAV_DOSYASI = os.path.join(klasor, "s.json")
         m8._m22.m21.DENEME_DOSYASI = os.path.join(klasor, "d.json")
         m8._m21.m18.AYAR_DOSYASI = os.path.join(klasor, "a.json")
@@ -386,6 +404,7 @@ class SohbetYonlendirme(unittest.TestCase):
         self.assertIn("Kart", self._etiket("hazır desteler"))
         self.assertIn("Formül", self._etiket("türev formülleri"))
         self.assertIn("Yanlış", self._etiket("yanlış defterim"))
+        self.assertIn("Panel", self._etiket("panelim"))
         self.assertIn("Program", self._etiket("bana haftalık çalışma programı hazırla"))
 
 

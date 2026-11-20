@@ -696,7 +696,7 @@ def sistemi_baslat():
             ("🌤️ Hava Durumu", "İstanbul hava durumu ve hava kalitesi"),
             ("📝 Mini Test", "bana 5 matematik sorusu sor"),
             ("📊 Haftalık Rapor", "bu hafta ne kadar çalıştım"),
-            ("📈 Grafik Çiz", "y = x^2 - 4 grafiğini çiz"),
+            ("🎯 Panelim", "panelim"),
             ("🤝 Neler Yapabilirim?", "help"),
         ]
         with st.container(key="arex_hizli"):
