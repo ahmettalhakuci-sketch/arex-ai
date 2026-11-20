@@ -556,6 +556,39 @@ class SohbetYonlendirme(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             return self.m8.akilli_yanit_uret(metin)[2]
 
+    def test_konu_degisimi_takip_sorusu(self):
+        m8, st = self.m8, self.st
+        st.session_state["messages"] = [{"role": "user", "content": "osmanlı neden çöktü"},
+                                        {"role": "assistant", "content": "..."}]
+        self.assertEqual(m8._konu_degisimi_sorgusu("peki ya bizans", "Osmanlı İmparatorluğu"),
+                         ("bizans neden çöktü", "bizans"))
+        self.assertEqual(m8._konu_degisimi_sorgusu("ya almanya?", "osmanlı")[1], "almanya")
+        # zamirli/soru kelimeli takipler konu değişimi DEĞİLDİR → bağlam korunur
+        for q in ("peki bunun önemi ne", "peki neden", "ya sonra", "peki daha fazla", "bir de onu anlat",
+                  "bir de selam söyle", "ya şaka yapıyorsun", "ya kardeşim", "peki anladım", "ya sen",
+                  "ya bilmiyorum", "peki tamam"):
+            self.assertIsNone(m8._konu_degisimi_sorgusu(q, "osmanlı"), q)
+        st.session_state["messages"] = []
+
+    def test_kota_bekleme_ve_durust_takip_mesaji(self):
+        m9 = self.m8._m9
+        import time as _t
+        eski = dict(m9._KOTA_BEKLEME)
+        try:
+            m9._KOTA_BEKLEME.clear()
+            self.assertFalse(m9.ai_kotasi_dolu_mu())
+            for model in ("openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"):
+                m9._KOTA_BEKLEME[f"groq_cloud:{model}"] = _t.time() + 60
+            self.assertTrue(m9.ai_kotasi_dolu_mu())
+            # Ağ kapalı + kota dolu → takip sorusu haber aramasına değil dürüst mesaja gitmeli
+            self.st.session_state["messages"] = [{"role": "user", "content": "fotosentez nedir"},
+                                                 {"role": "assistant", "content": "..."}]
+            self.assertIn("Meşgul", self._etiket("peki bitkiler geceleri ne yapar"))
+        finally:
+            m9._KOTA_BEKLEME.clear()
+            m9._KOTA_BEKLEME.update(eski)
+            self.st.session_state["messages"] = []
+
     def test_yonlendirme(self):
         self.assertIn("Matematik", self._etiket("2+3*4"))
         self.assertIn("Matematik", self._etiket("sin 30"))

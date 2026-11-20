@@ -4917,6 +4917,48 @@ def _konu_devami_mi(raw: str, norm: str) -> bool:
         return True
     return False
 
+_ZAMIR_VE_SORU = {
+    "bu", "su", "o", "bunun", "onun", "sunun", "bunu", "onu", "bunlar", "onlar", "bunda", "onda", "bundan",
+    "ondan", "buna", "ona", "neden", "niye", "nicin", "nasil", "nedir", "ne", "kim", "kimdir", "nerede", "mi",
+    "mı", "mu", "mü", "hangi", "kac", "daha", "fazla", "devam", "ornek", "ozet", "simdi", "sonra", "baska",
+    "diger", "digeri", "ilk", "son", "ayni", "hepsi", "tamam", "evet", "hayir",
+    # hitap / ünlem / kişi zamirleri ("ya kardeşim", "ya sen", "peki tamam")
+    "ben", "sen", "biz", "siz", "kardesim", "abi", "abla", "dostum", "canim", "hocam", "kanka", "aga",
+    "hadi", "aynen", "olur", "saka", "yok", "var", "iyi", "guzel", "harika", "super", "allah", "vallahi",
+    # yaygın emir/fiiller
+    "soyle", "anlat", "yap", "ver", "et", "bak", "dur", "gel", "git", "yaz", "oku", "goster", "sor", "calis",
+}
+_FIIL_EKI = re.compile(r"(?:yor\w*|[dt][ıiuü]m|[dt][ıiuü]n|[dt][ıiuü]k|m[ıi]ş\w*|mu[şs]\w*|acak\w*|ecek\w*"
+                       r"|m[ae]k|m[ıiuü]s[ıiuü]n|s[ıiuü]n[ıiuü]z?|[ae]l[ıi]m|l[ae]d[ıi]m)$")
+
+
+def _konu_degisimi_sorgusu(kullanici_girdisi: str, aktif_konu: str):
+    """'peki ya X' kalıbında X yeni bir konuysa → (önceki soru kalıbıyla yeni sorgu, X) ya da None."""
+    m = re.match(r"^\s*(?:peki\s+ya|ya)\s+(.+?)\s*(?:peki)?\s*[?!.]*\s*$", kullanici_girdisi, flags=re.IGNORECASE)
+    if not m:
+        return None
+    ozne = m.group(1).strip(" ?!.,")
+    kelimeler = metni_normallestir(ozne).split()
+    if not 1 <= len(kelimeler) <= 3 or any(k in _ZAMIR_VE_SORU for k in kelimeler) or re.search(r"\d", ozne):
+        return None
+    if any(_FIIL_EKI.search(k) for k in metni_normallestir(ozne.replace("İ", "i").replace("I", "ı").lower()).split()) \
+            or any(_FIIL_EKI.search(k) for k in ozne.replace("İ", "i").replace("I", "ı").lower().split()):
+        return None  # "ya şaka yapıyorsun", "ya anladım" → fiil, konu değil
+    onceki = next((str(x.get("content", "")) for x in reversed(st.session_state.get("messages") or [])
+                   if x.get("role") == "user" and x.get("content")), "")
+    if not onceki:
+        return None
+    # Önceki sorudan eski özneyi çıkar → soru kalıbı ("neden çöktü", "başkenti neresi")
+    eski_kok = {k[:5] for k in metni_normallestir(aktif_konu or "").split() if len(k) >= 3}
+    kalip = [w for w in onceki.split() if metni_normallestir(w)[:5] not in eski_kok]
+    if len(kalip) == len(onceki.split()):
+        kalip = onceki.split()[1:]  # eski özne bulunamadı → ilk kelimeyi özne say
+    kalip_metni = " ".join(kalip).strip()
+    if not kalip_metni or len(kalip_metni.split()) > 6:
+        return None
+    return f"{ozne} {kalip_metni}", ozne
+
+
 def _aktif_konu_baglami_uygula(kullanici_girdisi: str, guncelle: bool = True) -> tuple:
     """
     v9.1 GERÇEK ÇOK TURLU KONU DEVAMLILIĞI (100+ Soru Boyunca Bağlam Kopmaz!):
@@ -4934,6 +4976,15 @@ def _aktif_konu_baglami_uygula(kullanici_girdisi: str, guncelle: bool = True) ->
         if guncelle:
             st.session_state["aktif_konu"] = ""
         return kullanici_girdisi, False
+
+    # "peki ya bizans" / "ya almanya?" → KONU DEĞİŞİMİ: yeni özne + önceki sorunun kalıbı
+    # ("osmanlı neden çöktü" → "bizans neden çöktü"). Eski konuyu yapıştırmak yanlış maddeyi getirir.
+    _yeni = _konu_degisimi_sorgusu(kullanici_girdisi, aktif_konu)
+    if _yeni:
+        yeni_sorgu, yeni_konu = _yeni
+        if guncelle:
+            st.session_state["aktif_konu"] = yeni_konu
+        return yeni_sorgu, False
 
     if not aktif_konu and (_konu_devami_mi(raw, norm) or _daha_fazla_bilgi_istegi_mi(norm)):
         _gecmis_msj = st.session_state.get("messages") or []
@@ -5653,6 +5704,20 @@ def akilli_yanit_uret(kullanici_girdisi: str, hedef_dil: str = "tr"):
         h_y, h_e = havuz[aktif_soru_norm]
         return (selam_oneki + h_y if selam_oneki else h_y), hedef_dil, h_e
 
+    # Devam/takip sorusu ("peki geceleri ne yapar") yapay zekâ olmadan anlamlı yanıtlanamaz:
+    # bağlamsız haber aramasına düşmek yerine durumu dürüstçe söyle.
+    if _devam_veya_takip_sorusu_mu(norm_text):
+        _kota = False
+        try:
+            _kota = _m9.ai_kotasi_dolu_mu()
+        except Exception:
+            pass
+        return (("⏳ **Yapay zekâ kotam şu an dolu** (ücretsiz Groq sınırı)." if _kota else
+                 "⏳ **Yapay zekâ servislerine şu an ulaşamıyorum.**")
+                + " Bu takip sorusunu önceki konuşmamızla birlikte düşünebilmem için ona ihtiyacım var; "
+                  "1-2 dakika sonra tekrar sorar mısın?"
+                + "\n\n💡 Bu arada tek başına anlaşılır bir soru sorarsan (ör. *\"bitkilerde solunum nedir\"*) "
+                  "Wikipedia'dan hemen yanıtlayabilirim."), hedef_dil, "⏳ AI Geçici Olarak Meşgul"
     # SON KURTARMA ZİNCİRİ: Yalnızca doğal sohbet cümlesi DEĞİLSE Wikipedia/Web yedeğini dene!
     if not _sohbet_mi_simdi and st.session_state.get("wikipedia_aktif", True):
         try:

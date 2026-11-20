@@ -1183,6 +1183,24 @@ def _hata_kaydet(kod: str, mesaj: str):
 
 
 _GROQ_MODEL_ONBELLEK = {"liste": None, "zaman": 0.0}
+# Kota (HTTP 429) alan model → bu zamana kadar atlanır (her mesajda boşa yeniden denenmez)
+_KOTA_BEKLEME = {}
+
+
+def _kota_bekleme_suresi(hata) -> float:
+    """429 yanıtındaki Retry-After başlığını okur (yoksa 60 sn; en az 10 sn, en fazla 1 saat)."""
+    try:
+        deger = float(hata.headers.get("retry-after") or 60)
+    except Exception:
+        deger = 60.0
+    return max(10.0, min(3600.0, deger))
+
+
+def ai_kotasi_dolu_mu() -> bool:
+    """Groq'un tüm bilinen modelleri şu an kota beklemesindeyse True."""
+    simdi = time.time()
+    aktif = [m for m, bitis in _KOTA_BEKLEME.items() if bitis > simdi]
+    return len(aktif) >= 2
 
 
 def _groq_aktif_model_kesfet(anahtar: str, models_url_ozel: str = None) -> list:
@@ -1404,6 +1422,10 @@ def _bulut_anahtarli_ai_cagir(
             if _yedek_m not in _model_adaylari:
                 _model_adaylari.append(_yedek_m)
 
+    _bekleyen = [m for m in _model_adaylari if _KOTA_BEKLEME.get(f"{hedef_kod}:{m}", 0) > time.time()]
+    if _bekleyen and len(_bekleyen) == len(_model_adaylari):
+        return None, None  # tüm modeller kota beklemesinde → anında sıradaki ücretsiz kaynağa geç
+    _model_adaylari = [m for m in _model_adaylari if m not in _bekleyen]  # kotası dolu modelleri atla
     for _aktif_model in _model_adaylari:
         try:
             payload = {
@@ -1454,6 +1476,8 @@ def _bulut_anahtarli_ai_cagir(
                     return cevap, f"{_aktif_model}"
         except urllib.error.HTTPError as he:
             _hata_kaydet(hedef_kod, f"HTTP {he.code} ({_aktif_model}): {he.reason}")
+            if he.code == 429:
+                _KOTA_BEKLEME[f"{hedef_kod}:{_aktif_model}"] = time.time() + _kota_bekleme_suresi(he)
             if he.code in (401, 403):
                 break
             if he.code == 404 and hedef_kod == "groq_cloud":
@@ -1481,7 +1505,7 @@ def _pollinations_ai_cagir(
     """Anahtarsız ücretsiz Pollinations açık kaynak AI köprüsünü çağırır."""
     try:
         payload = {
-            "model": "openai",
+            "model": "openai-fast",  # anonim ücretsiz katman (2026: "openai" modeli ücretli → HTTP 402)
             "messages": (
                 [{"role": "system", "content": _uslup_ekle(sistem_prompt)}]
                 + [
