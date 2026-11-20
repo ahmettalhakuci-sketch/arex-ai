@@ -459,6 +459,24 @@ def _tarih_hesapla(t: str):
         return (f"📅 **İki Tarih Arası:** {_tarih_yaz(a)} → {_tarih_yaz(b)}\n"
                 f"• **{_sayi_yaz(gun)} gün** (≈ {gun // 7} hafta {gun % 7} gün)"), "📅 Tarih Hesaplayıcı"
 
+    # "3 gün sonra ne gün", "2 hafta önce hangi gündü", "100 gün sonra hangi tarih"
+    m = re.search(r"(\d{1,5})\s*(gün|hafta|ay|yıl)\s*(sonra|sonrası|önce|öncesi|evvel)\w*\s*(?:ne|hangi)\s*(?:gün|tarih)", t)
+    if m and not tarihler:
+        n, birim, yon = int(m.group(1)), m.group(2), m.group(3)
+        isaret = -1 if yon.startswith(("önce", "evvel")) else 1
+        if birim in ("gün", "hafta"):
+            d = bugun + timedelta(days=isaret * n * (7 if birim == "hafta" else 1))
+        else:
+            aylar = n * (12 if birim == "yıl" else 1) * isaret
+            y, a = divmod(bugun.month - 1 + aylar, 12)
+            yil, ay = bugun.year + y, a + 1
+            gun_say = (date(yil + (ay == 12), ay % 12 + 1, 1) - timedelta(days=1)).day
+            d = date(yil, ay, min(bugun.day, gun_say))
+        if not date(1900, 1, 1) <= d <= date(2200, 12, 31):
+            return None
+        return (f"📅 Bugünden ({_tarih_yaz(bugun)}) {n} {birim} {'önce' if isaret < 0 else 'sonra'}: "
+                f"**{d.day} {_AYLAR[d.month - 1]} {d.year}, {_GUNLER[d.weekday()]}**"), "📅 Tarih Hesaplayıcı"
+
     # Hangi gün?
     if tarihler and re.search(r"hangi\s*gün|ne\s*gün|günlerden\s*ne", t):
         d = tarihler[0]

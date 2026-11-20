@@ -21,6 +21,13 @@ import re
 import sys
 import time
 import zlib
+
+# 🇹🇷 Saat dilimini sabitle: Streamlit Cloud sunucuları UTC'de çalışır; bu satır olmadan mesaj saatleri,
+# hatırlatıcılar, çalışma kayıtları ve yedek adları 3 saat geri (gece yarısı → önceki gün) olurdu.
+os.environ["TZ"] = "Europe/Istanbul"
+if hasattr(time, "tzset"):
+    time.tzset()
+
 import streamlit as st
 
 # 1. PROJE DİZİNİNİ EN YÜKSEK ÖNCELİKLE BAĞLA

@@ -112,6 +112,24 @@ class GuncelAsistanInternetsiz(unittest.TestCase):
             self.assertIsNone(m16.guncel_asistan_yanitla(metin)[0], metin)
 
 
+class GoreliTarih(unittest.TestCase):
+    def test_n_gun_sonra_ne_gun(self):
+        from datetime import timedelta
+        bugun = m16._simdi().date()
+        hedef = bugun + timedelta(days=3)
+        cevap = m16.guncel_asistan_yanitla("3 gün sonra ne gün")[0]
+        self.assertIn(f"**{hedef.day} {m16._AYLAR[hedef.month - 1]} {hedef.year}, {m16._GUNLER[hedef.weekday()]}**", cevap)
+        hedef = bugun - timedelta(days=14)
+        self.assertIn(f"{hedef.day} {m16._AYLAR[hedef.month - 1]}", m16.guncel_asistan_yanitla("2 hafta önce hangi gündü")[0])
+        self.assertIsNone(m16.guncel_asistan_yanitla("3 gün sonra arayacağım")[0])
+
+    def test_saat_dilimi_sabitlenmis(self):
+        with open(os.path.join(KOK, "main.py"), encoding="utf-8") as f:
+            kaynak = f.read()
+        # Bulut sunucusu UTC'dir: main.py, streamlit içe aktarılmadan önce saat dilimini İstanbul'a sabitlemeli
+        self.assertLess(kaynak.index('os.environ["TZ"] = "Europe/Istanbul"'), kaynak.index("import streamlit as st"))
+
+
 class GrafikCizici(unittest.TestCase):
     def test_parabol_analizi(self):
         cevap, etiket = m17.grafik_ciz("y = -x^2 + 2x + 3 grafiğini çiz")
