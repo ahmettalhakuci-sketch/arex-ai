@@ -19,7 +19,7 @@ def _guvenli_modul_yukle(modul_adi: str):
     if modul_adi in sys.modules and getattr(sys.modules[modul_adi], "__file__", None):
         return sys.modules[modul_adi]
     aday_yollar = [os.path.join(_MODUL_DIZINI, f"{modul_adi}.py")]
-    for _ana in [_MODUL_DIZINI, os.path.dirname(_MODUL_DIZINI)]:
+    for _ana in [_MODUL_DIZINI]:
         for _kok, _altlar, _dosyalar in os.walk(_ana):
             _altlar[:] = [d for d in _altlar if not d.startswith(".") and d not in ("__pycache__", "venv", ".venv")]
             if f"{modul_adi}.py" in _dosyalar:
