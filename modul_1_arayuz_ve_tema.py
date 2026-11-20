@@ -2246,7 +2246,7 @@ def hero_banner_goster(kalip_sayisi: int, aktif_tema: str = "Derin Lacivert (Kla
     html = (
         '<div class="premium-header">'
         '<span class="premium-header-title"><span class="arex-crest">RX</span> AREX AI STUDIO</span>'
-        f'<span class="premium-header-badge">v12.0 • Asil Lacivert • {aktif_tema}</span>'
+        f'<span class="premium-header-badge">v14 • {aktif_tema.replace(" (Klasik Ar)", "")}</span>'
         '</div>'
     )
     st.markdown(html, unsafe_allow_html=True)

@@ -524,7 +524,7 @@ def sistemi_baslat():
 
     with st.sidebar:
         st.markdown("### ⚡ AREX-1 Studio")
-        st.caption("v14 • Mobil Premium • Mantık Motoru • 15 Modül")
+        st.caption("v14 • Mobil Premium • Mantık Motoru • 23 Modül")
 
         _aktif_sag_kod = st.session_state.get("acik_kaynak_saglayici", "pollinations_free")
         _aktif_anahtar_var = bool(st.session_state.get("acik_kaynak_api_key", "").strip())
@@ -993,7 +993,7 @@ def sistemi_baslat():
             "🤖 Açık Kaynak AI & Ollama",
             "🛡️ Güvenlik Kalkanı & Rate Limit",
             "🧠 JSON Hafıza & Öğretilenler",
-            "📊 13 Modül Sistem Durumu",
+            "📊 Modül Sistem Durumu",
         ])
         with ay_tab1:
             st.subheader("🤖 Sohbet Botu İçin Açık Kaynaklı Yapay Zeka Siteleri")
@@ -1036,7 +1036,7 @@ def sistemi_baslat():
                 st.json(guncel_json)
 
         with ay_tab4:
-            st.subheader("📊 13 Modüllü Mimari ve Canlı Bağlantı Kontrolü")
+            st.subheader("📊 Modüler Mimari ve Canlı Bağlantı Kontrolü")
             m1, m2, m3, m4 = st.columns(4)
             m1.metric("Hazır AI Kalıbı", f"{len(kalip_havuzu):,}".replace(",", "."), "O(1) İndeks")
             m2.metric("Bağlı Modül Sayısı", "13 / 13 Modül", "Tam Entegre")

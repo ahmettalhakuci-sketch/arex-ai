@@ -346,11 +346,17 @@ def ust_gezinme(bolumler: dict, varsayilan: str) -> str:
         st.session_state["arex_nav_secim"] = kisa_onceki  # boş seçimi geri al
     with st.container(key="arex_nav"):
         secim_fn = getattr(st, "pills", None) or getattr(st, "segmented_control", None)
+        # ÖNEMLİ: 'default' her çalıştırmada AYNI olmalı. Değişirse Streamlit bunu yeni bir widget sayar,
+        # sıfırlar ve o anda yapılan dokunuş kaybolur (bölüm değiştikten sonraki ilk tıklama işlemezdi).
+        # Güncel seçim zaten key="arex_nav_secim" ile oturumda tutulur.
+        kisa_varsayilan = next((k for k, v in bolumler.items() if v == varsayilan), next(iter(bolumler)))
+        if "arex_nav_secim" not in st.session_state:
+            st.session_state["arex_nav_secim"] = kisa_onceki
         if secim_fn is not None:
-            secim = secim_fn("Bölüm", list(bolumler), default=kisa_onceki,
+            secim = secim_fn("Bölüm", list(bolumler), default=kisa_varsayilan,
                              label_visibility="collapsed", key="arex_nav_secim")
         else:  # çok eski Streamlit
-            secim = st.radio("Bölüm", list(bolumler), index=list(bolumler).index(kisa_onceki),
+            secim = st.radio("Bölüm", list(bolumler), index=list(bolumler).index(kisa_varsayilan),
                              horizontal=True, label_visibility="collapsed", key="arex_nav_secim")
     tam = bolumler.get(secim) if secim else onceki
     st.session_state["_arex_aktif_bolum"] = tam

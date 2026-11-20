@@ -2704,8 +2704,13 @@ def iha_ve_bebek_arabasi_studyosu_goster():
             hiz_ms = hedef_hiz_kms / 3.6
             gerekli_guc_watt = (f_toplam_n * hiz_ms) / 0.75
             teker_rpm = (hiz_ms / (2 * math.pi * yaricap_m)) * 60.0
-            ort_akim_a = max(1.2, gerekli_guc_watt / aku_volt)
+            # Motor seçimi en kötü durumla (maks. yokuş), akü süresi ise normal kullanımla (düz yol) hesaplanır;
+            # aksi halde araba hep yokuş çıkıyormuş gibi menzil olduğundan çok düşük çıkardı.
+            f_duz_n = toplam_kutle_kg * g_ivme * yuvarlanma_katsayisi
+            duz_guc_watt = (f_duz_n * hiz_ms) / 0.75 + 4.0  # +4 W: Arduino, sürücü kartı ve sensörlerin sabit tüketimi
+            ort_akim_a = duz_guc_watt / aku_volt
             calisma_saat = (aku_ah * 0.8) / ort_akim_a
+            yokus_saat = (aku_ah * 0.8) / max(0.1, (gerekli_guc_watt + 4.0) / aku_volt)
             menzil_km = calisma_saat * hedef_hiz_kms
             onerilen_pwm = min(255, max(90, int((hedef_hiz_kms / 6.0) * 255)))
 
@@ -2717,7 +2722,8 @@ def iha_ve_bebek_arabasi_studyosu_goster():
                         f"• <strong>Toplam İtki Kuvveti:</strong> <code>{f_toplam_n:.1f} N</code><br>"
                         f"• <strong>Gerekli Toplam Tork:</strong> <code>{toplam_tork_nm:.2f} N·m</code> (Motor Başına: <code>{motor_basi_tork_nm:.2f} N·m</code> / <code>{motor_basi_kgcm:.1f} kg·cm</code>)<br>"
                         f"• <strong>Gerekli Motor Gücü:</strong> <code>{gerekli_guc_watt:.1f} Watt</code> &nbsp;|&nbsp; <strong>Tekerlek Devri:</strong> <code>{teker_rpm:.0f} RPM</code><br>"
-                        f"• <strong>Tahmini Akü Süresi:</strong> <code>{calisma_saat:.1f} Saat</code> (Yaklaşık Menzil: <code>{menzil_km:.1f} km</code>)<br>"
+                        f"• <strong>Tahmini Akü Süresi (düz yol):</strong> <code>{calisma_saat:.1f} Saat</code> (Yaklaşık Menzil: <code>{menzil_km:.1f} km</code>) "
+                        f"— sürekli {egim_derece:.0f}° yokuşta: <code>{yokus_saat:.1f} Saat</code><br>"
                         f"• <strong>L298N Önerilen PWM Hızı:</strong> <code>{onerilen_pwm} / 255</code> &nbsp;|&nbsp; <strong>HC-SR04 Yankı Süresi:</strong> <code>{int(engel_fren_cm * 58.3)} µs</code>"
                     ),
                 ),
