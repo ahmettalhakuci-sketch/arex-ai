@@ -331,6 +331,7 @@ def _pomodoro(t: str):
     sayac[bugun] = sayac.get(bugun, 0) + 1
     ayar["pomodoro"] = sayac
     _yaz(m18.AYAR_DOSYASI, ayar)
+    m18.sayac_artir("pomodoro")
     n = sayac[bugun]
     uzun_mola = "\n- 🛋️ Bu 4. pomodoron — bitince **15-30 dk uzun mola** hak ettin!" if n % 4 == 0 else ""
     return (f"🍅 **Pomodoro başladı!** ({dk} dk)\n\n"

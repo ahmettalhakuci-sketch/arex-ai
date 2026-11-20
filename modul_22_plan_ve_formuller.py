@@ -12,6 +12,7 @@ AREX AI STUDIO — MODÜL 22: ÇALIŞMA PROGRAMI & FORMÜL KARTLARI (modul_22_pl
                           "fizik formülleri", "kimya formülleri", "formül kartları"
                           → internetsiz, anında, doğrulanmış özet
 
+  4. 🏅 Rozetler        : "rozetlerim" → çalışma verilerinden kazanılan rozetler + sıradaki hedefler
   3. 🎯 Panelim         : "panelim", "durumum", "bugünkü özetim" → sınav geri sayımı, bugünkü program,
                           günlük hedef, seri, son deneme, yanlış defteri, kart tekrarı, sıradaki hatırlatıcı
                           ve "sıradaki adım" önerisi tek kartta
@@ -299,6 +300,99 @@ def _formuller(t: str):
 
 
 # ==============================================================================
+# 🏅 ROZETLER — mevcut verilerden hesaplanır (ek takip yok)
+# ==============================================================================
+ROZETLER = [
+    ("🌱", "İlk Adım", "İlk çalışma kaydını gir", "toplam_soru_veya_dk", 1),
+    ("📘", "Yüzlük", "Toplam 100 soru çöz", "toplam_soru", 100),
+    ("📗", "Beş Yüzlük", "Toplam 500 soru çöz", "toplam_soru", 500),
+    ("📕", "Binlik", "Toplam 1000 soru çöz", "toplam_soru", 1000),
+    ("🏛️", "Soru Canavarı", "Toplam 5000 soru çöz", "toplam_soru", 5000),
+    ("⏳", "10 Saat", "Toplam 10 saat çalış", "toplam_dk", 600),
+    ("⌛", "50 Saat", "Toplam 50 saat çalış", "toplam_dk", 3000),
+    ("🔥", "Isınma", "3 gün üst üste çalış", "en_uzun_seri", 3),
+    ("🔥🔥", "Bir Hafta", "7 gün üst üste çalış", "en_uzun_seri", 7),
+    ("☄️", "Durdurulamaz", "30 gün üst üste çalış", "en_uzun_seri", 30),
+    ("🍅", "Odak Çırağı", "10 pomodoro başlat", "pomodoro", 10),
+    ("🍅🍅", "Odak Ustası", "50 pomodoro başlat", "pomodoro", 50),
+    ("📝", "Test Avcısı", "10 sohbet içi test bitir", "bitirilen_test", 10),
+    ("💯", "Kusursuz", "En az 5 soruluk bir testte 100 puan al", "tam_puan_test", 1),
+    ("📒", "Hatadan Ders", "Yanlış defterinden 10 soruyu öğrenildi yap", "ogrenilen_yanlis", 10),
+    ("🃏", "Ezberci", "20 kartı 5. kutuya çıkar", "ezber_kart", 20),
+    ("📈", "Denemeci", "5 deneme kaydet", "deneme_sayisi", 5),
+    ("🚀", "Yükseliş", "Aynı tür denemede ilk denemene göre +10 net", "net_artisi", 10),
+    ("🎯", "Hedefçi", "Günlük soru hedefini 5 farklı gün tuttur", "hedef_gun", 5),
+]
+
+
+def _rozet_olcumleri() -> dict:
+    kayitlar = m18._oku(m18.TAKIP_DOSYASI, [])
+    gunluk, toplam_soru, toplam_dk = {}, 0, 0
+    for k in kayitlar:
+        try:
+            soru, dk = int(k.get("soru_sayisi", 0) or 0), int(k.get("sure_dk", 0) or 0)
+            t = date.fromisoformat(k["tarih"])
+        except Exception:
+            continue
+        toplam_soru += soru
+        toplam_dk += dk
+        if soru or dk:
+            gunluk[t] = gunluk.get(t, 0) + soru
+    en_uzun, seri, onceki = 0, 0, None
+    for g in sorted(gunluk):
+        seri = seri + 1 if onceki and (g - onceki).days == 1 else 1
+        en_uzun, onceki = max(en_uzun, seri), g
+    ayar = m18._oku(m18.AYAR_DOSYASI, {})
+    hedef = int(ayar.get("gunluk_soru_hedefi", 0) or 0)
+    sayaclar = ayar.get("sayaclar", {})
+    denemeler = m18._oku(m21.DENEME_DOSYASI, [])
+    net_artisi = 0.0
+    for i, d in enumerate(denemeler):
+        ilk = next((x for x in denemeler[:i] if m21._ayni_tur(x, d["sinav"], d.get("dersler", {}))), None)
+        if ilk:
+            net_artisi = max(net_artisi, d["net"] - ilk["net"])
+    return {
+        "toplam_soru": toplam_soru, "toplam_dk": toplam_dk, "toplam_soru_veya_dk": 1 if gunluk else 0,
+        "en_uzun_seri": en_uzun, "pomodoro": int(sayaclar.get("pomodoro", 0)),
+        "bitirilen_test": int(sayaclar.get("bitirilen_test", 0)), "tam_puan_test": int(sayaclar.get("tam_puan_test", 0)),
+        "ogrenilen_yanlis": int(sayaclar.get("ogrenilen_yanlis", 0)),
+        "ezber_kart": sum(1 for k in m18._oku(m21.KART_DOSYASI, []) if k.get("kutu", 1) >= 5),
+        "deneme_sayisi": len(denemeler), "net_artisi": net_artisi,
+        "hedef_gun": sum(1 for s in gunluk.values() if hedef and s >= hedef),
+    }
+
+
+def rozet_durumu():
+    olc = _rozet_olcumleri()
+    kazanilan = [r for r in ROZETLER if olc[r[3]] >= r[4]]
+    siradaki = sorted((r for r in ROZETLER if olc[r[3]] < r[4]), key=lambda r: -olc[r[3]] / r[4])
+    return kazanilan, siradaki, olc
+
+
+def _rozetler(t: str):
+    if not re.search(r"^(?:benim\s*)?(?:rozetlerim|rozetler|rozetlerimi\s*göster|başarımlarım|madalyalarım"
+                     r"|kaç\s*rozetim\s*var|hangi\s*rozetler\w*\s*(?:var|kazandım))\W*$", t):
+        return None
+    kazanilan, siradaki, olc = rozet_durumu()
+    s = [f"🏅 **Rozetlerin** — {len(kazanilan)}/{len(ROZETLER)}", ""]
+    if kazanilan:
+        s.append(" ".join(f"{r[0]} **{r[1]}**" for r in kazanilan))
+    else:
+        s.append("Henüz rozetin yok — ilk rozet için bir çalışma kaydı gir: *\"bugün 20 matematik sorusu çözdüm\"*")
+    if siradaki:
+        s += ["", "**Sıradaki hedefler:**"]
+        for r in siradaki[:4]:
+            mevcut = olc[r[3]]
+            oran = max(0.0, min(1.0, mevcut / r[4]))
+            dolu = round(oran * 10)
+            deger = m21._sayi(mevcut) if isinstance(mevcut, float) else mevcut
+            s.append(f"- {r[0]} {r[1]} — {r[2]} `{'█' * dolu}{'░' * (10 - dolu)}` {deger}/{r[4]}")
+    else:
+        s.append("\n🏆 **Tüm rozetleri topladın — efsanesin!**")
+    return "\n".join(s), "🏅 Rozetler"
+
+
+# ==============================================================================
 # PANELİM — tüm öğrenci verilerinin tek bakışta özeti
 # ==============================================================================
 def _panel(t: str):
@@ -377,6 +471,15 @@ def _panel(t: str):
         ne_zaman = f"{z:%H:%M}" if z.date() == bugun else f"{z.day} {m18._AYLAR[z.month - 1]} {z:%H:%M}"
         s.append(f"⏰ Sıradaki: {hat[0]['baslik']} — {ne_zaman}")
 
+    # Rozetler
+    try:
+        kazanilan, siradaki, olc = rozet_durumu()
+        if kazanilan or olc["toplam_soru_veya_dk"]:
+            yakin = f" · sıradaki: {siradaki[0][0]} {siradaki[0][1]}" if siradaki else ""
+            s.append(f"🏅 Rozetler: **{len(kazanilan)}/{len(ROZETLER)}**{yakin} → *\"rozetlerim\"*")
+    except Exception:
+        pass
+
     # Sıradaki adım (öncelik sırasıyla tek net öneri)
     if vadeli:
         adim = f"🃏 Önce **{min(vadeli, 10)} kartını** tekrar et → *\"kartları çalış\"*"
@@ -406,7 +509,7 @@ def plan_ve_formul_yanitla(metin: str):
             return _program_olustur(t)
         except Exception:
             return None, None
-    for fonk in (_panel, _bugun_ne_calisayim, _formuller):
+    for fonk in (_panel, _rozetler, _bugun_ne_calisayim, _formuller):
         try:
             sonuc = fonk(t)
         except Exception:

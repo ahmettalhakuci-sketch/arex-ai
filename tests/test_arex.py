@@ -349,6 +349,21 @@ class PlanVeFormuller(unittest.TestCase):
         for soru in ("panel nasıl yapılır", "güneş paneli fiyatları", "durumum kötü"):
             self.assertIsNone(self._y(soru)[0], soru)
 
+    def test_rozetler(self):
+        m18.TAKIP_DOSYASI = os.path.join(self.klasor, "takip.json")
+        self.assertIn("0/19", self._y("rozetlerim")[0])
+        bugun = m18._simdi().date()
+        with open(m18.TAKIP_DOSYASI, "w", encoding="utf-8") as f:
+            json.dump([{"ders": "Matematik", "konu": "x", "soru_sayisi": 40, "sure_dk": 60,
+                        "tarih": (bugun - __import__("datetime").timedelta(days=i)).isoformat()} for i in range(3)], f)
+        cevap = self._y("rozetlerim")[0]
+        self.assertIn("İlk Adım", cevap)
+        self.assertIn("Yüzlük", cevap)
+        self.assertIn("Isınma", cevap)
+        self.assertIn("Rozetler", self._y("panelim")[0])
+        for soru in ("rozet nasıl yapılır kumaştan", "madalya kazanan türk sporcular"):
+            self.assertIsNone(self._y(soru)[0], soru)
+
     def test_formuller(self):
         self.assertIn("Zincir", self._y("türev formülleri")[0])
         self.assertIn("P·V = n·R·T", self._y("kimya formülleri")[0])
@@ -441,6 +456,7 @@ class SohbetYonlendirme(unittest.TestCase):
         self.assertIn("Formül", self._etiket("türev formülleri"))
         self.assertIn("Yanlış", self._etiket("yanlış defterim"))
         self.assertIn("Panel", self._etiket("panelim"))
+        self.assertIn("Rozet", self._etiket("rozetlerim"))
         self.assertIn("Program", self._etiket("bana haftalık çalışma programı hazırla"))
 
 

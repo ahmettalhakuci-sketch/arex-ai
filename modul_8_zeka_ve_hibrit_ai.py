@@ -4155,6 +4155,7 @@ YARDIM_VE_HELP_YANITI = """🤝 **Elbette Ahmet! İşte seninle neler yapabilece
 * 📅 **Sınav geri sayımı:** *"fizik sınavım 5 aralıkta"*, *"sınavlarıma kaç gün kaldı"*
 * 🍅 **Pomodoro:** *"pomodoro başlat"*, *"50 dakika pomodoro"*
 * 🃏 **Kelime kartları:** *"kart ekle: apple = elma; book = kitap"*, *"kartları çalış"*, *"hazır desteler"*
+* 🏅 **Rozetler:** *"rozetlerim"* — çalıştıkça 19 rozet kazanırsın
 * 🎯 **Panelim:** *"panelim"* — sınav, program, hedef, deneme, kartlar ve sıradaki adım tek kartta
 * 📒 **Yanlış defteri:** testte yanlış yaptıkların otomatik kaydedilir · *"yanlış defterim"*, *"yanlışlarımı tekrar et"*
 * 🗓️ **Çalışma programı:** *"bana haftalık çalışma programı hazırla"*, *"bugün ne çalışayım"*

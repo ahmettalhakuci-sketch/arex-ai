@@ -338,6 +338,17 @@ def _cevap_dogru_mu(verilen: str, dogru: str) -> bool:
 _OGRENILDI_ESIGI = 2
 
 
+def sayac_artir(anahtar: str, miktar: int = 1):
+    """Rozetler için kalıcı sayaç (arex_calisma_ayarlari.json → 'sayaclar')."""
+    try:
+        ayar = _oku(AYAR_DOSYASI, {})
+        sayaclar = ayar.setdefault("sayaclar", {})
+        sayaclar[anahtar] = int(sayaclar.get(anahtar, 0)) + miktar
+        _yaz(AYAR_DOSYASI, ayar)
+    except Exception:
+        pass
+
+
 def _yanlisa_ekle(q, verilen: str = "") -> bool:
     """Testte yanlış/boş bırakılan soruyu yanlış defterine yazar (aynı soru tekrar eklenmez, sayacı artar)."""
     liste = _oku(YANLIS_DOSYASI, [])
@@ -365,6 +376,7 @@ def _defter_dogru(q) -> str:
             if k["dogru_tekrar"] >= _OGRENILDI_ESIGI:
                 liste.remove(k)
                 _yaz(YANLIS_DOSYASI, liste)
+                sayac_artir("ogrenilen_yanlis")
                 return "\n\n🎓 Bu soruyu üst üste 2 kez doğru yaptın — **öğrenildi**, yanlış defterinden çıkardım!"
             _yaz(YANLIS_DOSYASI, liste)
             return f"\n\n📒 Defterde: {k['dogru_tekrar']}/{_OGRENILDI_ESIGI} doğru tekrar"
@@ -491,6 +503,9 @@ def _test_bitir(oturum, erken=False):
         _kayit_ekle("Matematik", f"Sohbet testi: {d['konu']}", toplam, 0, _simdi().date())
     except Exception:
         pass
+    sayac_artir("bitirilen_test")
+    if puan == 100 and toplam >= 5:
+        sayac_artir("tam_puan_test")
     return (f"🏁 **Test {'erken ' if erken else ''}bitti!**\n\n"
             f"- ✅ Doğru: **{d['dogru']}** · ❌ Yanlış: **{d['yanlis']}** · ⏭️ Boş: **{d['bos']}**\n"
             f"- Puan: **{puan}/100** {yorum}\n- Çözdüğün {toplam} soru çalışma takibine eklendi 📊{_defter_ozeti(d)}\n\n"
