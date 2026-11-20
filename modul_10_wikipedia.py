@@ -699,7 +699,7 @@ def wikipedia_konu_ayikla(kullanici_girdisi: str) -> str:
     """
     temiz = str(kullanici_girdisi or "").strip()
     temiz = re.sub(
-        r"^(?:wikipedia|vikipedi|wiki|araştır|arastir|bana|lütfen|lutfen|acaba|ar|hey\s+ar|merhaba|selam|peki)\s*[:\-]?\s*",
+        r"^(?:wikipedia|vikipedi|wiki|araştır|arastir|bana|lütfen|lutfen|acaba|ar|hey\s+ar|merhaba|selam|peki(?:\s+ya)?)\b\s*[:\-]?\s*",
         "",
         temiz,
         flags=re.IGNORECASE,
@@ -721,6 +721,7 @@ def wikipedia_konu_ayikla(kullanici_girdisi: str) -> str:
         r"\s+(?:ne\s+zaman\s+(?:kuruldu|yıkıldı|doğdu|öldü|yapıldı|keşfedildi|icat\s+edildi|başladı|bitti))$",
         r"\s+(?:nasıl\s+(?:oluşur|çalışır|yapılır|yapilir|olur|kuruldu|keşfedildi|bir\s+yer|bir\s+şehir|bir\s+ülke))$",
         r"\s+(?:kimdir|kim|nedir|ne\s+demektir|ne\s+demek|nerededir|nerede\s+bulunur|nerede|neresi(?:dir)?|nasıldır|nasıl|nasil)$",
+        r"\s+(?:kaç(?:tır|tir)?|kac|ne\s+kadar(?:dır)?|hangisi(?:dir)?|hangileri(?:dir)?|nelerdir|ne\s+zaman(?:dır)?|ne)$",
         # v14: "Osmanlı neden çöktü", "II. Dünya Savaşı niçin başladı", "Roma ne zaman yıkıldı" → soru kalıbını at
         r"\s+(?:neden|niçin|nicin|niye|ne\s+zaman|nasıl|nasil|hangi\s+yıl(?:da)?|kaç\s+yılında)(?:\s+[a-zçğıöşü]+){1,2}$",
         r"\s+(?:mimarisi|tarihi|yemekleri|özellikleri|nedenleri|sonuçları|neler|nelerdir)$",
@@ -740,6 +741,44 @@ def wikipedia_konu_ayikla(kullanici_girdisi: str) -> str:
     return temiz.strip("?!.,;:\"' ")
 
 _WIKI_ONBELLEK = {}
+
+# Türkçe soruda yaygın kavramların Türkçe Vikipedi'deki doğru maddesi
+_KONU_TAKMA_ADLARI = {
+    "kurtuluş savaşı": "Türk Kurtuluş Savaşı", "kurtulus savasi": "Türk Kurtuluş Savaşı",
+    "istiklal savaşı": "Türk Kurtuluş Savaşı", "milli mücadele": "Türk Kurtuluş Savaşı",
+    "milli mucadele": "Türk Kurtuluş Savaşı",
+}
+
+
+def iyelik_adaylari(konu: str) -> list:
+    """'fransanın başkenti' → [("fransa'nın başkenti", "fransa", "başkenti"), ("fransan'ın …", "fransan", …)]
+    Türkçe tamlayan eki: ünlüden sonra -nın/-nin/-nun/-nün, ünsüzden sonra -ın/-in/-un/-ün.
+    'newtonun' hem newto-nun hem newton-un olabilir → ikisi de aday; hangisinin gerçek madde
+    olduğuna Wikipedia karar verir."""
+    m = re.match(r"^\s*(\S+)\s+(.+?)\s*$", konu or "")
+    if not m:
+        return []
+    kelime, ozellik = m.group(1), m.group(2)
+    if len(ozellik.split()) > 4:
+        return []
+    kelime = kelime.replace("’", "'")
+    unlu = "aeıioöuüâî"
+    adaylar = []
+    for ek_uz in (3, 2):  # önce -nın (ünlü kök), sonra -ın (ünsüz kök)
+        ek = kelime[-ek_uz:]
+        kok = kelime[:-ek_uz].rstrip("'")
+        if not re.fullmatch(r"n?[ıiuü]n", ek) or len(kok) < 3:
+            continue
+        if ek.startswith("n") != (kok[-1].lower() in unlu):
+            continue  # ünlü kök → -nın, ünsüz kök → -ın
+        adaylar.append((f"{kok}'{ek} {ozellik}", kok, ozellik))
+    return adaylar
+
+
+def iyelik_ayir(konu: str):
+    """İlk iyelik adayı (geriye uyumluluk) ya da None."""
+    a = iyelik_adaylari(konu)
+    return a[0] if a else None
 
 
 def _http_json_getir(url: str, timeout: int = 7):
@@ -812,6 +851,7 @@ def wikipedia_madde_getir(sorgu: str, dil: str = "tr", detay_karakter: int = 450
     konu = wikipedia_konu_ayikla(sorgu)
     if not konu:
         return {"basarili": False, "hata": "Lütfen aramak istediğiniz bir konu başlığı girin."}
+    konu = _KONU_TAKMA_ADLARI.get(konu.replace("İ", "i").replace("I", "ı").lower().strip(), konu)
 
     def _tr_ascii(s: str) -> str:
         return (
@@ -952,6 +992,66 @@ def wikipedia_madde_getir(sorgu: str, dil: str = "tr", detay_karakter: int = 450
                 "diger_oneriler": [a["baslik"] for a in adaylar[1:5]],
             }
         return None
+
+    # İyelikli sorular: "fransanın başkenti", "newtonun hareket yasaları"
+    iyelikler = iyelik_adaylari(konu) if dil == "tr" else []
+    if iyelikler:
+        tam_baslik, kok, ozellik = iyelikler[0]
+        try:
+            for _tam, _, _ in iyelikler:
+                if _dogrudan_baslik_dene(_tam, dil):  # "Newton'un hareket yasaları" gibi gerçek madde
+                    sonuc = _tek_dil_cek(_tam, dil)
+                    if sonuc:
+                        return sonuc
+            # Başlık büyük harf/ek yazımı farklı olabilir ("İstanbul'un Fethi", "Newton'ın hareket yasaları"):
+            # aramada özellik kelimelerinin TÜMÜ ve kök başlıkta geçiyorsa o maddeyi al (Eurovision gibi alakasızlar elenir)
+            def _kok5(w):
+                return _tr_ascii(w)[:5]
+            gerekli = [_kok5(w) for w in ozellik.split() if len(w) >= 3 and _tr_ascii(w) != "en"] + [_kok5(kok)]
+            _gorulen = set()
+            for _sorgu in (konu, f"{kok} {ozellik}"):
+                for aday in wikipedia_arama_onerileri(_sorgu, dil=dil, limit=6):
+                    b = aday.get("baslik", "")
+                    if b in _gorulen:
+                        continue
+                    _gorulen.add(b)
+                    b_kel = [w for w in re.findall(r"[a-z0-9]+", _tr_ascii(b)) if len(w) >= 2]
+                    if len(b_kel) > len(gerekli) + 3:
+                        continue  # "…nüfusu 100.000'in üzerindeki şehirler listesi" gibi uzun liste maddeleri
+                    if gerekli and all(any(bk.startswith(g) or (len(bk) >= 5 and g.startswith(bk))
+                                           for bk in b_kel) for g in gerekli):
+                        sonuc = _tek_dil_cek(b, dil)
+                        if sonuc:
+                            return sonuc
+            if re.search(r"(?:^|\s)en\s", ozellik + " "):
+                # "dünyanın en uzun nehri": 'Dünya' maddesi yanıltıcı bağlam olur → madde getirme
+                return {"basarili": False, "hata": f"'{konu}' için tek bir Wikipedia maddesi yok."}
+            # Kişinin adıyla anılan kavram ("einsteinın görelilik teorisi", "mendelin kanunları"):
+            # asıl konu kişi değil kavramın kendisidir → kavram maddesini dene
+            if re.search(r"(?:teori|kuram|yasa|kanun|ilke|denklem|deney|paradoks|teorem|sabit|ilkesi|modeli|etkisi)",
+                         _tr_ascii(ozellik).replace("ı", "i")) and len(ozellik.split()) >= 2:
+                kavram_kok = [_kok5(w) for w in ozellik.split() if len(w) >= 3]
+                adaylar_k = ([{"baslik": ozellik}] if _dogrudan_baslik_dene(ozellik, dil) else []) + \
+                    wikipedia_arama_onerileri(ozellik, dil=dil, limit=5)
+                for aday in adaylar_k:
+                    b_kel = [w for w in re.findall(r"[a-z0-9]+", _tr_ascii(aday.get("baslik", ""))) if len(w) >= 2]
+                    # kavramın kelimelerinin çoğu (en fazla 1 eksik) başlıkta olmalı: "Kuvvet" ✗, "Görelilik teorisi" ✓
+                    eslesen = sum(1 for g in kavram_kok if any(bk.startswith(g) or (len(bk) >= 5 and g.startswith(bk)) for bk in b_kel))
+                    if eslesen >= max(2, len(kavram_kok) - 1) and len(b_kel) <= len(kavram_kok) + 3:
+                        sonuc = _tek_dil_cek(aday["baslik"], dil)
+                        if sonuc:
+                            return sonuc
+            # Kök: önce doğrudan başlığı gerçekten var olan aday ("fransa" ✓, "fransan" ✗; "newton" ✓, "newto" ✗)
+            for _, _kok, _ in iyelikler:
+                if _dogrudan_baslik_dene(_kok, dil):
+                    sonuc = _tek_dil_cek(_kok, dil)
+                    if sonuc:
+                        return sonuc
+            sonuc = _tek_dil_cek(kok, dil)
+            if sonuc:
+                return sonuc
+        except Exception:
+            pass
 
     try:
         sonuc = _tek_dil_cek(konu, dil)

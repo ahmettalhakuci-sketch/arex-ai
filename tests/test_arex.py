@@ -130,6 +130,31 @@ class GoreliTarih(unittest.TestCase):
         self.assertLess(kaynak.index('os.environ["TZ"] = "Europe/Istanbul"'), kaynak.index("import streamlit as st"))
 
 
+class WikipediaKonu(unittest.TestCase):
+    def test_iyelik_ayirma(self):
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            import modul_10_wikipedia as m10
+        self.assertEqual(m10.iyelik_ayir("fransanın başkenti"), ("fransa'nın başkenti", "fransa", "başkenti"))
+        # belirsiz bölünmelerde her iki kök de aday olmalı (doğrusunu Wikipedia seçer)
+        self.assertIn("newton", [k for _, k, _ in m10.iyelik_adaylari("newtonun hareket yasaları")])
+        self.assertIn("fransa", [k for _, k, _ in m10.iyelik_adaylari("fransanın başkenti")])
+        self.assertIn("türkiye", [k for _, k, _ in m10.iyelik_adaylari("türkiyenin başkenti")])
+        self.assertIn("einstein", [k for _, k, _ in m10.iyelik_adaylari("einsteinın görelilik teorisi")])
+        for konu in ("yapay zeka", "fotosentez", "mısır piramitleri", "osmanlı imparatorluğu"):
+            self.assertIsNone(m10.iyelik_ayir(konu), konu)
+
+    def test_soru_sonu_temizligi(self):
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            import modul_10_wikipedia as m10
+        self.assertEqual(m10.wikipedia_konu_ayikla("istanbulun fethi ne zaman"), "istanbulun fethi")
+        self.assertEqual(m10.wikipedia_konu_ayikla("almanyanın nüfusu kaç"), "almanyanın nüfusu")
+        self.assertEqual(m10.wikipedia_konu_ayikla("dünyanın en uzun nehri hangisi"), "dünyanın en uzun nehri")
+        # "ar" (eski asistan adı) yalnızca ayrı kelimeyse silinmeli: "arşimet" → "şimet" OLMAMALI
+        for soru, konu in (("arşimet kimdir", "arşimet"), ("arjantin nerede", "arjantin"), ("ar: fotosentez nedir", "fotosentez"),
+                           ("pekin nerede", "pekin"), ("peki ya mars", "mars"), ("selamlar nasılsın", "selamlar nasılsın")):
+            self.assertEqual(m10.wikipedia_konu_ayikla(soru), konu, soru)
+
+
 class GrafikCizici(unittest.TestCase):
     def test_parabol_analizi(self):
         cevap, etiket = m17.grafik_ciz("y = -x^2 + 2x + 3 grafiğini çiz")
