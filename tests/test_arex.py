@@ -147,10 +147,26 @@ class CalismaKocu(unittest.TestCase):
         m18.TAKIP_DOSYASI = os.path.join(self.klasor, "takip.json")
         m18.AYAR_DOSYASI = os.path.join(self.klasor, "ayar.json")
         m18.HATIRLATICI_DOSYASI = os.path.join(self.klasor, "hat.json")
+        m18.YANLIS_DOSYASI = os.path.join(self.klasor, "yanlis.json")
         self.oturum = {}
 
     def _y(self, metin):
         return m18.calisma_kocu_yanitla(metin, self.oturum)
+
+    def test_yanlis_defteri(self):
+        random.seed(2)
+        self._y("bana 2 matematik sorusu sor")
+        self._y("999999")
+        self.assertIn("**2** soru yanlış defterine eklendi", self._y("geç")[0])
+        defter = self._y("yanlış defterim")[0]
+        self.assertIn("2 kayıt", defter)
+        for _ in range(2):
+            self._y("yanlışlarımı tekrar et")
+            while "arex_test" in self.oturum:
+                d = self.oturum["arex_test"]
+                self._y(str(d["sorular"][d["sira"]]["cevap"]))
+        self.assertIn("boş", self._y("yanlış defterim")[0])
+        self.assertIn("eklendi (#", self._y("yanlış defterine ekle: zincir kuralını unuttum")[0])
 
     def test_takip_ve_rapor(self):
         self.assertIn("Kaydettim: Matematik", self._y("bugün 30 matematik sorusu çözdüm")[0])
@@ -338,6 +354,7 @@ class SohbetYonlendirme(unittest.TestCase):
         m8._m18.TAKIP_DOSYASI = os.path.join(klasor, "t.json")
         m8._m18.AYAR_DOSYASI = os.path.join(klasor, "a.json")
         m8._m18.HATIRLATICI_DOSYASI = os.path.join(klasor, "h.json")
+        m8._m18.YANLIS_DOSYASI = os.path.join(klasor, "y.json")
         m8._m21.SINAV_DOSYASI = os.path.join(klasor, "s.json")
         m8._m21.KART_DOSYASI = os.path.join(klasor, "k.json")
         m8._m21.DENEME_DOSYASI = os.path.join(klasor, "d.json")
@@ -368,6 +385,7 @@ class SohbetYonlendirme(unittest.TestCase):
         self.assertIn("Deneme", self._etiket("denemelerim"))
         self.assertIn("Kart", self._etiket("hazır desteler"))
         self.assertIn("Formül", self._etiket("türev formülleri"))
+        self.assertIn("Yanlış", self._etiket("yanlış defterim"))
         self.assertIn("Program", self._etiket("bana haftalık çalışma programı hazırla"))
 
 

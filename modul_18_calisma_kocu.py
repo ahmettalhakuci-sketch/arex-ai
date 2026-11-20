@@ -11,6 +11,9 @@ AREX AI STUDIO — MODÜL 18: ÇALIŞMA KOÇU (TAKİP • SOHBET İÇİ TEST •
   2. 📝 Sohbet içi test   : "bana 5 matematik sorusu sor", "köklü sayılardan test yap"
                            → 130 tekil soruluk bankadan sorar, cevabı (6√3 = "6 kök 3" gibi
                              eşdeğer yazımlar dahil) kontrol eder, çözümü gösterir, puanlar
+     📒 Yanlış defteri: testte yanlış/boş bırakılan sorular otomatik kaydedilir;
+                           "yanlış defterim", "yanlışlarımı tekrar et" (2 kez doğru → öğrenildi),
+                           "yanlış defterine ekle: <not>", "#3 yanlışı sil"
   3. ⏰ Hatırlatıcı       : "yarın 8'de fizik sınavımı hatırlat", "20 dakika sonra su içmeyi hatırlat"
                            → uygulama açıkken bildirim (toast) + telefonda gerçek alarm için
                              tek dokunuşla Google Takvim'e ekleme bağlantısı
@@ -40,6 +43,7 @@ _KOK = os.path.dirname(os.path.abspath(__file__))
 TAKIP_DOSYASI = os.path.join(_KOK, "ahmet_soru_takip.json")      # Modül 7 ile ortak
 AYAR_DOSYASI = os.path.join(_KOK, "arex_calisma_ayarlari.json")
 HATIRLATICI_DOSYASI = os.path.join(_KOK, "arex_hatirlaticilar.json")
+YANLIS_DOSYASI = os.path.join(_KOK, "arex_yanlis_defteri.json")
 
 _GUNLER = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
 _GUN_KISA = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"]
@@ -331,6 +335,109 @@ def _cevap_dogru_mu(verilen: str, dogru: str) -> bool:
         return False
 
 
+_OGRENILDI_ESIGI = 2
+
+
+def _yanlisa_ekle(q, verilen: str = "") -> bool:
+    """Testte yanlış/boş bırakılan soruyu yanlış defterine yazar (aynı soru tekrar eklenmez, sayacı artar)."""
+    liste = _oku(YANLIS_DOSYASI, [])
+    for k in liste:
+        if k.get("soru") == q["soru"]:
+            k["kac_kez"] = k.get("kac_kez", 1) + 1
+            k["dogru_tekrar"] = 0
+            k["son"] = _simdi().date().isoformat()
+            _yaz(YANLIS_DOSYASI, liste)
+            return False
+    no = max([k["no"] for k in liste] + [0]) + 1
+    liste.append({"no": no, "ders": "Matematik", "konu": q.get("konu", ""), "soru": q["soru"], "cevap": q.get("cevap"),
+                  "cozum": q.get("cozum", ""), "verilen": verilen[:60], "kac_kez": 1, "dogru_tekrar": 0,
+                  "tarih": _simdi().date().isoformat(), "son": _simdi().date().isoformat()})
+    _yaz(YANLIS_DOSYASI, liste)
+    return True
+
+
+def _defter_dogru(q) -> str:
+    """Defterden sorulan soru doğru bilindi → sayaç; eşiğe ulaşınca defterden çıkar."""
+    liste = _oku(YANLIS_DOSYASI, [])
+    for k in liste:
+        if k.get("soru") == q["soru"]:
+            k["dogru_tekrar"] = k.get("dogru_tekrar", 0) + 1
+            if k["dogru_tekrar"] >= _OGRENILDI_ESIGI:
+                liste.remove(k)
+                _yaz(YANLIS_DOSYASI, liste)
+                return "\n\n🎓 Bu soruyu üst üste 2 kez doğru yaptın — **öğrenildi**, yanlış defterinden çıkardım!"
+            _yaz(YANLIS_DOSYASI, liste)
+            return f"\n\n📒 Defterde: {k['dogru_tekrar']}/{_OGRENILDI_ESIGI} doğru tekrar"
+    return ""
+
+
+def _yanlis_defteri(t: str, ham: str):
+    m = re.match(r"\s*yanlış\s*defter\w*\s*ekle\s*[:\-]?\s*(.+)$", ham, flags=re.I | re.S) or \
+        re.match(r"\s*yanl[ıi]ş\s*defter\w*\s*ekle\s*[:\-]?\s*(.+)$", _kucult(ham), flags=re.S)
+    if m:
+        not_metni = m.group(1).strip()[:400]
+        if len(not_metni) < 3:
+            return "📒 Ne ekleyeyim? Örnek: *\"yanlış defterine ekle: zincir kuralında içi türevlemeyi unuttum\"*", "📒 Yanlış Defteri"
+        liste = _oku(YANLIS_DOSYASI, [])
+        no = max([k["no"] for k in liste] + [0]) + 1
+        liste.append({"no": no, "ders": _ders_bul(_kucult(not_metni)) or "Genel", "konu": "Not", "soru": not_metni,
+                      "cevap": None, "kac_kez": 1, "dogru_tekrar": 0, "tarih": _simdi().date().isoformat(),
+                      "son": _simdi().date().isoformat()})
+        _yaz(YANLIS_DOSYASI, liste)
+        return f"📒 Yanlış defterine eklendi (#{no}). Görmek için: *\"yanlış defterim\"*", "📒 Yanlış Defteri"
+    m = re.search(r"#?(\d+)\s*(?:nolu|numaralı)?\s*yanlış\w*\s*sil", t)
+    if m:
+        no = int(m.group(1))
+        liste = _oku(YANLIS_DOSYASI, [])
+        yeni = [k for k in liste if k["no"] != no]
+        if len(yeni) == len(liste):
+            return f"📒 #{no} numaralı kayıt bulamadım.", "📒 Yanlış Defteri"
+        _yaz(YANLIS_DOSYASI, yeni)
+        return f"🗑️ #{no} yanlış defterinden silindi.", "📒 Yanlış Defteri"
+    if not re.search(r"yanlış\s*defter(?:im|imi|imde)|yanlışlarım(?:ı\s*(?:göster|listele))?$|yanlışlarımı\s*göster", t):
+        return None
+    liste = _oku(YANLIS_DOSYASI, [])
+    if not liste:
+        return ("📒 Yanlış defterin boş. Sohbet içi testte yanlış yaptığın ya da geçtiğin sorular buraya otomatik "
+                "eklenir. Kendin not eklemek için: *\"yanlış defterine ekle: ...\"*"), "📒 Yanlış Defteri"
+    gruplar = {}
+    for k in liste:
+        gruplar.setdefault(f"{k.get('ders', 'Genel')} · {k.get('konu') or 'Genel'}", []).append(k)
+    satirlar = [f"📒 **Yanlış Defterin** — {len(liste)} kayıt", ""]
+    for grup, kayitlar in sorted(gruplar.items(), key=lambda g: -len(g[1])):
+        satirlar.append(f"**{grup}** ({len(kayitlar)})")
+        for k in kayitlar[:6]:
+            soru = re.sub(r"\s+", " ", k["soru"])
+            ek = f" · ✍️ {k['kac_kez']} kez yanlış" if k.get("kac_kez", 1) > 1 else ""
+            ek += f" · ✅ {k['dogru_tekrar']}/{_OGRENILDI_ESIGI}" if k.get("dogru_tekrar") else ""
+            satirlar.append(f"- #{k['no']} {soru[:90]}{'…' if len(soru) > 90 else ''}{ek}")
+        satirlar.append("")
+    sorulabilir = sum(1 for k in liste if k.get("cevap"))
+    if sorulabilir:
+        satirlar.append(f"🔁 {sorulabilir} soruyu tekrar çözebilirsin: *\"yanlışlarımı tekrar et\"* "
+                        f"(üst üste {_OGRENILDI_ESIGI} kez doğru yapınca defterden çıkar)")
+    satirlar.append("Silmek için: *\"#3 yanlışı sil\"*")
+    return "\n".join(satirlar), "📒 Yanlış Defteri"
+
+
+def _defter_testi_baslat(t: str, oturum):
+    if not re.search(r"yanlışlarım\w*\s*(?:tekrar|sor|çöz|çalış)|yanlış\s*defter\w*\s*(?:den|ndan)?\s*(?:soru|test|tekrar)", t):
+        return None
+    havuz = [k for k in _oku(YANLIS_DOSYASI, []) if k.get("cevap")]
+    if not havuz:
+        return ("📒 Tekrar edilecek soru yok — yanlış defterin boş ya da sadece not içeriyor. "
+                "Önce bir test çöz: *\"bana 5 matematik sorusu sor\"*"), "📒 Yanlış Defteri"
+    havuz.sort(key=lambda k: (k.get("son", ""), -k.get("kac_kez", 1)))
+    sorular = [{"soru": k["soru"], "cevap": k["cevap"], "cozum": k.get("cozum", ""), "konu": k.get("konu", "")}
+               for k in havuz[:10]]
+    random.shuffle(sorular)
+    oturum.pop("arex_kart", None)
+    oturum["arex_test"] = {"sorular": sorular, "sira": 0, "dogru": 0, "yanlis": 0, "bos": 0, "ipucu": False,
+                           "konu": "Yanlış Defteri", "kaynak": "defter"}
+    return (f"🔁 **Yanlış defteri tekrarı** — {len(sorular)} soru. Bu sefer olacak! 💪\n\n"
+            + _soru_metni(oturum["arex_test"])), "📒 Yanlış Defteri"
+
+
 def _soru_metni(durum) -> str:
     q = durum["sorular"][durum["sira"]]
     return (f"**Soru {durum['sira'] + 1}/{len(durum['sorular'])}** · _{q['konu']}_\n\n{q['soru']}\n\n"
@@ -362,6 +469,14 @@ def _konu_kisa_adi(konu: str) -> str:
     return next((k for k, v in _KONU_ANAHTAR.items() if v == konu), "matematik")
 
 
+def _defter_ozeti(d) -> str:
+    n = d.get("defter_eklenen", 0)
+    if d.get("kaynak") == "defter":
+        kalan = len(_oku(YANLIS_DOSYASI, []))
+        return f"\n- 📒 Yanlış defterinde **{kalan}** kayıt kaldı"
+    return f"\n- 📒 **{n}** soru yanlış defterine eklendi → *\"yanlışlarımı tekrar et\"*" if n else ""
+
+
 def _test_bitir(oturum, erken=False):
     d = oturum.pop("arex_test", None)
     if not d:
@@ -378,7 +493,7 @@ def _test_bitir(oturum, erken=False):
         pass
     return (f"🏁 **Test {'erken ' if erken else ''}bitti!**\n\n"
             f"- ✅ Doğru: **{d['dogru']}** · ❌ Yanlış: **{d['yanlis']}** · ⏭️ Boş: **{d['bos']}**\n"
-            f"- Puan: **{puan}/100** {yorum}\n- Çözdüğün {toplam} soru çalışma takibine eklendi 📊\n\n"
+            f"- Puan: **{puan}/100** {yorum}\n- Çözdüğün {toplam} soru çalışma takibine eklendi 📊{_defter_ozeti(d)}\n\n"
             f"Yeniden denemek için: *\"bana 5 {_konu_kisa_adi(d['konu'])} sorusu sor\"*"), "📝 Test Sonucu"
 
 
@@ -407,9 +522,20 @@ def _test_cevapla(metin: str, oturum):
     elif _cevap_dogru_mu(metin, q["cevap"]):
         d["dogru"] += 1
         sonuc = f"✅ **Doğru!** {'(ipucuyla 😉)' if d['ipucu'] else '🎉'}\n> {q.get('cozum', '')}"
+        if d.get("kaynak") == "defter":
+            try:
+                sonuc += _defter_dogru(q)
+            except Exception:
+                pass
     else:
         d["yanlis"] += 1
         sonuc = f"❌ **Yanlış.** Doğru cevap: **{q['cevap']}**\n> {q.get('cozum', '')}"
+    if gec or not sonuc.startswith("✅"):
+        try:
+            if _yanlisa_ekle(q, "" if gec else metin):
+                d["defter_eklenen"] = d.get("defter_eklenen", 0) + 1
+        except Exception:
+            pass
     d["sira"] += 1
     d["ipucu"] = False
     if d["sira"] >= len(d["sorular"]):
@@ -581,7 +707,8 @@ def calisma_kocu_yanitla(metin: str, oturum):
     except Exception:
         oturum.pop("arex_test", None)
     t = _kucult(metin)
-    for fonk in (lambda: _test_baslat(t, oturum), lambda: _hatirlatici(t, metin), lambda: _hedef_ayarla(t),
+    for fonk in (lambda: _defter_testi_baslat(t, oturum), lambda: _yanlis_defteri(t, metin),
+                 lambda: _test_baslat(t, oturum), lambda: _hatirlatici(t, metin), lambda: _hedef_ayarla(t),
                  lambda: _rapor(t), lambda: _calisma_kaydi(t)):
         try:
             sonuc = fonk()

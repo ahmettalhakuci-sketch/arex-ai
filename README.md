@@ -20,6 +20,7 @@ uygulama gibi (ana ekrana eklenerek), bilgisayarda masaüstü düzeninde çalı�
 | 📅 Sınav geri sayımı | *"fizik sınavım 5 aralıkta"*, *"sınavlarıma kaç gün kaldı"* (+ çalışma planı önerisi) |
 | 🍅 Pomodoro | *"pomodoro başlat"*, *"50 dakika pomodoro"* — süre bitince ekranda hatırlatır |
 | 🃏 Kelime kartları | *"kart ekle: apple = elma; book = kitap"*, *"kartları çalış"* (Leitner aralıklı tekrar), *"hazır desteler"* (İngilizce, başkentler, elementler) |
+| 📒 Yanlış defteri | Testte yanlış/boş bıraktığın sorular otomatik kaydedilir · *"yanlış defterim"*, *"yanlışlarımı tekrar et"* (2 kez doğru → öğrenildi), *"yanlış defterine ekle: ..."* |
 | 🗓️ Çalışma programı | *"bana haftalık çalışma programı hazırla"*, *"günde 3 saat program yap"*, *"bugün ne çalışayım"* (sınavına, denemelerine ve çalışma kayıtlarına göre) |
 | 📐 Formül kartları | *"türev formülleri"*, *"trigonometri formülleri"*, *"fizik formülleri"*, *"formül kartları"* (internetsiz) |
 | 📈 Deneme takibi | *"deneme: türkçe 30 doğru 6 yanlış matematik 22 doğru 8 yanlış"* → kaydeder; *"denemelerim"* → gelişim grafiği |
