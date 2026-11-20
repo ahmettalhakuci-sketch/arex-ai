@@ -133,8 +133,15 @@ def yedekten_geri_yukle(zip_bayt: bytes) -> tuple:
 def yedekleme_paneli():
     """Yan menüde gösterilen yedekle / geri yükle paneli."""
     with st.expander("💾 Verilerimi Yedekle / Geri Yükle", expanded=False):
-        st.caption("Bulutta uygulama yeniden başlayınca kayıtlar sıfırlanabilir. Ara sıra yedek indir; "
-                   "gerekirse aynı dosyayı geri yükle.")
+        try:
+            import modul_24_kalici_depo as m24
+            st.caption(m24.durum_metni())
+            bulut_acik = m24.etkin_mi()
+        except Exception:
+            bulut_acik = False
+        if not bulut_acik:
+            st.caption("Bulutta uygulama yeniden başlayınca kayıtlar sıfırlanabilir. Ara sıra yedek indir; "
+                       "gerekirse aynı dosyayı geri yükle.")
         if st.button("📦 Yedek Hazırla", use_container_width=True, key="arex_yedek_hazirla"):
             veri, dahil = yedek_zip_olustur()
             st.session_state["_arex_yedek_veri"] = (veri, dahil)

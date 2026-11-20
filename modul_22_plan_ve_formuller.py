@@ -488,7 +488,8 @@ def _panel(t: str):
     try:
         import modul_20_yedekleme as m20
         import modul_23_erisim as m23
-        if m23.bulutta_mi():
+        import modul_24_kalici_depo as m24
+        if m23.bulutta_mi() and not m24.etkin_mi():  # kalıcı depo açıksa yedek hatırlatmaya gerek yok
             gerekli, gecen = m20.yedek_gerekli_mi()
             if gerekli:
                 s.append("💾 " + ("Hiç yedek almadın" if gecen is None else f"Son yedek **{gecen} gün** önce")

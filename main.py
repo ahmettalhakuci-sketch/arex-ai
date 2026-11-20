@@ -451,6 +451,14 @@ def sistemi_baslat():
     import modul_23_erisim as _m23_erisim
     _m23_erisim.erisim_kapisi()
 
+    # ☁️ Kalıcı bulut deposu (Supabase tanımlıysa): ilk çalıştırmada veriler geri yüklenir (sayfa okumadan ÖNCE),
+    # sonraki her çalıştırmada değişen dosyalar arka planda gönderilir. Tanımlı değilse hiçbir şey yapmaz.
+    try:
+        import modul_24_kalici_depo as _m24_depo
+        _m24_depo.esitle(arka_planda=True)
+    except Exception:
+        _m24_depo = None
+
     # ⏰ Hatırlatıcı denetleyicisi: uygulama açıkken 30 sn'de bir zamanı gelenleri ekranda bildirir
     if hasattr(st, "fragment"):
         @st.fragment(run_every="30s")
@@ -459,6 +467,11 @@ def sistemi_baslat():
                 import modul_18_calisma_kocu as _m18k
                 for _h in _m18k.zamani_gelen_hatirlaticilar():
                     st.toast(f"⏰ **Hatırlatma:** {_h['baslik']}", icon="🔔")
+            except Exception:
+                pass
+            try:
+                if _m24_depo is not None:
+                    _m24_depo.esitle(arka_planda=True)  # sohbet dışı değişiklikler de 30 sn içinde buluta gider
             except Exception:
                 pass
         _hatirlatici_denetle()

@@ -60,6 +60,29 @@ AREX_ERISIM_SIFRESI = "en-az-8-karakterli-uzun-bir-sifre"
 Tanımlıysa uygulama her yeni oturumda bu şifreyi sorar (5 hatalı denemeden sonra artan bekleme).
 Kodda varsayılan şifre yoktur; tanımlamazsan bulutta yan menüde uyarı görürsün.
 
+## ☁️ Kalıcı kayıt (isteğe bağlı, ücretsiz Supabase)
+
+Streamlit Cloud yeniden başlayınca kayıtlar (denemeler, kartlar, yanlış defteri, öğrettiklerin…) silinebilir.
+Kalıcı olsun istersen:
+
+1. [supabase.com](https://supabase.com) → ücretsiz proje aç
+2. **SQL Editor**'da çalıştır:
+   ```sql
+   create table if not exists arex_veri (
+     ad text primary key,
+     icerik text not null,
+     guncelleme timestamptz not null default now()
+   );
+   alter table arex_veri enable row level security;
+   ```
+3. **Project Settings → API**'den URL ve **service_role** anahtarını Secrets'a ekle:
+   ```toml
+   SUPABASE_URL = "https://xxxx.supabase.co"
+   SUPABASE_KEY = "service_role-anahtarı"
+   ```
+Uygulama açılışta kayıtları veritabanından geri yükler, değişenleri otomatik gönderir (anahtar yalnızca
+sunucuda kullanılır, tarayıcıya gitmez). Tanımlamazsan yan menüdeki yedekle/geri yükle ile devam edebilirsin.
+
 ## Telefona kurulum (Streamlit Community Cloud — ücretsiz)
 
 1. Kodu GitHub'a gönder: `git push -u origin mobil-premium-v14`
@@ -106,3 +129,4 @@ yedekleme ve sohbet yönlendirmesini doğrular. Kod değiştirdikten sonra çal�
 | `modul_21_ogrenci_araclari.py` | Net hesaplama, deneme takibi, sınav geri sayımı, pomodoro, kelime kartları |
 | `modul_22_plan_ve_formuller.py` | Kişisel haftalık çalışma programı, formül kartları, Panelim, rozetler |
 | `modul_23_erisim.py` | Zorunlu erişim şifresi (Secrets) ve korumasız bulut uyarısı |
+| `modul_24_kalici_depo.py` | Supabase ile kalıcı kayıt (geri yükleme + değişenleri gönderme) |

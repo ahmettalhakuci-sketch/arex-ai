@@ -18,6 +18,7 @@ import random
 import socket
 import sys
 import tempfile
+import time
 import unittest
 import urllib.request
 import warnings
@@ -34,6 +35,7 @@ def _ag_kapali(*_a, **_k):
     raise OSError("testlerde ağ kapalı")
 
 
+_GERCEK_URLOPEN, _GERCEK_BAGLANTI = urllib.request.urlopen, socket.create_connection
 urllib.request.urlopen = _ag_kapali
 socket.create_connection = _ag_kapali
 
@@ -46,6 +48,7 @@ import modul_20_yedekleme as m20  # noqa: E402
 import modul_21_ogrenci_araclari as m21  # noqa: E402
 import modul_22_plan_ve_formuller as m22  # noqa: E402
 import modul_23_erisim as m23  # noqa: E402
+import modul_24_kalici_depo as m24  # noqa: E402
 
 
 def _sonuc(metin):
@@ -547,6 +550,114 @@ class YedekHatirlatici(unittest.TestCase):
             m23.bulutta_mi = eski_bulut
             for (m, a), v in eski.items():
                 setattr(m, a, v)
+
+
+class KaliciDepo(unittest.TestCase):
+    """Supabase REST (PostgREST) arayüzünü taklit eden yerel sahte sunucuyla uçtan uca eşitleme testi."""
+
+    @classmethod
+    def setUpClass(cls):
+        import http.server
+        import threading
+        cls.tablo = {}
+        cls.istekler = []
+        test = cls
+
+        class Sahte(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def _yaz(self, kod, govde=b""):
+                self.send_response(kod)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(govde)
+
+            def do_GET(self):
+                test.istekler.append(("GET", self.path, self.headers.get("apikey")))
+                if self.headers.get("apikey") != "test-anahtar":
+                    return self._yaz(401)
+                self._yaz(200, json.dumps(list(test.tablo.values())).encode())
+
+            def do_POST(self):
+                govde = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+                test.istekler.append(("POST", self.path, [r["ad"] for r in govde]))
+                for r in govde:
+                    test.tablo[r["ad"]] = r
+                self._yaz(201)
+
+        cls.sunucu = http.server.HTTPServer(("127.0.0.1", 0), Sahte)
+        threading.Thread(target=cls.sunucu.serve_forever, daemon=True).start()
+        cls.url = f"http://127.0.0.1:{cls.sunucu.server_address[1]}"
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.sunucu.shutdown()
+
+    def setUp(self):
+        urllib.request.urlopen, socket.create_connection = _GERCEK_URLOPEN, _GERCEK_BAGLANTI  # yalnızca 127.0.0.1
+        self.klasor = tempfile.mkdtemp()
+        self._eski_kok = m24._KOK
+        m24._KOK = self.klasor
+        self.tablo.clear()
+        self.istekler.clear()
+        m24._DURUM.update({"geri_yuklendi": False, "imzalar": {}, "son_esitleme": None, "son_hata": None})
+        os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"] = self.url, "test-anahtar"
+
+    def tearDown(self):
+        urllib.request.urlopen = socket.create_connection = _ag_kapali
+        m24._KOK = self._eski_kok
+        os.environ.pop("SUPABASE_URL", None)
+        os.environ.pop("SUPABASE_KEY", None)
+
+    def _dosya(self, ad, veri):
+        with open(os.path.join(self.klasor, ad), "w", encoding="utf-8") as f:
+            json.dump(veri, f)
+
+    def _oku(self, ad):
+        with open(os.path.join(self.klasor, ad), encoding="utf-8") as f:
+            return json.load(f)
+
+    def test_yapilandirma_yoksa_hicbir_sey_yapmaz(self):
+        os.environ.pop("SUPABASE_URL")
+        self.assertFalse(m24.etkin_mi())
+        m24.esitle(arka_planda=False)
+        self.assertEqual(self.istekler, [])
+
+    def test_ilk_yukleme_ve_yalnizca_degisenler(self):
+        self._dosya("arex_kartlar.json", [{"on": "apple", "arka": "elma"}])
+        self._dosya("komutlar.json", {"selam": "merhaba"})
+        m24.esitle(arka_planda=False)
+        self.assertEqual(set(self.tablo), {"arex_kartlar.json", "komutlar.json"})
+        self.istekler.clear()
+        m24.esitle(arka_planda=False)  # değişiklik yok → gönderim yok
+        self.assertFalse([i for i in self.istekler if i[0] == "POST"])
+        time.sleep(0.01)
+        self._dosya("arex_kartlar.json", [{"on": "book", "arka": "kitap"}])
+        m24.esitle(arka_planda=False)
+        self.assertEqual([i[2] for i in self.istekler if i[0] == "POST"], [["arex_kartlar.json"]])
+
+    def test_yeniden_baslangicta_geri_yukleme_ve_guvenlik_kopyasi(self):
+        self.tablo["komutlar.json"] = {"ad": "komutlar.json", "icerik": json.dumps({"ogrettigim": "cevap"}), "guncelleme": "x"}
+        self.tablo["arex_denemeler.json"] = {"ad": "arex_denemeler.json", "icerik": "[1, 2]", "guncelleme": "x"}
+        self.tablo["../main.py"] = {"ad": "../main.py", "icerik": "{}", "guncelleme": "x"}  # kötü niyetli ad
+        self._dosya("komutlar.json", {"repo": "eski hali"})  # bulut yeniden başladı: GitHub'daki eski dosya
+        m24.esitle(arka_planda=False)
+        self.assertEqual(self._oku("komutlar.json"), {"ogrettigim": "cevap"})
+        self.assertEqual(self._oku("arex_denemeler.json"), [1, 2])
+        self.assertFalse(os.path.exists(os.path.join(os.path.dirname(self.klasor), "main.py")))
+        kopyalar = os.listdir(os.path.join(self.klasor, "ar_acil_yedekler"))
+        self.assertTrue(kopyalar and kopyalar[0].startswith("bulut_oncesi_"))
+        # geri yüklenen içerik tekrar gönderilmemeli
+        self.assertFalse([i for i in self.istekler if i[0] == "POST"])
+
+    def test_ulasilamazsa_yerel_veri_ezilmez_ve_gonderilmez(self):
+        os.environ["SUPABASE_KEY"] = "yanlis-anahtar"
+        self._dosya("arex_kartlar.json", [1])
+        m24.esitle(arka_planda=False)
+        self.assertEqual(self._oku("arex_kartlar.json"), [1])
+        self.assertFalse([i for i in self.istekler if i[0] == "POST"])
+        self.assertIn("ulaşılamadı", m24.durum_metni())
 
 
 class SohbetYonlendirme(unittest.TestCase):
