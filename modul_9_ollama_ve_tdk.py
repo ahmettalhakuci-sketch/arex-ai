@@ -242,6 +242,9 @@ _BULUT_ENV_HARITASI = [
 ]
 
 
+_UCRETLI_SAGLAYICILAR = {"deepseek_cloud", "together_cloud", "mistral_cloud"}
+
+
 def _tum_bulut_anahtarlarini_topla(oncelikli_kod: str = "") -> list:
     """
     Streamlit Secrets ve ortam değişkenlerindeki (env) TÜM geçerli bulut AI anahtarlarını
@@ -271,6 +274,8 @@ def _tum_bulut_anahtarlarini_topla(oncelikli_kod: str = "") -> list:
     for kod, env_adlari in sirali:
         if kod in gorulen:
             continue
+        if kod in _UCRETLI_SAGLAYICILAR and kod != oncelikli_kod:
+            continue  # ücretli sağlayıcı yalnızca açıkça seçilirse
         for e_ad in env_adlari:
             val = os.environ.get(e_ad, "").strip()
             if not val:
@@ -905,9 +910,9 @@ ACIK_KAYNAK_AI_SAGLAYICILARI = {
         "aciklama": "Hiçbir üyelik veya API anahtarı gerektirmeden internete bağlıyken doğrudan açık kaynak dil modelleriyle Türkçe sohbet üretir.",
     },
     "groq_cloud": {
-        "ad": "⚡ Groq Cloud — Meta Llama 3.3 70B (Ücretsiz Hızlı API)",
+        "ad": "⚡ Groq Cloud — GPT-OSS 120B (Ücretsiz, Açık Ağırlıklı, Çok Hızlı)",
         "url": "https://api.groq.com/openai/v1/chat/completions",
-        "model": "llama-3.3-70b-versatile",
+        "model": "openai/gpt-oss-120b",
         "anahtar_gerekli": True,
         "site": "https://console.groq.com/keys",
         "aciklama": "Açık kaynaklı Meta Llama 3.3 70B ve Qwen 2.5 modellerini saniyede 300 kelime hızla ücretsiz çalıştıran en popüler geliştirici sitesidir.",
@@ -1177,8 +1182,14 @@ def _hata_kaydet(kod: str, mesaj: str):
         pass
 
 
+_GROQ_MODEL_ONBELLEK = {"liste": None, "zaman": 0.0}
+
+
 def _groq_aktif_model_kesfet(anahtar: str, models_url_ozel: str = None) -> list:
-    """Groq /openai/v1/models ucundan hesabın şu an aktif olan sohbet modellerini canlı çeker (404 kendi kendini onarır!)."""
+    """Groq /openai/v1/models ucundan hesabın şu an aktif olan sohbet modellerini canlı çeker (404 kendi kendini onarır!).
+    Sonuç 1 saat önbellekte tutulur (her soruda tekrar çekilmez)."""
+    if _GROQ_MODEL_ONBELLEK["liste"] and time.time() - _GROQ_MODEL_ONBELLEK["zaman"] < 3600 and not models_url_ozel:
+        return list(_GROQ_MODEL_ONBELLEK["liste"])
     try:
         url = models_url_ozel or "https://api.groq.com/openai/v1/models"
         req = urllib.request.Request(
@@ -1195,9 +1206,9 @@ def _groq_aktif_model_kesfet(anahtar: str, models_url_ozel: str = None) -> list:
         # Yalnızca sohbet modelleri (whisper, guard, tts, embed hariç)
         sohbet = [
             mid for mid in tum
-            if not any(x in mid.lower() for x in ("whisper", "guard", "tts", "orpheus", "playai", "embed", "safeguard", "prompt-guard"))
+            if not any(x in mid.lower() for x in ("whisper", "guard", "tts", "orpheus", "playai", "embed", "safeguard", "prompt-guard", "allam"))
         ]
-        oncelik = ["llama-3.3-70b", "qwen", "gpt-oss-120b", "llama-3.1-8b-instant", "llama-4", "gemma"]
+        oncelik = ["gpt-oss-120b", "llama-3.3-70b", "gpt-oss-20b", "qwen", "llama-4", "llama-3.1-8b-instant", "gemma"]
         sirali = []
         for on in oncelik:
             for mid in sohbet:
@@ -1206,6 +1217,8 @@ def _groq_aktif_model_kesfet(anahtar: str, models_url_ozel: str = None) -> list:
         for mid in sohbet:
             if mid not in sirali:
                 sirali.append(mid)
+        if sirali and not models_url_ozel:
+            _GROQ_MODEL_ONBELLEK.update(liste=sirali[:4], zaman=time.time())
         return sirali[:4]
     except Exception:
         return []
@@ -1362,7 +1375,8 @@ def _bulut_anahtarli_ai_cagir(
     # kullanıcıya hata göstermeden anında sıradaki güçlü modele geçilir.
     _model_adaylari = [bilgi["model"]]
     if hedef_kod == "groq_cloud":
-        for _yedek_m in ("openai/gpt-oss-120b", "llama-3.1-8b-instant", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"):
+        # Önbellekteki canlı model listesi (varsa) → 404 turu yaşanmaz
+        for _yedek_m in (_GROQ_MODEL_ONBELLEK.get("liste") or ("openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b")):
             if _yedek_m not in _model_adaylari:
                 _model_adaylari.append(_yedek_m)
     elif hedef_kod == "openrouter":
@@ -1406,6 +1420,9 @@ def _bulut_anahtarli_ai_cagir(
                 "temperature": 0.45 if not ek_baglam else 0.35,
                 "max_tokens": 4096,
             }
+            if "gpt-oss" in _aktif_model:
+                # Akıl yürütme gerekmeyen sohbette kısa düşünme → ~%30 daha hızlı; muhakeme isteğinde orta
+                payload["reasoning_effort"] = "medium" if "AKIL YÜRÜTME TALİMATI" in (ek_baglam or "") else "low"
             hdrs = {
                 "Content-Type": "application/json",
                 "Accept": "application/json",
@@ -1424,7 +1441,7 @@ def _bulut_anahtarli_ai_cagir(
                 headers=hdrs,
                 method="POST",
             )
-            with urllib.request.urlopen(req, timeout=6.5) as resp:
+            with urllib.request.urlopen(req, timeout=(15 if hedef_kod == "groq_cloud" else 6.5)) as resp:
                 veri = json.loads(resp.read().decode("utf-8"))
                 cevap = _ollama_yanit_temizle(veri["choices"][0]["message"]["content"])
                 if cevap:

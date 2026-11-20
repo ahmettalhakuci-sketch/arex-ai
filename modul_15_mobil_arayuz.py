@@ -30,6 +30,9 @@ def kapak_ekrani_goster(surum: str = "v14"):
     """İlk açılışta tam ekran animasyonlu kapak. Saf CSS: 2,6 sn sonra kendiliğinden kaybolur,
     tıklamaları engellemez ve aynı oturumda tekrar gösterilmez."""
     if st.session_state.get("_arex_kapak_gosterildi"):
+        # Aynı konumda görünmez yer tutucu: sonraki öğelerin kimliği değişmesin
+        # (aksi halde ilk etkileşimde açık bölümler/pencereler kendiliğinden kapanır)
+        st.markdown('<span id="arex-kapak-yer" style="display:none"></span>', unsafe_allow_html=True)
         return
     st.session_state["_arex_kapak_gosterildi"] = True
     st.markdown(

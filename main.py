@@ -81,6 +81,11 @@ except Exception:
     m17_medya = None
 
 try:
+    import modul_19_cevap_varyantlari as m19_varyant
+except Exception:
+    m19_varyant = None
+
+try:
     import modul_15_mobil_arayuz as m15_mobil
     m15_mobil.kapak_ekrani_goster()
     m15_mobil.pwa_baglantilarini_ekle()
@@ -403,6 +408,8 @@ def mesaji_isle_ve_arastir(girdi_metni: str, hedef_dil: str):
     _yanit_svg = None
     if m17_medya is not None:
         cevap, _yanit_svg = m17_medya.svg_ayikla(cevap)
+    if m19_varyant is not None:  # yerel cevaplarda olasılıklı çeşitlilik (AI cevaplarına dokunmaz)
+        cevap = m19_varyant.cevabi_cesitlendir(cevap, islem_etiketi)
     st.session_state.messages.append(
         {"role": "user", "content": girdi_metni, "zaman": su_an, "tarih": bugun_str, "etiket": islem_etiketi}
     )
@@ -497,7 +504,7 @@ def sistemi_baslat():
 
         _aktif_sag_kod = st.session_state.get("acik_kaynak_saglayici", "pollinations_free")
         _aktif_anahtar_var = bool(st.session_state.get("acik_kaynak_api_key", "").strip())
-        _rozet_metin = "⚡ GROQ 70B + OTONOM AJAN AKTİF" if (_aktif_sag_kod == "groq_cloud" and _aktif_anahtar_var) else "🧠 TAM OTONOM AJAN AKTİF"
+        _rozet_metin = "⚡ GROQ GPT-OSS 120B + OTONOM AJAN" if (_aktif_sag_kod == "groq_cloud" and _aktif_anahtar_var) else "🧠 TAM OTONOM AJAN AKTİF"
         st.markdown(f'<span class="live-badge">{_rozet_metin}</span>', unsafe_allow_html=True)
         st.caption("Tuş seçmene gerek yok; AREX kendisi Wikipedia, Harita, Fiyat, TDK ve Çoklu AI arasında gidip gelerek en mantıklı yanıtı kurar.")
         st.markdown("#### 🔌 Zeka Kaynakları")
@@ -709,8 +716,7 @@ def sistemi_baslat():
 
         # 🎤 Sesli soru + 📸 Fotoğraftan soru (telefonda tek dokunuşla)
         with st.container(key="arex_medya"):
-            _md_ses, _md_foto = st.columns([3, 2], vertical_alignment="bottom")
-            with _md_ses:
+            with st.container():
                 if hasattr(st, "audio_input"):
                     _kayit = st.audio_input("🎤 Sesli sor", label_visibility="collapsed", key="arex_ana_mikrofon")
                     if _kayit is not None:
@@ -724,36 +730,62 @@ def sistemi_baslat():
                                 st.session_state["sesli_girdi"] = _soz
                             elif _soz_hata:
                                 st.warning(_soz_hata)
-            with _md_foto:
-                with st.popover("📸 Fotoğraftan Soru", use_container_width=True):
-                    st.caption("Kitaptaki sorunun fotoğrafını çek veya galeriden seç; AREX adım adım çözsün.")
-                    _foto = st.file_uploader("Soru fotoğrafı", type=["png", "jpg", "jpeg", "webp", "heic"],
-                                             label_visibility="collapsed", key="arex_foto_soru")
-                    _foto_not = st.text_input("Not (isteğe bağlı)", placeholder="ör. sadece 4. soruyu çöz",
-                                              key="arex_foto_not")
-                    if _foto is not None:
-                        st.image(_foto, use_container_width=True)
-                        if st.button("🧠 Soruyu Çöz", type="primary", use_container_width=True, key="arex_foto_coz"):
-                            _gem_key = ""
-                            try:
-                                _gem_key = m9_ollama_tdk._saglayici_icin_anahtar_bul("gemini_free", "")
-                            except Exception:
-                                pass
-                            if not _gem_key:
-                                st.info("📸 Fotoğraf çözümü için ücretsiz bir **Google Gemini** anahtarı gerekiyor: "
-                                        "[aistudio.google.com/apikey](https://aistudio.google.com/apikey) → anahtarı "
-                                        "yan menüdeki **🔑 Hızlı Groq / Bulut Anahtarı Bağla** bölümüne yapıştır "
-                                        "(veya Streamlit Secrets'a `GEMINI_API_KEY` olarak ekle).")
-                            else:
-                                with st.spinner("📸 Soru okunuyor ve çözülüyor..."):
-                                    _f_cevap, _f_hata = m17_medya.fotograftan_soru_coz(_foto.getvalue(), _gem_key, _foto_not)
+            with st.container():
+                with st.expander("📎 Fotoğraf / Video ile Sor", expanded=False):
+                    _groq_key = ""
+                    try:
+                        _groq_key = m9_ollama_tdk._saglayici_icin_anahtar_bul("groq_cloud", "")
+                    except Exception:
+                        pass
+                    _sek_foto, _sek_video = st.tabs(["📸 Fotoğraftan Soru", "🎬 Video / Ses Özeti"])
+                    with _sek_foto:
+                        st.caption("Kitaptaki sorunun fotoğrafını çek veya galeriden seç; AREX adım adım çözsün. "
+                                   "İpucu: soruyu düz ve net çek, tek soru kadrajda olsun.")
+                        _foto = st.file_uploader("Soru fotoğrafı", type=["png", "jpg", "jpeg", "webp"],
+                                                 label_visibility="collapsed", key="arex_foto_soru")
+                        _foto_not = st.text_input("Not (isteğe bağlı)", placeholder="ör. sadece 4. soruyu çöz",
+                                                  key="arex_foto_not")
+                        if _foto is not None:
+                            st.image(_foto, use_container_width=True)
+                            if st.button("🧠 Soruyu Çöz", type="primary", use_container_width=True, key="arex_foto_coz"):
+                                _gem_key = ""
+                                try:
+                                    _gem_key = m9_ollama_tdk._saglayici_icin_anahtar_bul("gemini_free", "")
+                                except Exception:
+                                    pass
+                                _f_cevap, _f_hata = None, None
+                                with st.spinner("📸 Fotoğraf okunuyor ve soru çözülüyor..."):
+                                    if _gem_key:  # isteğe bağlı: Gemini görüntüyü doğrudan görür (daha isabetli)
+                                        _f_cevap, _f_hata = m17_medya.fotograftan_soru_coz(_foto.getvalue(), _gem_key, _foto_not)
+                                    if not _f_cevap and m17_medya.ocr_hazir_mi() and _groq_key:
+                                        _f_cevap, _f_hata = m17_medya.fotograftan_soru_coz_ucretsiz(
+                                            _foto.getvalue(), _groq_key, _foto_not)
+                                    elif not _f_cevap and not _f_hata:
+                                        _f_hata = ("Yazı okuma (OCR) bu sunucuda kurulu değil. Streamlit Cloud'da "
+                                                   "packages.txt ile otomatik kurulur.")
                                 if _f_cevap:
-                                    _dogrudan_sohbete_ekle(f"📸 Fotoğraftaki soruyu çöz{': ' + _foto_not if _foto_not else ''}",
-                                                           _f_cevap, "📸 Fotoğraftan Soru")
+                                    _dogrudan_sohbete_ekle(
+                                        f"📸 Fotoğraftaki soruyu çöz{': ' + _foto_not if _foto_not else ''}",
+                                        _f_cevap, "📸 Fotoğraftan Soru")
                                     st.session_state["yeni_yanit_akisi"] = True
                                     st.rerun()
                                 else:
                                     st.error(f"Çözülemedi: {_f_hata}")
+                    with _sek_video:
+                        st.caption("Ders videosu, ses kaydı veya sesli not yükle; konuşmayı yazıya döküp özetleyeyim "
+                                   "(Groq Whisper, ücretsiz). YouTube için bağlantıyı sohbete yapıştırman yeterli.")
+                        _medya = st.file_uploader("Video / ses", type=["mp4", "mov", "m4a", "mp3", "wav", "ogg", "webm", "3gp", "aac", "flac"],
+                                                  label_visibility="collapsed", key="arex_medya_dosya")
+                        if _medya is not None and st.button("🎬 Özetle", type="primary", use_container_width=True,
+                                                            key="arex_medya_ozetle"):
+                            with st.spinner("🎧 Konuşma yazıya dökülüyor ve özetleniyor..."):
+                                _m_cevap, _m_hata = m17_medya.medya_dosyasini_ozetle(_medya.getvalue(), _medya.name, _groq_key)
+                            if _m_cevap:
+                                _dogrudan_sohbete_ekle(f"🎬 Bu kaydı özetle: {_medya.name}", _m_cevap, "🎬 Video / Ses Özeti")
+                                st.session_state["yeni_yanit_akisi"] = True
+                                st.rerun()
+                            else:
+                                st.error(f"Özetlenemedi: {_m_hata}")
 
         # Sesli okuma: Önce metin ekranda ANINDA görünür, ses hemen ardından hazırlanır (arayüzü kilitlemez!)
         if st.session_state.get("bekleyen_ses"):

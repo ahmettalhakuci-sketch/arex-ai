@@ -9,6 +9,7 @@ Cümle Bozukluklarını Temizleme ve Geniş Yerleşik Ansiklopedi (modul_10_wiki
 """
 import importlib.util
 import json
+import time
 import os
 import re
 import sys
@@ -720,6 +721,8 @@ def wikipedia_konu_ayikla(kullanici_girdisi: str) -> str:
         r"\s+(?:ne\s+zaman\s+(?:kuruldu|yıkıldı|doğdu|öldü|yapıldı|keşfedildi|icat\s+edildi|başladı|bitti))$",
         r"\s+(?:nasıl\s+(?:oluşur|çalışır|yapılır|yapilir|olur|kuruldu|keşfedildi|bir\s+yer|bir\s+şehir|bir\s+ülke))$",
         r"\s+(?:kimdir|kim|nedir|ne\s+demektir|ne\s+demek|nerededir|nerede\s+bulunur|nerede|neresi(?:dir)?|nasıldır|nasıl|nasil)$",
+        # v14: "Osmanlı neden çöktü", "II. Dünya Savaşı niçin başladı", "Roma ne zaman yıkıldı" → soru kalıbını at
+        r"\s+(?:neden|niçin|nicin|niye|ne\s+zaman|nasıl|nasil|hangi\s+yıl(?:da)?|kaç\s+yılında)(?:\s+[a-zçğıöşü]+){1,2}$",
         r"\s+(?:mimarisi|tarihi|yemekleri|özellikleri|nedenleri|sonuçları|neler|nelerdir)$",
         r"\s+(?:vikipedi(?:\s*de\s*ara)?|wikipedia(?:\s*da\s*ara)?)$",
     ]
@@ -736,16 +739,29 @@ def wikipedia_konu_ayikla(kullanici_girdisi: str) -> str:
     temiz = re.sub(r"^karadelik$", "Kara delik", temiz, flags=re.IGNORECASE)
     return temiz.strip("?!.,;:\"' ")
 
+_WIKI_ONBELLEK = {}
+
+
 def _http_json_getir(url: str, timeout: int = 7):
+    """Wikimedia API isteği: kimlikli User-Agent (Wikimedia politikası, hız sınırına daha az takılır)
+    ve 1 saatlik bellek içi önbellek (aynı konu tekrar sorulunca anında yanıt)."""
+    simdi = time.time()
+    kayit = _WIKI_ONBELLEK.get(url)
+    if kayit and simdi - kayit[0] < 3600:
+        return kayit[1]
     req = urllib.request.Request(
         url,
         headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0 AREX-AI/12.1/3",
+            "User-Agent": "AREX-AI-Studio/14 (+https://streamlit.io; egitim asistani)",
             "Accept": "application/json",
         },
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+        veri = json.loads(resp.read().decode("utf-8"))
+    if len(_WIKI_ONBELLEK) > 400:
+        _WIKI_ONBELLEK.clear()
+    _WIKI_ONBELLEK[url] = (simdi, veri)
+    return veri
 
 
 def wikipedia_arama_onerileri(sorgu: str, dil: str = "tr", limit: int = 6) -> list:
@@ -860,19 +876,55 @@ def wikipedia_madde_getir(sorgu: str, dil: str = "tr", detay_karakter: int = 450
                 en_iyi_b = b
         return en_iyi_b
 
+    def _detay_url(baslik: str, hedef_dil: str) -> str:
+        return (f"https://{hedef_dil}.wikipedia.org/w/api.php?"
+                f"action=query&prop=extracts|pageimages|info|pageprops&ppprop=disambiguation&inprop=url&pithumbsize=500"
+                f"&explaintext=1&{'exchars=1200' if detay_karakter <= 1200 else 'exintro=1'}&redirects=1"
+                f"&titles={urllib.parse.quote(baslik)}&format=json&utf8=1")
+
+    def _dogrudan_baslik_dene(aranan_baslik: str, hedef_dil: str):
+        """'Fatih Sultan Mehmet' → (yönlendirme) 'II. Mehmed'. Anlam ayrımı sayfalarını atlar.
+        İçerik aynı istekte gelir → arama + içerik için 2 yerine tek istek."""
+        if not aranan_baslik or len(aranan_baslik.split()) > 6:
+            return None
+        baslik = aranan_baslik.strip()
+        if hedef_dil == "tr":
+            kucuk = baslik.replace("İ", "i").replace("I", "ı").lower()
+            kucuk = re.sub(r"^ikinci\s+", "II. ", kucuk)
+            kucuk = re.sub(r"^birinci\s+", "I. ", kucuk)
+            if kucuk != baslik.replace("İ", "i").replace("I", "ı").lower():
+                baslik = kucuk.replace("dünya savaşı", "Dünya Savaşı")
+            else:
+                baslik = (baslik[:1].replace("i", "İ").replace("ı", "I").upper() if baslik[:1] in "iı" else baslik[:1].upper()) + baslik[1:]
+        else:
+            baslik = baslik[:1].upper() + baslik[1:]
+        try:
+            v = _http_json_getir(_detay_url(baslik, hedef_dil), timeout=5)
+        except Exception:
+            return None
+        for pid, sayfa in v.get("query", {}).get("pages", {}).items():
+            if str(pid) == "-1" or "missing" in sayfa or "disambiguation" in sayfa.get("pageprops", {}):
+                return None
+            if not sayfa.get("extract", "").strip():
+                return None
+            return sayfa.get("title"), baslik
+        return None
+
     def _tek_dil_cek(aranan_baslik: str, hedef_dil: str):
-        adaylar = wikipedia_arama_onerileri(aranan_baslik, dil=hedef_dil, limit=5)
-        secilen_baslik = _en_alakali_aday_sec(aranan_baslik, adaylar)
+        dogrudan = _dogrudan_baslik_dene(aranan_baslik, hedef_dil)
+        istek_basligi = None
+        if dogrudan:
+            secilen_baslik, istek_basligi = dogrudan
+            adaylar = [{"baslik": secilen_baslik, "kisa_ozet": ""}]
+        else:
+            adaylar = wikipedia_arama_onerileri(aranan_baslik, dil=hedef_dil, limit=5)
+            secilen_baslik = _en_alakali_aday_sec(aranan_baslik, adaylar)
         if not secilen_baslik:
             return None
 
         q_title = urllib.parse.quote(secilen_baslik)
-        detay_url = (
-            f"https://{hedef_dil}.wikipedia.org/w/api.php?"
-            f"action=query&prop=extracts|pageimages|info&inprop=url&pithumbsize=500"
-            f"&explaintext=1&redirects=1&titles={q_title}&format=json&utf8=1"
-        )
-        veri = _http_json_getir(detay_url)
+        # Doğrudan başlıkla geldiyse aynı URL önbellekte → ek ağ isteği yok
+        veri = _http_json_getir(_detay_url(istek_basligi or secilen_baslik, hedef_dil))
         sayfalar = veri.get("query", {}).get("pages", {})
         for pid, sayfa in sayfalar.items():
             if str(pid) == "-1" or "missing" in sayfa:

@@ -79,7 +79,16 @@ AHMET_BILGI_TABANI = _m3.AHMET_BILGI_TABANI
 GENEL_SORU_CEVAP_TABANI = _m3.GENEL_SORU_CEVAP_TABANI
 OZEL_CEVAP_KURALLARI = _m3.OZEL_CEVAP_KURALLARI
 json_komut_ekle = _m3.json_komut_ekle
-json_oku = _m3.json_oku
+
+# Soru genişletme (Modül 19): özel kurallar, profil ve öğretilen hafızaya ek soru kalıpları
+try:
+    _m19 = _guvenli_modul_yukle("modul_19_cevap_varyantlari")
+    _m19.tablolari_genislet(OZEL_CEVAP_KURALLARI, AHMET_BILGI_TABANI)
+
+    def json_oku():
+        return _m19.json_kayitlarini_genislet(_m3.json_oku())
+except Exception:
+    json_oku = _m3.json_oku
 karekok_sadelestir = _m4.karekok_sadelestir
 matematik_motoru_calistir = _m4.matematik_motoru_calistir
 
@@ -4122,7 +4131,9 @@ YARDIM_VE_HELP_YANITI = """🤝 **Elbette Ahmet! İşte seninle neler yapabilece
 * 📖 **İngilizce Sözlük:** *"ingilizce serendipity ne demek"*
 * 📈 **Grafik Çizici:** *"y = x^2 - 4 grafiğini çiz"*, *"y = sin(x) grafiği"*, *"y = 1/x grafiği -5 ile 5 arasında"*
 * 🎤 **Sesli Soru:** Sohbetin altındaki mikrofona dokun ve konuş.
-* 📸 **Fotoğraftan Soru:** *"📸 Fotoğraftan Soru"* düğmesiyle kitaptaki sorunun fotoğrafını gönder.
+* 📸 **Fotoğraftan Soru:** *"📎 Fotoğraf / Video"* → kitaptaki sorunun fotoğrafını gönder (ücretsiz OCR + Groq).
+* 🎬 **Video / Ses Özeti:** *"📎 Fotoğraf / Video"* → ders videosu veya ses kaydı yükle, yazıya döküp özetleyeyim.
+* ▶️ **YouTube Özeti:** Sohbete bir YouTube bağlantısı yapıştır, altyazısından Türkçe özet çıkarayım.
 * 📊 **Çalışma Takibi:** *"bugün 30 matematik sorusu çözdüm"*, *"45 dakika fizik çalıştım"*, *"günlük hedefim 50 soru"*, *"bu hafta ne kadar çalıştım"*
 * 📝 **Sohbet İçi Test:** *"bana 5 matematik sorusu sor"*, *"köklü sayılardan test yap"* (ipucu · geç · testi bitir)
 * ⏰ **Hatırlatıcı:** *"yarın 8'de fizik sınavımı hatırlat"*, *"20 dakika sonra su içmeyi hatırlat"*, *"hatırlatıcılarım"*
@@ -5200,6 +5211,14 @@ def akilli_yanit_uret(kullanici_girdisi: str, hedef_dil: str = "tr"):
             _ck_yanit, _ck_etiket = None, None
         if _ck_yanit:
             return _ck_yanit, hedef_dil, _ck_etiket
+    if _grafik_ciz is not None and not ozel_ai_saglayici and _m17.youtube_kimligi(kullanici_girdisi):
+        try:
+            _yt_yanit, _yt_etiket = _m17.youtube_ozetle(
+                kullanici_girdisi, _m9._saglayici_icin_anahtar_bul("groq_cloud", ""))
+        except Exception:
+            _yt_yanit, _yt_etiket = None, None
+        if _yt_yanit:
+            return _yt_yanit, hedef_dil, _yt_etiket
     if _grafik_ciz is not None and not ozel_ai_saglayici:
         try:
             _gr_yanit, _gr_etiket = _grafik_ciz(kullanici_girdisi)
@@ -5460,7 +5479,11 @@ def akilli_yanit_uret(kullanici_girdisi: str, hedef_dil: str = "tr"):
             st.session_state["aktif_konu"] = re.sub(r"\s*\([^)]*\)", "", bio_ad).strip()
         else:
             # Eğer bir mekan/yapı 'nasıl?' diye sorulduysa ('Fatih Camii nasıl?') önce yerleşik mekan bilgisine bak!
-            mekan_s = acik_kaynak_adres_bul(bio_parcasi)
+            # Yalnızca yerleşik konum belleği (internet harita araması burada kullanılmıyordu → ~4 sn kazanç)
+            try:
+                mekan_s = acik_kaynak_adres_bul(bio_parcasi, sadece_yerel=True)
+            except TypeError:
+                mekan_s = {"basarili": False}
             _derin_mi = _daha_fazla_bilgi_istegi_mi(norm_text)
             if mekan_s.get("basarili") and "Konum Belleği" in mekan_s.get("kaynak", "") and not _derin_mi:
                 toplanan_parcalar.append(adres_sonucunu_metne_formatla(mekan_s))

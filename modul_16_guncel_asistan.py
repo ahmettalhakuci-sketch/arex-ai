@@ -519,6 +519,127 @@ def _tarih_hesapla(t: str):
     return None
 
 
+# ==============================================================================
+# 8. KUR'AN AYET & MEAL (alquran.cloud — Diyanet meali)
+# ==============================================================================
+_SURELER = ["Fatiha", "Bakara", "Ali İmran", "Nisa", "Maide", "Enam", "Araf", "Enfal", "Tevbe", "Yunus", "Hud", "Yusuf",
+            "Rad", "İbrahim", "Hicr", "Nahl", "İsra", "Kehf", "Meryem", "Taha", "Enbiya", "Hac", "Müminun", "Nur",
+            "Furkan", "Şuara", "Neml", "Kasas", "Ankebut", "Rum", "Lokman", "Secde", "Ahzab", "Sebe", "Fatır", "Yasin",
+            "Saffat", "Sad", "Zümer", "Mümin", "Fussilet", "Şura", "Zuhruf", "Duhan", "Casiye", "Ahkaf", "Muhammed",
+            "Fetih", "Hucurat", "Kaf", "Zariyat", "Tur", "Necm", "Kamer", "Rahman", "Vakıa", "Hadid", "Mücadele", "Haşr",
+            "Mümtehine", "Saf", "Cuma", "Münafikun", "Tegabün", "Talak", "Tahrim", "Mülk", "Kalem", "Hakka", "Mearic",
+            "Nuh", "Cin", "Müzzemmil", "Müddessir", "Kıyamet", "İnsan", "Mürselat", "Nebe", "Naziat", "Abese", "Tekvir",
+            "İnfitar", "Mutaffifin", "İnşikak", "Buruc", "Tarık", "Ala", "Gaşiye", "Fecr", "Beled", "Şems", "Leyl",
+            "Duha", "İnşirah", "Tin", "Alak", "Kadir", "Beyyine", "Zilzal", "Adiyat", "Karia", "Tekasür", "Asr",
+            "Hümeze", "Fil", "Kureyş", "Maun", "Kevser", "Kafirun", "Nasr", "Tebbet", "İhlas", "Felak", "Nas"]
+_SURE_TAKMA = {"ali imran": 3, "al-i imran": 3, "en'am": 6, "a'raf": 7, "ra'd": 13, "mü'minun": 23, "gafir": 40,
+               "mü'min": 40, "a'la": 87, "inşirah": 94, "şerh": 94, "zilzal": 99, "zelzele": 99, "tebbet": 111, "leheb": 111,
+               "mesed": 111, "ihlas": 112, "kadr": 97, "yasin": 36, "yasini şerif": 36}
+_OZEL_AYETLER = {"ayetel kürsi": (2, 255), "ayet-el kürsi": (2, 255), "ayetelkürsi": (2, 255), "amenerrasulü": (2, 285),
+                 "amenerrasulu": (2, 285)}
+
+
+def _sure_no_bul(t: str):
+    def sade(x):
+        return re.sub(r"[^a-zçğıöşü]", "", _kucult(x).replace("â", "a").replace("î", "i").replace("û", "u"))
+    for ad, no in _SURE_TAKMA.items():
+        if re.search(r"\b" + re.escape(ad) + r"(?:'?\w{0,4})?\b", t):
+            return no
+    for i, ad in enumerate(_SURELER, 1):
+        if re.search(r"\b" + re.escape(_kucult(ad)) + r"(?:'?\w{0,5})?\s*(?:suresi|süresi|sure|\d)", t) or \
+                re.search(r"\b" + re.escape(_kucult(ad)) + r"\s*(?:suresi|süresi)", t):
+            return i
+    return None
+
+
+def _kuran(t: str):
+    if not re.search(r"ayet|suresi|süresi|sure\b|kur'?an|meal|ayetel|amenerrasul|\b\d{1,3}\s*:\s*\d{1,3}\b", t):
+        # Yalnızca "<sure adı> <sayı>" ("bakara 255", "yasin 1") biçimindeyse
+        m = re.fullmatch(r"([a-zçğıöşü' -]{2,20}?)\s+(\d{1,3})\s*\.?", t.strip())
+        if not (m and _sure_no_bul(m.group(1) + " suresi")):
+            return None
+    sure = ayet = None
+    for ad, (s_no, a_no) in _OZEL_AYETLER.items():
+        if ad in t:
+            sure, ayet = s_no, a_no
+    if sure is None:
+        m = re.search(r"\b(\d{1,3})\s*:\s*(\d{1,3})\b", t)
+        if m and re.search(r"ayet|kur'?an|meal|sure", t):
+            sure, ayet = int(m.group(1)), int(m.group(2))
+    if sure is None:
+        sure = _sure_no_bul(t)
+        if sure is None:
+            return None
+        m = re.search(r"(\d{1,3})\s*(?:\.|'?\s*[iıuü]nc[iıuü])?\s*ayet", t) or re.search(r"(?:suresi|süresi)?\s*(\d{1,3})\b", t)
+        ayet = int(m.group(1)) if m else None
+    if not 1 <= sure <= 114:
+        return "📖 Kur'an'da 114 sure var; sure numarasını kontrol eder misin?", "📖 Kur'an-ı Kerim"
+    try:
+        if ayet:
+            veri = _json_cek(f"https://api.alquran.cloud/v1/ayah/{sure}:{ayet}/editions/quran-uthmani,tr.diyanet", ttl=86400)
+            arapca, meal = veri["data"][0], veri["data"][1]
+            sure_adi = _SURELER[sure - 1]
+            return (f"📖 **{sure_adi} Suresi, {ayet}. Ayet** ({sure}:{ayet})\n\n"
+                    f"> {arapca['text']}\n\n**Meali (Diyanet):** {meal['text']}\n\n"
+                    f"🔗 Kaynak: alquran.cloud · Diyanet İşleri Başkanlığı meali"), "📖 Kur'an-ı Kerim"
+        veri = _json_cek(f"https://api.alquran.cloud/v1/surah/{sure}/editions/quran-uthmani,tr.diyanet", ttl=86400)
+        arapca, meal = veri["data"][0], veri["data"][1]
+        adet = arapca.get("numberOfAyahs", len(arapca.get("ayahs", [])))
+        satirlar = [f"📖 **{_SURELER[sure - 1]} Suresi** ({sure}. sure · {adet} ayet · "
+                    f"{'Mekke' if arapca.get('revelationType') == 'Meccan' else 'Medine'}'de indi)", ""]
+        goster = min(adet, 11)
+        for a, m_ in zip(arapca["ayahs"][:goster], meal["ayahs"][:goster]):
+            satirlar.append(f"**{a['numberInSurah']}.** {a['text']}  \n_{m_['text']}_\n")
+        if adet > goster:
+            satirlar.append(f"… (ilk {goster} ayet gösterildi) — belirli bir ayet için: *\"{_SURELER[sure - 1]} {goster + 1}\"*")
+        satirlar.append("\n🔗 Kaynak: alquran.cloud · Diyanet İşleri Başkanlığı meali")
+        return "\n".join(satirlar), "📖 Kur'an-ı Kerim"
+    except urllib.error.HTTPError:
+        return f"📖 {_SURELER[sure - 1]} Suresi'nde {ayet}. ayet bulunamadı; ayet numarasını kontrol eder misin?", "📖 Kur'an-ı Kerim"
+    except Exception:
+        return None
+
+
+# ==============================================================================
+# 9. GÜN DOĞUMU / BATIMI (Open-Meteo)
+# ==============================================================================
+def _gunes(t: str):
+    if not re.search(r"güneş\s*(?:ne\s*zaman|kaçta|saat\s*kaçta)?\s*(?:doğ|bat)|gün\s*(?:doğumu|batımı)|gundogumu|gunbatimi"
+                     r"|güneşin\s*(?:doğuşu|batışı)|gün\s*ışığı\s*süresi|gün\s*ne\s*kadar\s*uzun", t):
+        return None
+    _soru_sozcukleri = {"bugün", "yarın", "yarin", "akşam", "sabah", "güneş", "gün", "kaç", "kac", "saat", "hangi", "ne",
+                        "zaman", "doğumu", "batımı", "burada", "bura", "şura", "ora"}
+    sehir = "istanbul"
+    for m in re.finditer(r"([a-zçğıöşü]{3,})(?:'(?:da|de|ta|te|nda|nde)|\s+(?:için|icin|ilinde|şehrinde))\b|"
+                         r"([a-zçğıöşü]{3,})(?:da|de|ta|te)\b", t):
+        aday = m.group(1) or m.group(2)
+        if aday and aday not in _soru_sozcukleri:
+            sehir = aday
+            break
+    try:
+        yer = None
+        for ulke in ("&countryCode=TR", ""):  # önce Türkiye'de ara, bulunamazsa dünyada
+            g = _json_cek("https://geocoding-api.open-meteo.com/v1/search?name=" + urllib.parse.quote(sehir) +
+                          "&count=1&language=tr&format=json" + ulke, ttl=86400)
+            yer = (g.get("results") or [None])[0]
+            if yer:
+                break
+        if not yer:
+            return None
+        gun = 1 if re.search(r"yarın|yarin", t) else 0
+        v = _json_cek(f"https://api.open-meteo.com/v1/forecast?latitude={yer['latitude']}&longitude={yer['longitude']}"
+                      f"&daily=sunrise,sunset,daylight_duration&timezone=auto&forecast_days=2", ttl=3600)
+        d = v["daily"]
+        dogus, batis = d["sunrise"][gun][11:16], d["sunset"][gun][11:16]
+        sure = d["daylight_duration"][gun] / 3600
+        return (f"🌅 **{yer['name']}** — {'yarın' if gun else 'bugün'}\n"
+                f"- ☀️ Gün doğumu: **{dogus}**\n- 🌇 Gün batımı: **{batis}**\n"
+                f"- ⏳ Gün ışığı süresi: **{int(sure)} sa {int(round((sure % 1) * 60))} dk**\n\n"
+                f"🔗 Kaynak: Open-Meteo"), "🌅 Gün Doğumu / Batımı"
+    except Exception:
+        return None
+
+
 def _md_satirlari_koru(metin: str) -> str:
     """Markdown'da tek satır sonları birleşir: '•' maddelerini gerçek listeye çevir,
     diğer satırlara zorunlu satır sonu ekle (tablo/başlık/boş satırlara dokunma)."""
@@ -537,7 +658,7 @@ def _md_satirlari_koru(metin: str) -> str:
 # ==============================================================================
 # GİRİŞ NOKTASI
 # ==============================================================================
-_SIRA = [_birim_cevir, _tarih_hesapla, _dunya_saati, _ingilizce_sozluk, _bugun_tarihte, _tatiller, _deprem]
+_SIRA = [_birim_cevir, _tarih_hesapla, _dunya_saati, _ingilizce_sozluk, _bugun_tarihte, _tatiller, _deprem, _kuran, _gunes]
 
 
 def guncel_asistan_yanitla(metin: str):

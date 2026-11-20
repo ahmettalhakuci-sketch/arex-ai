@@ -368,3 +368,276 @@ def fotograftan_soru_coz(gorsel_bayt: bytes, gemini_anahtar: str, ek_not: str = 
         except Exception as h:
             son_hata = type(h).__name__
     return None, f"Gemini yanıt vermedi ({son_hata})"
+
+
+# ==============================================================================
+# 4. ÜCRETSİZ MEDYA ZEKÂSI — OCR (Tesseract) + Groq, Video/Ses (Whisper) ve YouTube
+# ==============================================================================
+import os
+import shutil
+import subprocess
+import tempfile
+
+_GROQ_SOHBET_URL = "https://api.groq.com/openai/v1/chat/completions"
+_GROQ_MODELLER = ("openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b")
+
+
+def _groq_sohbet(sistem: str, kullanici: str, anahtar: str, effort: str = "low", max_tokens: int = 2500):
+    """Groq sohbet çağrısı (model sırasıyla, 429/5xx'te sıradakine geçer) → (metin, hata)."""
+    if not anahtar:
+        return None, "Groq anahtarı yok"
+    son = None
+    for model in _GROQ_MODELLER:
+        govde = {"model": model, "temperature": 0.3, "max_tokens": max_tokens,
+                 "messages": [{"role": "system", "content": sistem}, {"role": "user", "content": kullanici}]}
+        if "gpt-oss" in model:
+            govde["reasoning_effort"] = effort
+        istek = urllib.request.Request(_GROQ_SOHBET_URL, data=json.dumps(govde).encode(),
+                                       headers={"Authorization": f"Bearer {anahtar}", "Content-Type": "application/json",
+                                                "User-Agent": "AREX-AI-Studio/14"})
+        try:
+            with urllib.request.urlopen(istek, timeout=40) as y:
+                metin = json.loads(y.read().decode())["choices"][0]["message"]["content"].strip()
+            if metin:
+                return metin, None
+        except urllib.error.HTTPError as h:
+            son = f"HTTP {h.code}"
+            if h.code in (401, 403):
+                break
+        except Exception as h:
+            son = type(h).__name__
+    if son == "HTTP 429":
+        return None, "Groq ücretsiz kullanım sınırına ulaşıldı; 1 dakika sonra tekrar dener misin?"
+    return None, f"Groq yanıt vermedi ({son})"
+
+
+# ---------- 4.1 Fotoğraf → OCR → çözüm ----------
+def ocr_hazir_mi() -> bool:
+    try:
+        import pytesseract  # noqa: F401
+        return bool(shutil.which("tesseract"))
+    except Exception:
+        return False
+
+
+def _ocr_temizle(metin: str) -> str:
+    metin = re.sub(r"[ \t]+", " ", metin)
+    return "\n".join(s.strip() for s in metin.splitlines() if s.strip())
+
+
+def ocr_metni_cikar(gorsel_bayt: bytes):
+    """Tesseract (Türkçe + İngilizce) ile fotoğraftaki yazıyı 3 farklı ön işlemeyle okur.
+    → (okumalar_listesi, hata). Tek bir ayar her karakteri doğru okuyamadığı için (ör. '7' → '/')
+    farklı okumalar birlikte değerlendirilir (çoğunluk/karşılaştırma)."""
+    try:
+        import pytesseract
+        from PIL import Image, ImageOps, ImageFilter
+    except Exception:
+        return None, "OCR kütüphanesi (pytesseract) kurulu değil"
+    if not shutil.which("tesseract"):
+        return None, "Tesseract programı kurulu değil"
+    try:
+        ham = ImageOps.exif_transpose(Image.open(io.BytesIO(gorsel_bayt))).convert("L")
+        diller = "tur+eng" if "tur" in pytesseract.get_languages(config="") else "eng"
+
+        def olcekle(im, hedef):
+            oran = hedef / max(im.size)
+            return im.resize((max(1, int(im.width * oran)), max(1, int(im.height * oran))), Image.LANCZOS)
+
+        varyantlar = []
+        for hedef in (1600, 2400):
+            im = ImageOps.autocontrast(olcekle(ham, hedef), cutoff=1)
+            esik = im.point(lambda p: 255 if p > 150 else 0)
+            varyantlar += [im.filter(ImageFilter.SHARPEN), esik] if hedef == 1600 else [esik]
+        okumalar = []
+        for v in varyantlar:
+            metin = _ocr_temizle(pytesseract.image_to_string(v, lang=diller, config="--psm 6"))
+            if len(re.sub(r"\W", "", metin)) >= 4 and metin not in okumalar:
+                okumalar.append(metin)
+        return (okumalar, None) if okumalar else (None, "Fotoğrafta okunabilir yazı bulunamadı")
+    except Exception as h:
+        return None, f"OCR hatası ({type(h).__name__})"
+
+
+_OCR_COZUM_TALIMATI = (
+    "Sen AREX adlı Türkçe bir ders asistanısın; kullanıcı 9. sınıf öğrencisi. Aşağıdaki metin bir fotoğraftan OCR ile "
+    "okundu; harf/sembol hataları olabilir (ör. 'x2' aslında 'x²', '√' yerine 'V', 'O' yerine '0'). Önce soruyu mantıklı "
+    "biçimde düzelterek '**Soru:** ...' diye yaz. Sonra çözümü numaralı kısa adımlarla göster, işlemleri `kod` biçiminde yaz. "
+    "En sonda '**Cevap:** ...' satırı olsun; şıklıysa doğru şıkkı belirt. Metinden soru anlaşılmıyorsa uydurma, bunu söyle. "
+    "Birden çok soru varsa kullanıcı notunda belirtileni, yoksa ilkini çöz. Tablo kullanma.\n"
+    "ÖNEMLİ: Aynı fotoğrafın birden fazla OCR okuması verilebilir. Karakterleri okumalar arasında KARŞILAŞTIR; "
+    "bir okumada '/', 'l', 'I' görünen yer diğerinde rakamsa rakamı esas al (çoğunluk). Üslü sayılar OCR'da bozulur: "
+    "'^' işareti '4' gibi okunabilir ('2^5' → '245'), küçük yazılmış üsler tabana yapışır ('3²' → '32'); '.' veya '·' "
+    "çarpma olabilir. Şıklara uyan en mantıklı yorumu bul. Çözümün sonunda cevabı soruya geri "
+    "koyarak SAĞLAMA yap; şıklardan hiçbirine uymuyorsa okumayı yeniden değerlendir. Hâlâ emin değilsen bunu açıkça yaz."
+)
+
+
+def _siklari_bul(okumalar):
+    """OCR okumalarından 'A) 19  B) 21 ...' şıklarını çıkarır → {'A': '19', ...} (en çok şık bulan okuma)."""
+    en_iyi = {}
+    for o in okumalar:
+        bulunan = {h.upper(): d.strip(" .") for h, d in re.findall(r"\b([A-Ea-e])\s*[)\.]\s*([^\sA-E)][^\n]*?)(?=\s+[A-Ea-e]\s*[)\.]|\n|$)", o)}
+        if len(bulunan) > len(en_iyi):
+            en_iyi = bulunan
+    return en_iyi if len(en_iyi) >= 3 else {}
+
+
+def _cevap_sikka_uyuyor_mu(cozum: str, siklar: dict) -> bool:
+    satir = (re.findall(r"\*\*Cevap:?\*\*:?\s*(.+)", cozum) or [""])[-1]
+    if not satir:
+        return False
+    satir_n = satir.replace(",", ".").replace(" ", "")
+    for harf, deger in siklar.items():
+        deger_n = deger.replace(",", ".").replace(" ", "")
+        if re.search(rf"(?<![A-Za-z]){harf}(?:\)|\s|\*|$|\.)", satir) or (deger_n and deger_n in satir_n):
+            return True
+    return False
+
+
+def fotograftan_soru_coz_ucretsiz(gorsel_bayt: bytes, groq_anahtar: str, ek_not: str = ""):
+    """OCR + Groq: tamamen ücretsiz fotoğraf çözümü → (yanıt, hata)."""
+    okumalar, hata = ocr_metni_cikar(gorsel_bayt)
+    if not okumalar:
+        return None, hata
+    metin = okumalar[0]
+    istek = "\n\n".join(f"OCR OKUMASI {i + 1}:\n{o[:2500]}" for i, o in enumerate(okumalar)) + (
+        f"\n\nKULLANICI NOTU: {ek_not}" if ek_not else "")
+    cozum, hata = _groq_sohbet(_OCR_COZUM_TALIMATI, istek, groq_anahtar, effort="medium")
+    if not cozum:
+        return None, hata
+    # Şık sağlaması (kodla, modele bırakmadan): cevap şıklardan birine uymuyorsa bir kez daha, daha derin düşün
+    siklar = _siklari_bul(okumalar)
+    if siklar and not _cevap_sikka_uyuyor_mu(cozum, siklar):
+        ikinci, _ = _groq_sohbet(_OCR_COZUM_TALIMATI, istek + "\n\nNOT: Önceki çözümün cevabı şıklardan hiçbirine "
+                                 "uymadı. OCR hatalarını (özellikle üs, çarpma, kesir işaretleri) yeniden yorumla ve "
+                                 "şıklardan birine ulaşan tutarlı ifadeyi bul.", groq_anahtar, effort="high")
+        if ikinci and _cevap_sikka_uyuyor_mu(ikinci, siklar):
+            cozum = ikinci
+        else:
+            cozum = ("⚠️ **Emin değilim:** Fotoğraftaki ifade net okunamadı ve bulduğum sonuç şıklarla uyuşmuyor. "
+                     "Soruyu yazarak gönderirsen ya da daha net/düz bir fotoğraf çekersen kesin çözerim.\n\n" + cozum)
+    okunan = "\n".join(f"> {s}" for s in metin.splitlines()[:8])
+    return (f"📸 **Fotoğraftan Soru Çözümü** *(ücretsiz: Tesseract OCR + Groq)*\n\n{cozum}\n\n"
+            f"**🔍 Fotoğraftan okunan metin:**\n{okunan}"), None
+
+
+# ---------- 4.2 Video / ses dosyası → Whisper → özet ----------
+_WHISPER_SINIR = 24 * 1024 * 1024
+_SES_UZANTILARI = (".mp3", ".m4a", ".wav", ".ogg", ".webm", ".flac", ".mpga", ".mpeg", ".mp4")
+
+
+def _ffmpeg_ile_sese_cevir(bayt: bytes, uzanti: str):
+    """Video/büyük ses → mono 16 kHz 48 kbps MP3 (Whisper için yeterli, ~20 kat küçük)."""
+    if not shutil.which("ffmpeg"):
+        return None
+    with tempfile.TemporaryDirectory() as d:
+        giris, cikis = os.path.join(d, "giris" + uzanti), os.path.join(d, "cikis.mp3")
+        with open(giris, "wb") as f:
+            f.write(bayt)
+        try:
+            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", giris, "-vn", "-ac", "1", "-ar", "16000",
+                            "-b:a", "48k", "-t", "5400", cikis], check=True, timeout=300)
+            with open(cikis, "rb") as f:
+                return f.read()
+        except Exception:
+            return None
+
+
+def _whisper_yazi(ses_bayt: bytes, dosya_adi: str, anahtar: str):
+    mime = {"mp3": "audio/mpeg", "wav": "audio/wav", "m4a": "audio/mp4", "mp4": "video/mp4", "ogg": "audio/ogg",
+            "webm": "audio/webm", "flac": "audio/flac"}.get(dosya_adi.rsplit(".", 1)[-1].lower(), "application/octet-stream")
+    govde, tur = _multipart({"model": "whisper-large-v3-turbo", "response_format": "json", "temperature": "0"},
+                            dosya_adi, ses_bayt, mime)
+    istek = urllib.request.Request("https://api.groq.com/openai/v1/audio/transcriptions", data=govde,
+                                   headers={"Authorization": f"Bearer {anahtar}", "Content-Type": tur,
+                                            "User-Agent": "AREX-AI-Studio/14"})
+    try:
+        with urllib.request.urlopen(istek, timeout=180) as y:
+            return (json.loads(y.read().decode()).get("text") or "").strip(), None
+    except urllib.error.HTTPError as h:
+        return None, f"Whisper hatası (HTTP {h.code})"
+    except Exception as h:
+        return None, f"Whisper bağlantı hatası ({type(h).__name__})"
+
+
+_OZET_TALIMATI = (
+    "Sen AREX adlı Türkçe bir asistansın. Sana bir video/ses kaydının veya YouTube videosunun yazıya dökülmüş metni "
+    "verilecek (başka dilde olabilir). TÜRKÇE yanıt ver ve şu biçimi kullan:\n"
+    "**🎯 Kısaca:** 1-2 cümlelik ana fikir\n**📌 Ana noktalar:** 4-7 madde\n"
+    "**🧠 Öğrenilecek kavramlar:** (varsa) 2-5 kavram ve kısa açıklaması\n"
+    "Metinde olmayan bilgiyi ekleme; konuşma metni anlamsızsa (müzik, gürültü) bunu söyle. Tablo kullanma."
+)
+
+
+def medya_dosyasini_ozetle(bayt: bytes, dosya_adi: str, groq_anahtar: str):
+    """Video/ses dosyası → (yanıt, hata)."""
+    if not groq_anahtar:
+        return None, "Groq anahtarı yok"
+    uzanti = "." + dosya_adi.rsplit(".", 1)[-1].lower() if "." in dosya_adi else ".mp4"
+    gonderilecek, ad = bayt, dosya_adi
+    video_mu = uzanti in (".mp4", ".mov", ".mkv", ".avi", ".3gp", ".webm")
+    if len(bayt) > _WHISPER_SINIR or uzanti not in _SES_UZANTILARI or video_mu:
+        donusen = _ffmpeg_ile_sese_cevir(bayt, uzanti)
+        if donusen:
+            gonderilecek, ad = donusen, "ses.mp3"
+        elif len(bayt) > _WHISPER_SINIR or uzanti not in _SES_UZANTILARI:
+            return None, "Dosya çok büyük ya da biçimi desteklenmiyor (ffmpeg yok). 24 MB altı MP3/MP4/M4A/WAV dene."
+    if len(gonderilecek) > _WHISPER_SINIR:
+        return None, "Ses çok uzun (sıkıştırıldıktan sonra da 24 MB'ı aşıyor). Daha kısa bir bölüm dene."
+    yazi, hata = _whisper_yazi(gonderilecek, ad, groq_anahtar)
+    if not yazi:
+        return None, hata or "Kayıtta konuşma bulunamadı"
+    ozet, hata = _groq_sohbet(_OZET_TALIMATI, f"KAYIT METNİ ({len(yazi)} karakter):\n{yazi[:14000]}", groq_anahtar)
+    if not ozet:
+        return None, hata
+    alinti = yazi[:1500] + ("…" if len(yazi) > 1500 else "")
+    return (f"🎬 **Video / Ses Özeti** *(ücretsiz: Groq Whisper + Groq)* — `{dosya_adi}`\n\n{ozet}\n\n"
+            f"**📝 Konuşma metninden:**\n> {alinti}"), None
+
+
+# ---------- 4.3 YouTube bağlantısı → altyazı → özet ----------
+_YT_DESEN = re.compile(r"(?:youtube\.com/(?:watch\?(?:.*&)?v=|shorts/|live/|embed/)|youtu\.be/)([A-Za-z0-9_-]{11})")
+
+
+def youtube_kimligi(metin: str):
+    m = _YT_DESEN.search(metin or "")
+    return m.group(1) if m else None
+
+
+def youtube_ozetle(metin: str, groq_anahtar: str):
+    """Mesajda YouTube bağlantısı varsa altyazıyı çekip özetler → (yanıt, etiket) | (None, None)."""
+    vid = youtube_kimligi(metin)
+    if not vid:
+        return None, None
+    if not groq_anahtar:
+        return "▶️ YouTube özeti için Groq anahtarı gerekiyor (Streamlit Secrets → `GROQ_API_KEY`).", "▶️ YouTube"
+    try:
+        from youtube_transcript_api import YouTubeTranscriptApi
+    except Exception:
+        return "▶️ YouTube özeti için `youtube-transcript-api` paketi kurulu değil.", "▶️ YouTube"
+    try:
+        api = YouTubeTranscriptApi()
+        try:
+            veri = api.fetch(vid, languages=["tr", "en"])
+        except Exception:
+            liste = api.list(vid)
+            veri = next(iter(liste)).fetch()
+        yazi = " ".join(p.text for p in veri.snippets if p.text and not re.fullmatch(r"\[.*\]|♪+", p.text.strip()))
+        dil = getattr(veri, "language_code", "?")
+    except Exception as h:
+        ad = type(h).__name__
+        neden = ("YouTube bu sunucudan gelen istekleri engelliyor" if "Block" in ad or "IpBlocked" in ad
+                 else "Bu videoda altyazı yok veya kapalı" if "Transcript" in ad or "Disabled" in ad
+                 else f"altyazı alınamadı ({ad})")
+        return (f"▶️ Bu videonun özetini çıkaramadım: **{neden}**.\n\n💡 Alternatif: videoyu indirip "
+                f"*📎 Fotoğraf / Video → 🎬 Video* bölümünden yükleyebilirsin; sesi Whisper ile yazıya döküp özetlerim."), "▶️ YouTube"
+    if len(yazi) < 40:
+        return "▶️ Bu videonun altyazısında özetlenecek konuşma yok (müzik/klip olabilir).", "▶️ YouTube"
+    ek = re.sub(_YT_DESEN, "", metin).strip()
+    ozet, hata = _groq_sohbet(_OZET_TALIMATI, f"YOUTUBE ALTYAZISI (dil: {dil}):\n{yazi[:14000]}"
+                              + (f"\n\nKULLANICININ İSTEĞİ: {ek}" if len(ek) > 3 else ""), groq_anahtar)
+    if not ozet:
+        return f"▶️ Altyazıyı aldım ama özetleyemedim ({hata}).", "▶️ YouTube"
+    return (f"▶️ **YouTube Video Özeti** *(altyazı: {dil}, ücretsiz)*\n\n{ozet}\n\n"
+            f"🔗 https://youtu.be/{vid}"), "▶️ YouTube Özeti"

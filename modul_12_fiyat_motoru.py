@@ -532,7 +532,7 @@ def _photon_ile_ara(yer: str):
     }
 
 
-def acik_kaynak_adres_bul(sorgu: str) -> dict:
+def acik_kaynak_adres_bul(sorgu: str, sadece_yerel: bool = False) -> dict:
     """
     3 Katmanlı Doğrudan Adres & Konum Çözümleyici:
       1. Yerleşik detaylı Türkiye/İstanbul mekan belleği (tam ulaşım & açıklama dahil)
@@ -566,6 +566,9 @@ def acik_kaynak_adres_bul(sorgu: str) -> dict:
                 "lon": y["lon"],
                 "kaynak": "AREX AI Konum Belleği (Doğrulanmış)",
             }
+
+    if sadece_yerel:  # yalnızca yerleşik bellek istendi → ağa çıkma (hız)
+        return {"basarili": False, "hata": "Yerleşik bellekte yok"}
 
     # 2. Canlı OpenStreetMap Nominatim API
     q_osm = urllib.parse.quote(yer)
