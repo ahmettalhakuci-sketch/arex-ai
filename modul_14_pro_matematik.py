@@ -768,8 +768,28 @@ def _ozel_kaliplar(t: str):
 _IFADE_KARAKTERLERI = re.compile(r"[\d√π][\s\d.,+\-*/^()!%√πa-zçğıöşü]*")
 
 
+def _md_satirlari_koru(metin: str) -> str:
+    """Markdown'da tek satır sonları birleşir: '•' maddelerini gerçek listeye çevir,
+    diğer satırlara zorunlu satır sonu ekle (tablo/başlık/boş satırlara dokunma)."""
+    satirlar = []
+    for satir in metin.split("\n"):
+        if satir.startswith("• "):
+            satir = "- " + satir[2:]
+        elif satir.startswith("  _") or satir.startswith("  Eş"):
+            satir = "  " + satir.strip()  # liste altı girintili satır
+        if satir.strip() and not satir.lstrip().startswith(("|", "#", "- ")) and not satir.endswith("  "):
+            satir += "  "
+        satirlar.append(satir)
+    return "\n".join(satirlar)
+
+
 def pro_matematik_coz(metin: str):
     """Metin bir matematik sorusuysa (cevap, etiket) döndürür; değilse (None, None)."""
+    cevap, etiket = _pro_matematik_coz_ham(metin)
+    return (_md_satirlari_koru(cevap), etiket) if cevap else (None, None)
+
+
+def _pro_matematik_coz_ham(metin: str):
     if not metin or len(metin) > 300:
         return None, None
     kucuk = metin.replace("İ", "i").replace("I", "ı").lower().replace("̇", "").strip()

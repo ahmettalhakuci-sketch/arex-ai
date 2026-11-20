@@ -23,6 +23,26 @@ if _MODUL_DIZINI not in sys.path:
     sys.path.insert(0, _MODUL_DIZINI)
 
 
+
+# ==============================================================================
+# v14 — MOBİL YANIT ÜSLUBU (tüm AI sağlayıcılarına giden sistem mesajına bir kez eklenir)
+# ==============================================================================
+YANIT_USLUBU = (
+    "\n\nYANIT ÜSLUBU (ÖNEMLİ): Kullanıcı çoğunlukla TELEFONDAN yazıyor. "
+    "1) İlk 1-2 cümlede sorunun doğrudan cevabını ver; ayrıntıyı sonra ekle. "
+    "2) Uzunluğu soruya göre ayarla: basit soruya kısa ve net cevap; 'detaylı anlat' denirse uzun. "
+    "3) Kısa başlıklar ve madde işaretleri kullan; tablo gerekiyorsa EN FAZLA 3 sütun olsun, geniş tablo kullanma. "
+    "4) Duygusal veya kişisel mesajlarda (stres, üzüntü, sevinç) rapor/tablo YAZMA: önce duyguyu anla, "
+    "sıcak ve samimi 4-6 cümleyle 2-3 somut öneri ver, gerekirse güvendiği bir yetişkinle konuşmayı öner. "
+    "5) Önceki mesajlarla bağlantılı sorularda ('peki...', 'bunun...') konuşmanın akışını sürdür. "
+    "6) Emin olmadığın bilgide bunu açıkça söyle; sayı, tarih ve isim uydurma."
+)
+
+
+def _uslup_ekle(sistem: str) -> str:
+    sistem = sistem or ""
+    return sistem if "YANIT ÜSLUBU (ÖNEMLİ)" in sistem else sistem + YANIT_USLUBU
+
 def _guvenli_modul_yukle(modul_adi: str):
     if modul_adi in sys.modules and getattr(sys.modules[modul_adi], "__file__", None):
         return sys.modules[modul_adi]
@@ -482,7 +502,7 @@ def ollama_soru_sor(
             f"{ek_baglam.strip()[:3200]}"
         )
 
-    mesaj_listesi = [{"role": "system", "content": sistem_mesaji}]
+    mesaj_listesi = [{"role": "system", "content": _uslup_ekle(sistem_mesaji)}]
     kaynak_gecmis = gecmis_mesajlar if gecmis_mesajlar is not None else ss_mesajlar
     for m in kaynak_gecmis[-6:]:
         rol = m.get("role", "")
@@ -1375,7 +1395,7 @@ def _bulut_anahtarli_ai_cagir(
             payload = {
                 "model": _aktif_model,
                 "messages": (
-                    [{"role": "system", "content": sistem_prompt}]
+                    [{"role": "system", "content": _uslup_ekle(sistem_prompt)}]
                     + [
                         {"role": m.get("role", "user"), "content": str(m.get("content", ""))[:2200]}
                         for m in gecmis_mesajlar[-12:]
@@ -1446,7 +1466,7 @@ def _pollinations_ai_cagir(
         payload = {
             "model": "openai",
             "messages": (
-                [{"role": "system", "content": sistem_prompt}]
+                [{"role": "system", "content": _uslup_ekle(sistem_prompt)}]
                 + [
                     {"role": m.get("role", "user"), "content": str(m.get("content", ""))[:2200]}
                     for m in gecmis_mesajlar[-12:]
@@ -1491,7 +1511,7 @@ def _pollinations_ai_cagir(
             payload_m = {
                 "model": "mistral",
                 "messages": [
-                    {"role": "system", "content": sistem_prompt},
+                    {"role": "system", "content": _uslup_ekle(sistem_prompt)},
                     {"role": "user", "content": soru},
                 ],
                 "temperature": 0.4,
@@ -1515,7 +1535,7 @@ def _pollinations_ai_cagir(
             payload_d = {
                 "model": "deepseek",
                 "messages": [
-                    {"role": "system", "content": sistem_prompt},
+                    {"role": "system", "content": _uslup_ekle(sistem_prompt)},
                     {"role": "user", "content": soru},
                 ],
                 "temperature": 0.4,
@@ -1795,7 +1815,7 @@ def acik_kaynak_ai_sor(soru: str, saglayici_kodu: str = None, api_key: str = "",
         "Sen Ahmet tarafından geliştirilen 'AREX AI Studio' adlı Türkçe yapay zeka asistanısın. "
         "Ahmet İstanbul Fatih'te Fen ve Sosyal Bilimler Proje Okulu 9. sınıf öğrencisi, "
         f"TEKNOFEST İHA ve TÜBİTAK akıllı bebek arabası projeleri geliştiriyor. BUGÜNÜN GERÇEK TARİHİ: {_guncel_tarih_etiketi()}. Güncel açık kaynak verilerini her zaman esas al. "
-        "Ahmet ile candan, samimi ve sıcakkanlı sohbet et; bilgi veya açıklama verirken yüzeysel tek cümleyle geçiştirme, zengin, akıcı, madde işaretli ve doyurucu bir Türkçe ile anlat. "
+        "Ahmet ile candan, samimi ve sıcakkanlı sohbet et; bilgi veya açıklama verirken soruya uygun derinlikte, akıcı ve doyurucu bir Türkçe ile anlat. "
         "Bilmediğin bir veriyi asla uydurma; <think> gibi iç düşünce etiketleri kullanma."
         + (
             " ÇOCUK DOSTU MOD AKTİF: Karşında meraklı bir çocuk var! Çok yumuşak, neşeli, basit, güvenli, eğitici ve hayal gücünü destekleyen bir Türkçe ile konuş; gerekirse kısa örnekler veya minik hikayeler kullan."

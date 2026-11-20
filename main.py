@@ -614,16 +614,20 @@ def sistemi_baslat():
     if bolum == "💬 Sohbet & Wikipedia Araştırma Botu":
         # Ultra Sade 4 Kısayol (Göz Yormayan Tek Satır)
         hizli_girdi = None
+        # Hızlı öneriler (telefonda 2'li ızgara): v14 yeni kaynaklarını tek dokunuşla tanıtır
+        _HIZLI_ONERILER = [
+            ("🌍 Son Depremler", "son depremler"),
+            ("🌤️ Hava Durumu", "İstanbul hava durumu ve hava kalitesi"),
+            ("🎉 Bayramlar", "resmi tatiller ve bayramlar"),
+            ("📜 Tarihte Bugün", "bugün tarihte ne oldu"),
+            ("🧮 Denklem Çöz", "x^2-5x+6=0"),
+            ("🤝 Neler Yapabilirim?", "help"),
+        ]
         with st.container(key="arex_hizli"):
-            q1, q2, q3, q4 = st.columns(4)
-        if q1.button("🌐 Hızlı Çeviri (EN)", use_container_width=True):
-            hizli_girdi = "İngilizceye çevir: Merhaba, en yakın metro istasyonu nerede?"
-        if q2.button("⏰ Saat & 25 dk Sayaç", use_container_width=True):
-            hizli_girdi = "25 dakika pomodoro sayaç kur"
-        if q3.button("🌤️ İstanbul Hava + AQI", use_container_width=True):
-            hizli_girdi = "İstanbul hava durumu ve hava kalitesi"
-        if q4.button("🤝 Yardım (Help)", use_container_width=True):
-            hizli_girdi = "help"
+            _h_sutunlar = st.columns(len(_HIZLI_ONERILER))
+            for _h_sutun, (_h_etiket, _h_soru) in zip(_h_sutunlar, _HIZLI_ONERILER):
+                if _h_sutun.button(_h_etiket, use_container_width=True, key=f"hizli_{_h_etiket}"):
+                    hizli_girdi = _h_soru
 
         # Tam Genişlikli Ferah Sohbet Penceresi
         chat_penceresi = st.container(height=525, key="arex_sohbet")

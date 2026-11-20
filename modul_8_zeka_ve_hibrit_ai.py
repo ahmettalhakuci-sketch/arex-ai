@@ -4097,6 +4097,16 @@ YARDIM_VE_HELP_YANITI = """🤝 **Elbette Ahmet! İşte seninle neler yapabilece
 * 🧮 **Matematik & Fizik:** *"76 çarpı 25"*, *"kök 72"*, *"3x + 9 = 24"* yazarak adım adım çözdür.
 * 🎓 **Kodsuz Öğretme:** *"öğret: favori rengim = lacivert"* yazarak bana yeni bilgi öğretebilirsin.
 
+**✨ v14 ile yeni gelenler:**
+* 🧮 **Profesyonel Matematik:** *"2+3*4"*, *"√27 + √3"*, *"sin 45"*, *"3(x-2)=x+4"*, *"120'nin asal çarpanları"*, *"80'e yüzde 50 zam"*
+* 🌍 **Kandilli Depremleri:** *"son depremler"*, *"malatya'da deprem var mı"*, *"büyük depremler"*
+* 🎉 **Bayram & Tatil:** *"kurban bayramı ne zaman"*, *"resmi tatiller"*
+* 📜 **Tarihte Bugün:** *"bugün tarihte ne oldu"*
+* 📏 **Birim Çevirici:** *"5 km kaç mil"*, *"2 su bardağı kaç ml"*, *"100 fahrenheit kaç celsius"*
+* 📅 **Tarih & Yaş:** *"yılbaşına kaç gün kaldı"*, *"1 ocak 2027 hangi gün"*, *"12.05.2010 doğumluyum kaç yaşındayım"*
+* 🕰️ **Dünya Saati:** *"Tokyo'da saat kaç"*, *"New York ile saat farkı"*
+* 📖 **İngilizce Sözlük:** *"ingilizce serendipity ne demek"*
+
 *Hangisiyle başlamak istersin canım kardeşim?* ⚡"""
 
 
@@ -4306,7 +4316,17 @@ def _yanit_alaka_dogrula(yanit: str, mevcut_sorgu: str, onceki_konu: str) -> boo
     sorgu_norm = metni_normallestir(mevcut_sorgu)
     yanit_norm = metni_normallestir(yanit)
     if len(onceki_norm) >= 4 and onceki_norm not in sorgu_norm and onceki_norm in yanit_norm:
-        # Eski konu yeni soruda hiç geçmediği halde yanıtta geçiyorsa -> bağlam sızıntısı var!
+        # Eski konu yeni soruda geçmediği halde yanıtta geçiyor. Bu ya bağlam sızıntısıdır
+        # (yanıt yeni soruyu hiç işlemiyor) ya da meşru bir bağlantıdır ("bitkiler geceleri ne yapar"
+        # → fotosentez). Ayırt etmek için: yanıt, sorunun kendi anahtar kelimelerini içeriyor mu?
+        _bos = {"nedir", "neler", "nasil", "neden", "nerede", "hangi", "kimdir", "peki", "bana",
+                "anlat", "acikla", "yapar", "olur", "midir", "mudur", "kadar", "icin", "gibi", "daha"}
+        anahtarlar = [k for k in re.findall(r"[a-z0-9]{4,}", sorgu_norm) if k not in _bos]
+        if anahtarlar:
+            # Türkçe ekleri tolere etmek için ilk 5 harf (kök) eşleşmesi: "geceleri" ~ "gece"
+            isabet = sum(1 for k in anahtarlar if k[:5] in yanit_norm or k[:4] in yanit_norm)
+            if isabet / len(anahtarlar) >= 0.5:
+                return True
         return False
     return True
 
@@ -4540,7 +4560,13 @@ def _devam_veya_takip_sorusu_mu(norm_text: str) -> bool:
         "ornek ver", "ozetle", "kisaca ozetle", "baska ne var", "peki neden",
         "aciklar misin", "anlamadim tekrar anlat", "devam", "ilerlet", "ekle",
     ]
-    return any(k in norm_text for k in takip_kaliplari)
+    if any(k in norm_text for k in takip_kaliplari):
+        return True
+    # Önceki konuya bağlanan doğal takip soruları: "peki ...", "ya ...", "bir de ...", "bunun/onun ..."
+    n = norm_text.strip()
+    if n.startswith(("peki ", "ya ", "bir de ", "o zaman ", "ayrica ", "bu durumda ", "yani ")):
+        return True
+    return bool(re.search(r"\b(bunun|onun|bunu|onu|bunlar|onlar|bunda|onda|bundan|ondan|buna|ona)\b", n)) and len(n.split()) <= 9
 
 
 def akilli_niyet_siniflandir(kullanici_girdisi: str) -> dict:

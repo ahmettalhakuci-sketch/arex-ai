@@ -519,6 +519,21 @@ def _tarih_hesapla(t: str):
     return None
 
 
+def _md_satirlari_koru(metin: str) -> str:
+    """Markdown'da tek satır sonları birleşir: '•' maddelerini gerçek listeye çevir,
+    diğer satırlara zorunlu satır sonu ekle (tablo/başlık/boş satırlara dokunma)."""
+    satirlar = []
+    for satir in metin.split("\n"):
+        if satir.startswith("• "):
+            satir = "- " + satir[2:]
+        elif satir.startswith("  _") or satir.startswith("  Eş"):
+            satir = "  " + satir.strip()  # liste altı girintili satır
+        if satir.strip() and not satir.lstrip().startswith(("|", "#", "- ")) and not satir.endswith("  "):
+            satir += "  "
+        satirlar.append(satir)
+    return "\n".join(satirlar)
+
+
 # ==============================================================================
 # GİRİŞ NOKTASI
 # ==============================================================================
@@ -536,5 +551,5 @@ def guncel_asistan_yanitla(metin: str):
         except Exception:
             sonuc = None
         if sonuc:
-            return sonuc
+            return _md_satirlari_koru(sonuc[0]), sonuc[1]
     return None, None
