@@ -76,6 +76,11 @@ st.set_page_config(
 
 # Mobil premium arayüz + açılış kapağı + PWA (Modül 15)
 try:
+    import modul_17_medya_ve_grafik as m17_medya
+except Exception:
+    m17_medya = None
+
+try:
     import modul_15_mobil_arayuz as m15_mobil
     m15_mobil.kapak_ekrani_goster()
     m15_mobil.pwa_baglantilarini_ekle()
@@ -326,6 +331,29 @@ def oturum_durumunu_hazirla():
         yeni_temiz_sohbet_baslat()
 
 
+def _sesi_yaziya_dok(ses_bayt: bytes):
+    """Önce Groq Whisper (çok daha isabetli Türkçe), olmazsa Google ücretsiz tanıma."""
+    groq_key = ""
+    try:
+        groq_key = m9_ollama_tdk._saglayici_icin_anahtar_bul("groq_cloud", "")
+    except Exception:
+        pass
+    if m17_medya is not None and groq_key:
+        metin, _hata = m17_medya.sesi_metne_cevir(ses_bayt, groq_key, dil="tr")
+        if metin:
+            return metin, None
+    return m5_dil.mikrofon_sesini_metne_cevir(ses_bayt, dil="tr-TR")
+
+
+def _dogrudan_sohbete_ekle(kullanici_metni: str, cevap: str, etiket: str):
+    """Fotoğraf gibi sohbet motoru dışı yanıtları geçmişe ekler."""
+    simdi = m2_alimler.turkiye_saati_al()
+    ortak = {"zaman": simdi.strftime("%H:%M:%S"), "tarih": simdi.strftime("%Y-%m-%d"), "etiket": etiket}
+    st.session_state.messages.append({"role": "user", "content": kullanici_metni, **ortak})
+    st.session_state.messages.append({"role": "assistant", "content": cevap, **ortak})
+    aktif_sohbeti_oturuma_kaydet()
+
+
 def mesaji_isle_ve_arastir(girdi_metni: str, hedef_dil: str):
     """
     Kullanıcı sohbette bir soru sorduğunda:
@@ -372,11 +400,15 @@ def mesaji_isle_ve_arastir(girdi_metni: str, hedef_dil: str):
         with st.spinner("⚡ AREX düşünüyor ve yanıt hazırlıyor..."):
             cevap, dil_kodu, islem_etiketi = m8_zeka.akilli_yanit_uret(girdi_metni, hedef_dil=hedef_dil)
 
+    _yanit_svg = None
+    if m17_medya is not None:
+        cevap, _yanit_svg = m17_medya.svg_ayikla(cevap)
     st.session_state.messages.append(
         {"role": "user", "content": girdi_metni, "zaman": su_an, "tarih": bugun_str, "etiket": islem_etiketi}
     )
     st.session_state.messages.append(
-        {"role": "assistant", "content": cevap, "zaman": su_an, "tarih": bugun_str, "etiket": islem_etiketi}
+        {"role": "assistant", "content": cevap, "zaman": su_an, "tarih": bugun_str, "etiket": islem_etiketi,
+         **({"svg": _yanit_svg} if _yanit_svg else {})}
     )
     aktif_sohbeti_oturuma_kaydet()
     return cevap, dil_kodu
@@ -656,10 +688,60 @@ def sistemi_baslat():
                         st.write_stream(_kelime_akisi(msg["content"]))
                     else:
                         st.markdown(msg["content"])
+                    if msg.get("svg"):
+                        st.markdown(msg["svg"], unsafe_allow_html=True)
                     saat_bilgi = msg.get("zaman", "")
                     etiket_bilgi = msg.get("etiket", "")
                     if saat_bilgi or etiket_bilgi:
                         st.caption(f"🕒 {saat_bilgi}  |  🏷️ {etiket_bilgi}")
+
+        # 🎤 Sesli soru + 📸 Fotoğraftan soru (telefonda tek dokunuşla)
+        with st.container(key="arex_medya"):
+            _md_ses, _md_foto = st.columns([3, 2], vertical_alignment="bottom")
+            with _md_ses:
+                if hasattr(st, "audio_input"):
+                    _kayit = st.audio_input("🎤 Sesli sor", label_visibility="collapsed", key="arex_ana_mikrofon")
+                    if _kayit is not None:
+                        _ses = _kayit.getvalue()
+                        _ses_hash = hash(_ses)
+                        if _ses_hash != st.session_state.get("son_mikrofon_hash"):
+                            st.session_state["son_mikrofon_hash"] = _ses_hash
+                            with st.spinner("🎤 Sesin yazıya dökülüyor..."):
+                                _soz, _soz_hata = _sesi_yaziya_dok(_ses)
+                            if _soz:
+                                st.session_state["sesli_girdi"] = _soz
+                            elif _soz_hata:
+                                st.warning(_soz_hata)
+            with _md_foto:
+                with st.popover("📸 Fotoğraftan Soru", use_container_width=True):
+                    st.caption("Kitaptaki sorunun fotoğrafını çek veya galeriden seç; AREX adım adım çözsün.")
+                    _foto = st.file_uploader("Soru fotoğrafı", type=["png", "jpg", "jpeg", "webp", "heic"],
+                                             label_visibility="collapsed", key="arex_foto_soru")
+                    _foto_not = st.text_input("Not (isteğe bağlı)", placeholder="ör. sadece 4. soruyu çöz",
+                                              key="arex_foto_not")
+                    if _foto is not None:
+                        st.image(_foto, use_container_width=True)
+                        if st.button("🧠 Soruyu Çöz", type="primary", use_container_width=True, key="arex_foto_coz"):
+                            _gem_key = ""
+                            try:
+                                _gem_key = m9_ollama_tdk._saglayici_icin_anahtar_bul("gemini_free", "")
+                            except Exception:
+                                pass
+                            if not _gem_key:
+                                st.info("📸 Fotoğraf çözümü için ücretsiz bir **Google Gemini** anahtarı gerekiyor: "
+                                        "[aistudio.google.com/apikey](https://aistudio.google.com/apikey) → anahtarı "
+                                        "yan menüdeki **🔑 Hızlı Groq / Bulut Anahtarı Bağla** bölümüne yapıştır "
+                                        "(veya Streamlit Secrets'a `GEMINI_API_KEY` olarak ekle).")
+                            else:
+                                with st.spinner("📸 Soru okunuyor ve çözülüyor..."):
+                                    _f_cevap, _f_hata = m17_medya.fotograftan_soru_coz(_foto.getvalue(), _gem_key, _foto_not)
+                                if _f_cevap:
+                                    _dogrudan_sohbete_ekle(f"📸 Fotoğraftaki soruyu çöz{': ' + _foto_not if _foto_not else ''}",
+                                                           _f_cevap, "📸 Fotoğraftan Soru")
+                                    st.session_state["yeni_yanit_akisi"] = True
+                                    st.rerun()
+                                else:
+                                    st.error(f"Çözülemedi: {_f_hata}")
 
         # Sesli okuma: Önce metin ekranda ANINDA görünür, ses hemen ardından hazırlanır (arayüzü kilitlemez!)
         if st.session_state.get("bekleyen_ses"):
@@ -674,7 +756,7 @@ def sistemi_baslat():
         prompt = st.chat_input(
             "AREX'e bir şey sor…"
         )
-        aktif_girdi = hizli_girdi or prompt
+        aktif_girdi = hizli_girdi or prompt or st.session_state.pop("sesli_girdi", None)
         if aktif_girdi is not None and aktif_girdi.strip() != "":
             cevap, dil_kodu = mesaji_isle_ve_arastir(aktif_girdi.strip(), sohbet_dili)
             st.session_state["yeni_yanit_akisi"] = True

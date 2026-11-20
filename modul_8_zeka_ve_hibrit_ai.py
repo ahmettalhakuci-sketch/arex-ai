@@ -90,6 +90,13 @@ try:
     _guncel_asistan_yanitla = _m16.guncel_asistan_yanitla
 except Exception:
     _guncel_asistan_yanitla = None
+
+# Grafik çizici (Modül 17): "y = x^2 - 4 grafiğini çiz"
+try:
+    _m17 = _guvenli_modul_yukle("modul_17_medya_ve_grafik")
+    _grafik_ciz = _m17.grafik_ciz
+except Exception:
+    _grafik_ciz = None
 TURKCE_AYLAR = _m5.TURKCE_AYLAR
 TURKCE_GUNLER = _m5.TURKCE_GUNLER
 guvenli_cevir = _m5.guvenli_cevir
@@ -4106,6 +4113,9 @@ YARDIM_VE_HELP_YANITI = """🤝 **Elbette Ahmet! İşte seninle neler yapabilece
 * 📅 **Tarih & Yaş:** *"yılbaşına kaç gün kaldı"*, *"1 ocak 2027 hangi gün"*, *"12.05.2010 doğumluyum kaç yaşındayım"*
 * 🕰️ **Dünya Saati:** *"Tokyo'da saat kaç"*, *"New York ile saat farkı"*
 * 📖 **İngilizce Sözlük:** *"ingilizce serendipity ne demek"*
+* 📈 **Grafik Çizici:** *"y = x^2 - 4 grafiğini çiz"*, *"y = sin(x) grafiği"*, *"y = 1/x grafiği -5 ile 5 arasında"*
+* 🎤 **Sesli Soru:** Sohbetin altındaki mikrofona dokun ve konuş.
+* 📸 **Fotoğraftan Soru:** *"📸 Fotoğraftan Soru"* düğmesiyle kitaptaki sorunun fotoğrafını gönder.
 
 *Hangisiyle başlamak istersin canım kardeşim?* ⚡"""
 
@@ -5172,7 +5182,14 @@ def akilli_yanit_uret(kullanici_girdisi: str, hedef_dil: str = "tr"):
         ozel_ai_saglayici = _saglayici_onek_map[_ai_onek.group(1).lower()]
         kullanici_girdisi = _ai_onek.group(2).strip()
 
-    # 0-A3. Güncel kaynaklar & günlük asistan (net kalıplı sorular → doğrudan, hızlı yanıt)
+    # 0-A3. Grafik çizici + güncel kaynaklar & günlük asistan (net kalıplı sorular → doğrudan, hızlı yanıt)
+    if _grafik_ciz is not None and not ozel_ai_saglayici:
+        try:
+            _gr_yanit, _gr_etiket = _grafik_ciz(kullanici_girdisi)
+        except Exception:
+            _gr_yanit, _gr_etiket = None, None
+        if _gr_yanit:
+            return _gr_yanit, hedef_dil, _gr_etiket
     if _guncel_asistan_yanitla is not None and not ozel_ai_saglayici:
         try:
             _g_yanit, _g_etiket = _guncel_asistan_yanitla(kullanici_girdisi)
