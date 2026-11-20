@@ -44,6 +44,35 @@ YEDEK_DOSYALARI = {
 _EN_FAZLA_BAYT = 20 * 1024 * 1024
 
 
+_AYAR_DOSYASI = os.path.join(_KOK, "arex_calisma_ayarlari.json")
+
+
+def son_yedek_kaydet():
+    """Yedek indirildiğinde tarihini saklar (Panelim'deki yedek hatırlatıcısı için)."""
+    try:
+        with open(_AYAR_DOSYASI, "r", encoding="utf-8") as f:
+            ayar = json.load(f)
+    except Exception:
+        ayar = {}
+    ayar["son_yedek"] = datetime.now().isoformat(timespec="minutes")
+    with open(_AYAR_DOSYASI, "w", encoding="utf-8") as f:
+        json.dump(ayar, f, ensure_ascii=False, indent=2)
+
+
+def yedek_gerekli_mi(gun_esigi: int = 7):
+    """→ (gerekli_mi, son_yedek_gunu_veya_None). Yedeklenecek kayıt yoksa gerekli değildir."""
+    if not any(os.path.isfile(os.path.join(_KOK, ad)) for ad in YEDEK_DOSYALARI
+               if ad not in ("komutlar.json", "tdk_anlam_onbellek.json")):
+        return False, None
+    try:
+        with open(_AYAR_DOSYASI, "r", encoding="utf-8") as f:
+            son = json.load(f).get("son_yedek")
+        gecen = (datetime.now() - datetime.fromisoformat(son)).days if son else None
+    except Exception:
+        gecen = None
+    return gecen is None or gecen >= gun_esigi, gecen
+
+
 def yedek_zip_olustur() -> tuple:
     """→ (zip_baytları, dahil_edilen_dosya_listesi)"""
     tampon = io.BytesIO()
@@ -112,7 +141,8 @@ def yedekleme_paneli():
         if st.session_state.get("_arex_yedek_veri"):
             veri, dahil = st.session_state["_arex_yedek_veri"]
             st.download_button("⬇️ Yedeği İndir", data=veri, use_container_width=True, mime="application/zip",
-                               file_name=f"arex_yedek_{datetime.now():%Y%m%d_%H%M}.zip", key="arex_yedek_indir")
+                               file_name=f"arex_yedek_{datetime.now():%Y%m%d_%H%M}.zip", key="arex_yedek_indir",
+                               on_click=son_yedek_kaydet)
             st.caption("İçerik: " + (", ".join(YEDEK_DOSYALARI[d] for d in dahil) if dahil else "henüz kayıt yok"))
         st.divider()
         yuklenen = st.file_uploader("Yedekten geri yükle (.zip)", type=["zip"], key="arex_yedek_yukle")

@@ -480,6 +480,50 @@ class YanlisTetiklemeYok(unittest.TestCase):
         self.assertIn("Net: 27,5", cevap)
 
 
+class YedekHatirlatici(unittest.TestCase):
+    def setUp(self):
+        self.klasor = tempfile.mkdtemp()
+        self._eski = (m20._KOK, m20._AYAR_DOSYASI)
+        m20._KOK = self.klasor
+        m20._AYAR_DOSYASI = os.path.join(self.klasor, "arex_calisma_ayarlari.json")
+
+    def tearDown(self):
+        m20._KOK, m20._AYAR_DOSYASI = self._eski
+
+    def test_yedek_gerekli_mi(self):
+        self.assertEqual(m20.yedek_gerekli_mi(), (False, None))  # kayıt yok → uyarı yok
+        with open(os.path.join(self.klasor, "arex_kartlar.json"), "w") as f:
+            f.write("[]")
+        self.assertEqual(m20.yedek_gerekli_mi(), (True, None))  # kayıt var, hiç yedek yok
+        m20.son_yedek_kaydet()
+        self.assertEqual(m20.yedek_gerekli_mi(), (False, 0))
+        with open(m20._AYAR_DOSYASI, encoding="utf-8") as f:
+            ayar = json.load(f)
+        ayar["son_yedek"] = "2020-01-01T10:00"
+        with open(m20._AYAR_DOSYASI, "w", encoding="utf-8") as f:
+            json.dump(ayar, f)
+        self.assertTrue(m20.yedek_gerekli_mi()[0])
+
+    def test_panelde_bulutta_uyari(self):
+        with open(os.path.join(self.klasor, "arex_kartlar.json"), "w") as f:
+            f.write("[]")
+        eski_bulut = m23.bulutta_mi
+        eski = {(m, a): getattr(m, a) for m, a in [(m18, "TAKIP_DOSYASI"), (m18, "AYAR_DOSYASI"),
+                (m18, "HATIRLATICI_DOSYASI"), (m18, "YANLIS_DOSYASI"), (m21, "SINAV_DOSYASI"),
+                (m21, "KART_DOSYASI"), (m21, "DENEME_DOSYASI")]}
+        try:
+            for (m, a) in eski:
+                setattr(m, a, os.path.join(self.klasor, "x_" + a))
+            m23.bulutta_mi = lambda: True
+            self.assertIn("Hiç yedek almadın", m22.plan_ve_formul_yanitla("panelim")[0])
+            m23.bulutta_mi = lambda: False
+            self.assertNotIn("yedek", m22.plan_ve_formul_yanitla("panelim")[0])
+        finally:
+            m23.bulutta_mi = eski_bulut
+            for (m, a), v in eski.items():
+                setattr(m, a, v)
+
+
 class SohbetYonlendirme(unittest.TestCase):
     """Sohbet motorunun soruları doğru modüle yönlendirdiğini doğrular (ağ kapalı)."""
 

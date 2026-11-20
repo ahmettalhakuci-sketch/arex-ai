@@ -484,6 +484,18 @@ def _panel(t: str):
     except Exception:
         pass
 
+    # Bulutta yedek hatırlatıcısı (uygulama yeniden başlayınca dosyalar sıfırlanabilir)
+    try:
+        import modul_20_yedekleme as m20
+        import modul_23_erisim as m23
+        if m23.bulutta_mi():
+            gerekli, gecen = m20.yedek_gerekli_mi()
+            if gerekli:
+                s.append("💾 " + ("Hiç yedek almadın" if gecen is None else f"Son yedek **{gecen} gün** önce")
+                         + " — yan menü ☰ → **Verilerimi Yedekle**")
+    except Exception:
+        pass
+
     # Sıradaki adım (öncelik sırasıyla tek net öneri)
     if vadeli:
         adim = f"🃏 Önce **{min(vadeli, 10)} kartını** tekrar et → *\"kartları çalış\"*"
