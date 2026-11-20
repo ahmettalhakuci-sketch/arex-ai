@@ -1183,6 +1183,13 @@ def _hata_kaydet(kod: str, mesaj: str):
 
 
 _GROQ_MODEL_ONBELLEK = {"liste": None, "zaman": 0.0}
+
+
+def _gecmis_kisalt(icerik, sinir: int = 1500) -> str:
+    """Geçmiş mesajı token tasarrufu için kısaltır: gömülü grafik (SVG) ve kaynak bağlantı satırları atılır."""
+    metin = re.sub(r"<!--AREX_SVG:[A-Za-z0-9+/=]+-->", "", str(icerik or ""))
+    metin = re.sub(r"\[🔗[^\]]*\]\([^)]*\)", "", metin)
+    return metin[:sinir]
 # Kota (HTTP 429) alan model → bu zamana kadar atlanır (her mesajda boşa yeniden denenmez)
 _KOTA_BEKLEME = {}
 
@@ -1433,14 +1440,16 @@ def _bulut_anahtarli_ai_cagir(
                 "messages": (
                     [{"role": "system", "content": _uslup_ekle(sistem_prompt)}]
                     + [
-                        {"role": m.get("role", "user"), "content": str(m.get("content", ""))[:2200]}
-                        for m in gecmis_mesajlar[-12:]
+                        {"role": m.get("role", "user"), "content": _gecmis_kisalt(m.get("content", ""))}
+                        for m in gecmis_mesajlar[-6:]
                         if m.get("role") in ("user", "assistant") and m.get("content")
                     ]
                     + [{"role": "user", "content": soru}]
                 ),
                 "temperature": 0.45 if not ek_baglam else 0.35,
-                "max_tokens": 4096,
+                # Groq ücretsiz plan: dakikada 8.000 token ve sınır hesabında İSTENEN max_tokens da sayılır.
+                # 4096 istemek tek mesajda kotanın çoğunu ayırıyordu; gerçek yanıtlar ~250-1100 token.
+                "max_tokens": 3000 if "UZUN ANLATIM" in (ek_baglam or "") else 1800,
             }
             if "gpt-oss" in _aktif_model:
                 # Akıl yürütme gerekmeyen sohbette kısa düşünme → ~%30 daha hızlı; muhakeme isteğinde orta
@@ -1509,8 +1518,8 @@ def _pollinations_ai_cagir(
             "messages": (
                 [{"role": "system", "content": _uslup_ekle(sistem_prompt)}]
                 + [
-                    {"role": m.get("role", "user"), "content": str(m.get("content", ""))[:2200]}
-                    for m in gecmis_mesajlar[-12:]
+                    {"role": m.get("role", "user"), "content": _gecmis_kisalt(m.get("content", ""))}
+                    for m in gecmis_mesajlar[-6:]
                     if m.get("role") in ("user", "assistant") and m.get("content")
                 ]
                 + [{"role": "user", "content": soru}]

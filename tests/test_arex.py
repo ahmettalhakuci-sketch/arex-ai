@@ -61,6 +61,8 @@ class ProMatematik(unittest.TestCase):
         self.assertIn("`14`", _sonuc("2+3*4"))
         self.assertIn("`-9`", _sonuc("-3^2"))
         self.assertIn("`512`", _sonuc("2^3^2"))
+        self.assertIn("**`18`**", _sonuc("120'nin %15'i kaç"))
+        self.assertIn("**`60`**", _sonuc("200'ün yüzde 30'u"))
         self.assertIn("`14`", _sonuc("2(3+4)"))
 
     def test_kesir_ve_kok(self):
@@ -152,6 +154,7 @@ class WikipediaKonu(unittest.TestCase):
         self.assertEqual(m10.wikipedia_konu_ayikla("istanbulun fethi ne zaman"), "istanbulun fethi")
         self.assertEqual(m10.wikipedia_konu_ayikla("almanyanın nüfusu kaç"), "almanyanın nüfusu")
         self.assertEqual(m10.wikipedia_konu_ayikla("dünyanın en uzun nehri hangisi"), "dünyanın en uzun nehri")
+        self.assertEqual(m10.wikipedia_konu_ayikla("karadelikler nasıl oluşur"), "Kara delik")
         # "ar" (eski asistan adı) yalnızca ayrı kelimeyse silinmeli: "arşimet" → "şimet" OLMAMALI
         for soru, konu in (("arşimet kimdir", "arşimet"), ("arjantin nerede", "arjantin"), ("ar: fotosentez nedir", "fotosentez"),
                            ("pekin nerede", "pekin"), ("peki ya mars", "mars"), ("selamlar nasılsın", "selamlar nasılsın")):
@@ -724,6 +727,30 @@ class SohbetYonlendirme(unittest.TestCase):
             m9._KOTA_BEKLEME.clear()
             m9._KOTA_BEKLEME.update(eski)
             self.st.session_state["messages"] = []
+
+    def test_yonlendirme_duzeltmeleri(self):
+        m8 = self.m8
+        # fiyat: "ne kadar" yalnızca ürün bağlamında
+        for q in ("ışık hızı ne kadar", "bu hafta ne kadar sıcak olacak", "istanbul ankara arası ne kadar sürer"):
+            self.assertFalse(m8.fiyat_sorgusu_mu(q), q)
+        for q in ("iphone 15 ne kadar", "playstation 5 kaç tl", "ekmek fiyatı"):
+            self.assertTrue(m8.fiyat_sorgusu_mu(q), q)
+        # hava: "kaç derece" her zaman hava değildir
+        for q in ("bugün yağmur yağacak mı", "bu hafta ne kadar sıcak olacak", "yarın şemsiye almalı mıyım", "ankara hava durumu"):
+            self.assertTrue(m8._hava_durumu_istegi_mi(q), q)
+        for q in ("suyun kaynama noktası kaç derece", "üçgenin iç açıları toplamı kaç derece", "ateşim kaç derece"):
+            self.assertFalse(m8._hava_durumu_istegi_mi(q), q)
+        # sohbet ve yaratıcı istekler Wikipedia'ya gitmemeli
+        n = m8.metni_normallestir
+        for q in ("yüzde yüz emin misin", "canım çok sıkılıyor", "ciddi misin"):
+            self.assertTrue(m8._dogal_sohbet_cumlesi_mi(q, n(q)), q)
+        for q in ("bana bir fıkra anlat", "bir şiir yaz", "bana bir bilmece sor"):
+            self.assertTrue(m8._hikaye_veya_masal_istegi_mi(n(q)), q)
+        # harita: alakasız eşleşme reddedilir
+        self.assertFalse(m8._harita_sonucu_alakali_mi("sin şehri nerede", "Şehri Yaren Konutları, Sincan"))
+        self.assertTrue(m8._harita_sonucu_alakali_mi("anıtkabir nerede", "Anıtkabir, Çankaya, Ankara"))
+        # √ sembolü matematik motoruna gider
+        self.assertIn("MATEMATIK", m8.otonom_plan_olustur("√50")["araclar"])
 
     def test_yonlendirme(self):
         self.assertIn("Matematik", self._etiket("2+3*4"))

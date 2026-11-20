@@ -4263,7 +4263,33 @@ def fiyat_sorgusu_mu(kullanici_girdisi: str) -> bool:
     raw = kullanici_girdisi.replace("İ", "i").replace("I", "ı").lower().replace("\u0307", "").strip()
     if raw.startswith(("fiyat:", "fiyat ", "cimri:", "cimri ", "epey:", "epey ", "akakce:", "akakçe:")):
         return True
-    return bool(re.search(r"\b(ne kadar|kaç tl|kac tl|kaç para|kac para|fiyatı|fiyati|fiyatları|en ucuz)\b", raw))
+    if re.search(r"\b(kaç tl|kac tl|kaç lira|kac lira|kaç para|kac para|fiyatı|fiyati|fiyatları|fiyatlari|en ucuz|ücreti|ucreti)\b", raw):
+        return True
+    if not re.search(r"\bne kadar\b", raw):
+        return False
+    # "ışık hızı ne kadar", "ne kadar sıcak olacak", "ne kadar sürer", "dünya ne kadar büyük" → fiyat DEĞİL
+    if re.search(r"(hız|hiz|sıcak|sicak|soğuk|soguk|uzak|uzun|kısa|kisa|sür|sur(?:er|ecek)|süre|yaş|yas\b|boy|derin|yüksek|"
+                 r"yuksek|ağır|agir|büyük|buyuk|küçük|kucuk|kalori|zaman|önemli|onemli|mesafe|nüfus|nufus|alan|"
+                 r"sıcaklı|sicakli|derece|ışık|isik|güç|guc|enerji|kütle|kutle|hacim|ağırlı|agirli|uyu|çalış|calis|"
+                 r"sev|mutlu|zor|kolay|güzel|guzel|doğru|dogru|emin|olacak|oldu|gerek|lazım|lazim|var|yeter)", raw):
+        return False
+    return True
+
+
+def _harita_sonucu_alakali_mi(sorgu: str, yer: str) -> bool:
+    """Sorgudaki anlamlı yer adı kelimelerinden en az biri, bulunan yerin adında KELİME olarak geçmeli."""
+    durak = {"nerede", "neresi", "nerededir", "adresi", "adres", "konumu", "konum", "sehri", "sehir", "ili", "ilcesi",
+             "ulkesi", "yer", "yeri", "nasil", "giderim", "yol", "tarifi", "hangi", "semtte", "ilcede", "bana", "en", "yakin"}
+    s_kel = [k for k in metni_normallestir(sorgu).split() if len(k) >= 2 and k not in durak]
+    y_kel = metni_normallestir(yer).split()
+    if not s_kel:
+        return True
+    for sk in s_kel:
+        for yk in y_kel:
+            # tam kelime ya da yalnızca ekle uzamış hali ("ankaranin" ~ "ankara"); "sin" ≠ "sincan"
+            if yk == sk or (len(sk) >= 4 and (yk.startswith(sk) or sk.startswith(yk)) and abs(len(yk) - len(sk)) <= 3):
+                return True
+    return False
 
 
 def adres_sorgusu_mu(kullanici_girdisi: str) -> bool:
@@ -4419,6 +4445,7 @@ def _duygusal_kisisel_sohbet_mi(raw: str, norm: str) -> bool:
         "sinirim", "stres", "agliyorum", "korkuyorum", "sikildim", "canim sikkin", "moralim",
         "yalnizim", "dert", "kafam karisti", "kotu hissediyorum", "mutsuzum", "mutluyum",
         "sevincliyim", "heyecanliyim", "anlamiyor", "dinlemiyor",
+        "sikiliyor", "sikiliyorum", "canim sikiliyor", "bunaliyorum", "keyfim yok", "keyifsizim", "canim yaniyor",
     ]
     kisisel_zamir = bool(re.search(r"\b(beni|bana|benim|benden|kendimi|ben)\b", norm))
 
@@ -4453,6 +4480,11 @@ def _dogal_sohbet_cumlesi_mi(raw: str, norm: str) -> bool:
         "dinlemiyorsun", "anlamiyorsun", "gunun nasil", "nasil gecti", "motive", "motivasyon", "kendimi nasil", "ne yapabilirim", "nasil basaririm",
     ]
     if any(k in norm for k in geri_bildirim_ve_gunluk):
+        return True
+
+    # Asistana yöneltilmiş kısa sorular: "yüzde yüz emin misin", "ciddi misin", "robot musun", "orada mısın"
+    if re.search(r"\b(emin|ciddi|burada|orada|hakli|deli|robot|insan|gercek|mutlu|uzgun|iyi|kizgin|yorgun|akilli|zeki|"
+                 r"canli|uyanik|mesgul|hazir|sikilmis|kirgin)\s+m[iu]s[iu]n(?:uz)?\b", norm):
         return True
 
     # Türkçe 1. / 2. şahıs fiil çekimi bitişleri
@@ -4586,6 +4618,8 @@ def _hikaye_veya_masal_istegi_mi(norm_text: str) -> bool:
             "masal anlat", "bana masal", "uzun masal", "kisa masal", "cocuk masali",
             "hikaye anlat", "hikayesini anlat", "kisa hikaye", "uzun hikaye", "hikaye yaz",
             "oyku anlat", "oyku yaz", "destan anlat", "bir hikaye",
+            "fikra anlat", "bir fikra", "fikra soyle", "saka yap", "espri yap", "bir espri", "bilmece sor",
+            "bir bilmece", "siir yaz", "bir siir", "siir oku", "tekerleme", "sarki sozu yaz", "sarki yaz",
         ]
     )
 
@@ -4691,7 +4725,7 @@ def akilli_niyet_siniflandir(kullanici_girdisi: str) -> dict:
         skorlar["WIKIPEDIA_ANSIKLOPEDI"] -= 60
     if re.search(r"\b(ne demek|ne demektir|kelimesinin anlamı|kelimesi ne demek|tdk anlamı)\b", raw):
         skorlar["SOZLUK_TDK"] += 85
-    if re.search(r"(\d+\s*[+\-*/×÷^]\s*\d+|\d*\s*x\s*(?:\^2|²)?\s*[+\-=]|\bkök\b|\bkok\b|\bkarekök\b|\bçarpı\b|\bcarpi\b|\bbölü\b|\bbolu\b|\bartı\b|\barti\b|\beksi\b|\byüzde\b|\byuzde\b|\büzeri\b|\buzeri\b|\büssü\b|\bussu\b|\bebob\b|\bekok\b|\bfaktöriyel|\bfaktoriyel|\basal\b|\bhızla\b|\bhizla\b|\bhipotenüs|\bhipotenus|\bpisagor|üçgenin\s+alanı|ucgenin\s+alani)", raw):
+    if re.search(r"(√\s*\d|\d+\s*[+\-*/×÷^]\s*\d+|\d*\s*x\s*(?:\^2|²)?\s*[+\-=]|\bkök\b|\bkok\b|\bkarekök\b|\bçarpı\b|\bcarpi\b|\bbölü\b|\bbolu\b|\bartı\b|\barti\b|\beksi\b|\byüzde\b|\byuzde\b|\büzeri\b|\buzeri\b|\büssü\b|\bussu\b|\bebob\b|\bekok\b|\bfaktöriyel|\bfaktoriyel|\basal\b|\bhızla\b|\bhizla\b|\bhipotenüs|\bhipotenus|\bpisagor|üçgenin\s+alanı|ucgenin\s+alani)", raw):
         skorlar["MATEMATIK_FEN"] += 95
 
     # 4. Selamlaşma / Duygu / Kişisel Sohbet
@@ -4770,6 +4804,13 @@ def _yemek_tarifi_istegi_mi(metin_kucuk: str) -> bool:
 
 
 def _hava_durumu_istegi_mi(metin_kucuk: str) -> bool:
+    # "suyun kaynama noktası kaç derece", "üçgenin iç açısı kaç derece", "ateşim kaç derece" → hava DEĞİL
+    if re.search(r"kayna|erime|donma|nokta|açı|aci\b|üçgen|ucgen|vücut|vucut|ateş|ates|fırın|firin|motor|kelvin|fahrenhayt", metin_kucuk) \
+            and not re.search(r"hava|yağmur|yagmur|kar\b|rüzgar|ruzgar", metin_kucuk):
+        return False
+    if re.search(r"\b(?:sıcak|sicak|soğuk|soguk|serin|ılık|yağmurlu|yagmurlu|karlı|rüzgarlı|ruzgarli)\s+(?:olacak|mı|mi|olur mu|mu)\b"
+                 r"|\b(?:yağmur|yagmur|kar)\s+(?:yağacak|yagacak)|\bhava\s+(?:nasıl\s+)?olacak|\bşemsiye\s+al|\bsemsiye\s+al|\bmont\s+giy", metin_kucuk):
+        return True
     return bool(re.search(r"\b(hava durumu|hava nasıl|hava nasil|kaç derece|kac derece|yağmur var mı|kar yağacak mı|hava kalitesi|hava kirliliği|hava kirliligi|aqi|uv indeksi)\b", metin_kucuk))
 
 
@@ -5055,7 +5096,7 @@ def otonom_plan_olustur(kullanici_girdisi: str) -> dict:
     _aralik_veya_skor = bool(re.search(
         r"\b\d+\s*-\s*\d+\s*(?:gün|gun|saat|dakika|dk|hafta|ay|yıl|yil|sene|kişi|kisi|kez|defa|tane|kat|yaş|yas|"
         r"sayfa|soru|km|metre|kilo|tl|lira|dolar|euro)\b|\b(?:skor|maç|mac|kazand|yendi|yenildi|berabere|galip|mağlup)", raw))
-    if _pro_mat_mi or (not _aralik_veya_skor and re.search(r"(\d+\s*[+\-*/×÷^]\s*\d+|\d*\s*x\s*(?:\^2|²)?\s*[+\-=]|\bkök\b|\bkok\b|\bkarekök\b|\bçarpı\b|\bcarpi\b|\bbölü\b|\bbolu\b|\bartı\b|\barti\b|\beksi\b|\byüzde\b|\byuzde\b|\büzeri\b|\buzeri\b|\büssü\b|\bussu\b|\bebob\b|\bekok\b|\bfaktöriyel|\bfaktoriyel|\basal\b|\bhızla\b|\bhizla\b|\bhipotenüs|\bhipotenus|\bpisagor|üçgenin\s+alanı|ucgenin\s+alani)", raw)):
+    if _pro_mat_mi or (not _aralik_veya_skor and re.search(r"(√\s*\d|\d+\s*[+\-*/×÷^]\s*\d+|\d*\s*x\s*(?:\^2|²)?\s*[+\-=]|\bkök\b|\bkok\b|\bkarekök\b|\bçarpı\b|\bcarpi\b|\bbölü\b|\bbolu\b|\bartı\b|\barti\b|\beksi\b|\byüzde\b|\byuzde\b|\büzeri\b|\buzeri\b|\büssü\b|\bussu\b|\bebob\b|\bekok\b|\bfaktöriyel|\bfaktoriyel|\basal\b|\bhızla\b|\bhizla\b|\bhipotenüs|\bhipotenus|\bpisagor|üçgenin\s+alanı|ucgenin\s+alani)", raw)):
         araclar.append("MATEMATIK")
         adim_ozetleri.append("🧮 Matematik motoru hesaplıyor")
 
@@ -5171,7 +5212,9 @@ def otonom_plan_olustur(kullanici_girdisi: str) -> dict:
         araclar.append("WIKIPEDIA_BIYOGRAFI")
         adim_ozetleri.append("🌐 Derin ansiklopedi (Wikipedia) kaynakları açılıyor")
     _canli_web_sentez = ("CANLI_WEB_HABER" in araclar and bool(st.session_state.get("acik_kaynak_ai_aktif", True)))
-    if not araclar or yorum_istegi_var or ollama_acik_istek or derin_istek_var or devam_istegi_var or hikaye_istegi_var or _canli_web_sentez:
+    # "suyun kaynama noktası kaç derece", "ışık hızı ne kadar": madde özeti sayıyı içermeyebilir → AI bağlamla yanıtlasın
+    _sayisal_soru = bool(re.search(r"\b(kaç|kac|kaçtır|ne kadar|hangisi|hangi yıl|kaçıncı|kacinci)\b", raw)) and "WIKIPEDIA_BIYOGRAFI" in araclar
+    if not araclar or _sayisal_soru or yorum_istegi_var or ollama_acik_istek or derin_istek_var or devam_istegi_var or hikaye_istegi_var or _canli_web_sentez:
         araclar.append("SOHBET_AI")
         if ollama_acik_istek:
             adim_ozetleri.append("🦙 Yerel Ollama + açık kaynak verileri sentezleniyor")
@@ -5486,7 +5529,9 @@ def akilli_yanit_uret(kullanici_girdisi: str, hedef_dil: str = "tr"):
     if "HARITA" in araclar:
         adres_parcasi = kullanici_girdisi.split(" ve ")[-1] if (" ve " in raw_text and len(araclar) >= 2 and "WIKIPEDIA_BIYOGRAFI" in araclar) else kullanici_girdisi
         a_sonuc = acik_kaynak_adres_bul(adres_parcasi)
-        if a_sonuc.get("basarili"):
+        if a_sonuc.get("basarili") and not _harita_sonucu_alakali_mi(adres_parcasi, a_sonuc.get("yer", "")):
+            a_sonuc = {"basarili": False}  # "sin şehri" → "Şehri Yaren Konutları (Sincan)" gibi alakasız eşleşme
+        if a_sonuc.get("basarili") and a_sonuc.get("yer"):
             toplanan_parcalar.append(adres_sonucunu_metne_formatla(a_sonuc))
             kullanilan_kaynaklar.append(f"Harita ({a_sonuc['yer']})")
             st.session_state["aktif_konu"] = a_sonuc["yer"]
@@ -5730,6 +5775,17 @@ def akilli_yanit_uret(kullanici_girdisi: str, hedef_dil: str = "tr"):
                 return w_fmt, hedef_dil, f"🌐 Wikipedia ({w_kurtar['baslik']})"
         except Exception:
             pass
+    _kota_dolu_simdi = False
+    try:
+        _kota_dolu_simdi = _m9.ai_kotasi_dolu_mu()
+    except Exception:
+        pass
+    if _kota_dolu_simdi and not _sohbet_mi_simdi:
+        # Yapay zekâ yokken genel haber araması bilgi sorusuna alakasız başlıklar döndürür → dürüst mesaj
+        return ("⏳ **Yapay zekâ kotam şu an dolu** (ücretsiz Groq: dakikada sınırlı istek). "
+                "Bu soruyu sağlıklı yanıtlayabilmem için ona ihtiyacım var; **1 dakika sonra** tekrar sorar mısın?\n\n"
+                "💡 Bu arada hesap, birim çevirme, hava durumu, döviz, deprem, net hesaplama, kartlar ve "
+                "formül kartları gibi araçlarım yapay zekâsız çalışmaya devam ediyor."), hedef_dil, "⏳ AI Geçici Olarak Meşgul"
     if not _sohbet_mi_simdi:
         try:
             cw_kurtar = canli_web_ve_haber_ara(kullanici_girdisi)

@@ -741,6 +741,15 @@ def _ozel_kaliplar(t: str):
         return (f"💯 **Yüzde Oranı:** `{sayi_yaz(a)}`, `{sayi_yaz(b)}` sayısının "
                 f"`({sayi_yaz(a)} / {sayi_yaz(b)}) × 100` = **%{sayi_yaz(oran).split(' ≈')[-1].strip()}**'idir."), "Yüzde Oranı"
 
+    # "120'nin %15'i kaç", "200'ün yüzde 30'u", "%15'i 120'nin"  → doğrudan yüzde hesabı
+    m = (re.search(_SAYI + _EK + r"\s*(?:%|y[üu]zde)\s*" + _SAYI + r"\s*'?\s*(?:[ıiuü]|s[ıiuü]|n[ıiuü]|y[ıiuü])\b(?!\s*(?:" +
+                   r"art|azal|zam|indirim|fazla|eksil|d[üu][şs]))", t))
+    if m:
+        ana, oran = _f(m.group(1)), _f(m.group(2))
+        sonuc = ana * oran / 100
+        return (f"💯 **Yüzde Hesabı:** `{sayi_yaz(ana)}` sayısının yüzde `{sayi_yaz(oran)}` kadarı\n"
+                f"• `{sayi_yaz(ana)} × {sayi_yaz(oran)} / 100` = **`{sayi_yaz(sonuc)}`**"), "Yüzde Hesabı"
+
     # Yüzde artış / zam / azalış / indirim
     artis = r"(?:art[ıi][şs]|art[ıi]r|zam|fazla|ekle)"
     azalis = r"(?:azal[ıi][şs]|azalt|indirim|eksil|d[üu][şs][üu][şs]|d[üu][şs]|iskonto)"

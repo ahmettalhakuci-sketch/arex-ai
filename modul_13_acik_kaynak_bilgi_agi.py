@@ -807,7 +807,7 @@ def canli_hava_durumu_getir(sehir: str) -> dict:
             break
     if not sehir_temiz:
         sehir_temiz = re.sub(
-            r"\b(hava durumu|hava kalitesi|hava nasıl|hava nasil|bugün hava|bugun hava|anlık|anlik|şu an|su an|güncel|guncel|detaylı|detayli|derece|sıcaklık|sicaklik|kaç|kac|nedir|nasıl|nasil|hava|durumu|aqi|yağmur var mı|kar yağacak mı|yağmur|kar|bugün|bugun|yarın|yarin|ver|söyle|soyle|göster|goster|ve)\b",
+            r"\b(hava durumu|hava kalitesi|hava nasıl|hava nasil|bugün hava|bugun hava|anlık|anlik|şu an|su an|güncel|guncel|detaylı|detayli|derece|sıcaklık|sicaklik|kaç|kac|nedir|nasıl|nasil|hava|durumu|aqi|yağmur var mı|kar yağacak mı|yağmur|kar|bugün|bugun|yarın|yarin|ver|söyle|soyle|göster|goster|ve|yağacak|yagacak|yağar|yagar|yağıyor|yagiyor|olacak|olur|mı|mi|mu|mü|ne kadar|sıcak|sicak|soğuk|soguk|serin|ılık|ilik|rüzgarlı|ruzgarli|rüzgar|ruzgar|yağmurlu|yagmurlu|karlı|karli|bu|hafta|haftasonu|hafta sonu|sonu|şemsiye|semsiye|almalı mıyım|almali miyim|alayım mı|var mı|yok mu|akşam|aksam|sabah|öğlen|oglen|gece|bugünkü|bugunku|yarınki|yarinki)\b",
             " ",
             sehir,
             flags=re.IGNORECASE,

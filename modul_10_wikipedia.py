@@ -737,7 +737,7 @@ def wikipedia_konu_ayikla(kullanici_girdisi: str) -> str:
 
     temiz = re.sub(r"^(?:bana|lütfen|lutfen|biraz)\s+", "", temiz, flags=re.IGNORECASE).strip()
     temiz = re.sub(r"^mars\s+gezegeni$", "Mars", temiz, flags=re.IGNORECASE)
-    temiz = re.sub(r"^karadelik$", "Kara delik", temiz, flags=re.IGNORECASE)
+    temiz = re.sub(r"^kara\s*delik(?:ler|in|i|leri)?$", "Kara delik", temiz, flags=re.IGNORECASE)
     return temiz.strip("?!.,;:\"' ")
 
 _WIKI_ONBELLEK = {}
@@ -764,6 +764,8 @@ def iyelik_adaylari(konu: str) -> list:
     kelime = kelime.replace("’", "'")
     unlu = "aeıioöuüâî"
     adaylar = []
+    if kelime.lower().rstrip("'") in ("suyun", "su'yun"):  # düzensiz: su → suyun
+        return [(f"suyun {ozellik}", "su", ozellik)]
     for ek_uz in (3, 2):  # önce -nın (ünlü kök), sonra -ın (ünsüz kök)
         ek = kelime[-ek_uz:]
         kok = kelime[:-ek_uz].rstrip("'")
@@ -873,6 +875,9 @@ def wikipedia_madde_getir(sorgu: str, dil: str = "tr", detay_karakter: int = 450
             "bir", "veya", "ile", "icin", "gibi", "daha", "cok", "ama", "fakat", "ancak",
             "nedir", "kimdir", "nasil", "neden", "nerede", "hakkinda", "bilgi", "anlat",
             "olarak", "olan", "olanlar", "uzerine", "bana", "sana", "benim", "senin",
+            # İngilizce dolgu kelimeleri ("what is the capital of japan" → "Do What U Want" eşleşmesin)
+            "what", "the", "how", "many", "much", "does", "why", "who", "where", "when", "which", "are",
+            "was", "were", "can", "you", "your", "tell", "about", "with", "from", "this", "that", "have",
         }
         q_norm = _tr_ascii(aranan).strip()
         q_kelimeler = [w for w in re.findall(r"[a-z0-9]+", q_norm) if len(w) >= 3 and w not in durak]
@@ -952,6 +957,11 @@ def wikipedia_madde_getir(sorgu: str, dil: str = "tr", detay_karakter: int = 450
 
     def _tek_dil_cek(aranan_baslik: str, hedef_dil: str):
         dogrudan = _dogrudan_baslik_dene(aranan_baslik, hedef_dil)
+        if not dogrudan and hedef_dil == "tr":
+            # Çoğul ek: "kara delikler", "volkanlar", "dinozorlar" → tekil başlık ("Volkan", "Dinozor")
+            tekil = re.sub(r"(?<=\w{3})(?:ler|lar)$", "", aranan_baslik.strip(), flags=re.IGNORECASE)
+            if tekil != aranan_baslik.strip():
+                dogrudan = _dogrudan_baslik_dene(tekil, hedef_dil)
         istek_basligi = None
         if dogrudan:
             secilen_baslik, istek_basligi = dogrudan
