@@ -1,0 +1,6 @@
+streamlit>=1.40
+gTTS
+edge-tts
+thefuzz
+SpeechRecognition
+googletrans

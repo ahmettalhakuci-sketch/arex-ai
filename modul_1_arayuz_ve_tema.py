@@ -5,6 +5,7 @@ AREX AI STUDIO v4.0 — MODÜL 1: KOYU LACİVERT TEMA MOTORU, 3D ÇEVİRMELİ KA
 CSS TASARIMI, 150 ÇOK DİLLİ KART VE 240 SİSTEM KISAYOLU (modul_1_arayuz_ve_tema.py)
 ==============================================================================
 """
+import re
 import streamlit as st
 
 UYGULAMA_ADI = "AREX AI Studio"
@@ -2251,7 +2252,17 @@ def hero_banner_goster(kalip_sayisi: int, aktif_tema: str = "Derin Lacivert (Kla
     st.markdown(html, unsafe_allow_html=True)
 
 
+def _satir_ici_markdown(metin: str) -> str:
+    """HTML kart içinde **kalın**, *italik* ve `kod` işaretlerini gerçek biçime çevirir."""
+    metin = str(metin)
+    metin = re.sub(r"`([^`]+)`", r"<code>\1</code>", metin)
+    metin = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", metin)
+    metin = re.sub(r"(?<![\w*])\*(?!\s)([^*]+?)\*(?!\w)", r"<i>\1</i>", metin)
+    return metin
+
+
 def bilgi_karti_olustur(baslik: str, alt_bilgi: str, aciklama: str) -> str:
+    aciklama = _satir_ici_markdown(aciklama)
     return (
         f'<div class="premium-card">'
         f'<div class="card-title">{baslik}</div>'

@@ -41,6 +41,12 @@ primaryColor = "#38bdf8"
 backgroundColor = "#03091a"
 secondaryBackgroundColor = "#07142e"
 textColor = "#ffffff"
+
+[server]
+enableStaticServing = true
+
+[browser]
+gatherUsageStats = false
 """
 for _hedef_kok in {PROJE_KOK_DIZINI, os.getcwd()}:
     try:
@@ -62,11 +68,19 @@ except Exception:
 
 # 3. SAYFA YAPILANDIRMASI (İlk Streamlit Komutu)
 st.set_page_config(
-    page_title="AREX AI Studio v13.0 | Akıllı Sohbet & Mantık Motoru",
+    page_title="AREX AI",
     page_icon="⚡",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",  # telefonda kapalı, bilgisayarda açık başlar
 )
+
+# Mobil premium arayüz + açılış kapağı + PWA (Modül 15)
+try:
+    import modul_15_mobil_arayuz as m15_mobil
+    m15_mobil.kapak_ekrani_goster()
+    m15_mobil.pwa_baglantilarini_ekle()
+except Exception:
+    m15_mobil = None
 
 # 4. OTOMATİK 10 MODÜL KURUCU VE GÜNCELLEYİCİ MEKANİZMA
 _GOMULU_MODUL_ARSIVI = {
@@ -371,6 +385,8 @@ def mesaji_isle_ve_arastir(girdi_metni: str, hedef_dil: str):
 def sistemi_baslat():
     oturum_durumunu_hazirla()
     m1_arayuz.arayuz_stillerini_yukle(st.session_state.secili_tema)
+    if m15_mobil is not None:
+        m15_mobil.mobil_stilleri_yukle()
 
     # GÜVENLİK KATMANI 0: Harici Siber Güvenlik Datası & FAIL-CLOSED Acil Kilit Kontrolü
     m11_guvenlik.siber_guvenlik_datasini_yukle()
@@ -415,22 +431,25 @@ def sistemi_baslat():
     # ==========================================================================
     # SADELEŞTİRİLMİŞ YAN MENÜ (9 Dağınık Sekme -> 5 Birleştirilmiş Merkez)
     # ==========================================================================
+    # ÜST HERO BANNER + ÜSTTE YAPIŞIK BÖLÜM ÇUBUĞU (mobilde yatay kaydırılır)
+    m1_arayuz.hero_banner_goster(len(kalip_havuzu), st.session_state.secili_tema)
+    _BOLUMLER = {
+        "💬 Sohbet": "💬 Sohbet & Wikipedia Araştırma Botu",
+        "📚 Eğitim": "📚 Eğitim, Matematik & Ansiklopedi",
+        "🌐 Dil": "🌐 Dil & 3D Çevirmeli Kart Stüdyosu",
+        "🍅 Odak": "🍅 Pomodoro & Canlı Çalışma Yeri",
+        "🚀 Mühendislik": "🚀 Mühendislik (İHA / Bebek Arabası)",
+        "🔌 API": "🔌 Çoklu API, DeepSeek & Canlı Bağlantı",
+        "⚙️ Ayarlar": "⚙️ Açık Kaynak AI & Sistem Ayarları",
+    }
+    if m15_mobil is not None:
+        bolum = m15_mobil.ust_gezinme(_BOLUMLER, "💬 Sohbet & Wikipedia Araştırma Botu")
+    else:
+        bolum = st.radio("Çalışma Alanı Seçin:", list(_BOLUMLER.values()), horizontal=True)
+
     with st.sidebar:
         st.markdown("### ⚡ AREX-1 Studio")
-        st.caption("v13.0 • Asil Lacivert • Mantık Motoru • 13 Modül")
-
-        bolum = st.radio(
-            "Çalışma Alanı Seçin:",
-            [
-                "💬 Sohbet & Wikipedia Araştırma Botu",
-                "🍅 Pomodoro & Canlı Çalışma Yeri",
-                "🔌 Çoklu API, DeepSeek & Canlı Bağlantı",
-                "📚 Eğitim, Matematik & Ansiklopedi",
-                "🌐 Dil & 3D Çevirmeli Kart Stüdyosu",
-                "🚀 Mühendislik (İHA / Bebek Arabası)",
-                "⚙️ Açık Kaynak AI & Sistem Ayarları",
-            ],
-        )
+        st.caption("v14 • Mobil Premium • Mantık Motoru • 15 Modül")
 
         _aktif_sag_kod = st.session_state.get("acik_kaynak_saglayici", "pollinations_free")
         _aktif_anahtar_var = bool(st.session_state.get("acik_kaynak_api_key", "").strip())
@@ -588,16 +607,15 @@ def sistemi_baslat():
                 use_container_width=True,
             )
 
-    # ÜST HERO BANNER
-    m1_arayuz.hero_banner_goster(len(kalip_havuzu), st.session_state.secili_tema)
 
     # ==========================================================================
     # MERKEZ 1: TAM GENİŞLİKLİ SOHBET & DOĞRUDAN WIKIPEDIA ARAŞTIRMA BOTU
     # ==========================================================================
     if bolum == "💬 Sohbet & Wikipedia Araştırma Botu":
         # Ultra Sade 4 Kısayol (Göz Yormayan Tek Satır)
-        q1, q2, q3, q4 = st.columns(4)
         hizli_girdi = None
+        with st.container(key="arex_hizli"):
+            q1, q2, q3, q4 = st.columns(4)
         if q1.button("🌐 Hızlı Çeviri (EN)", use_container_width=True):
             hizli_girdi = "İngilizceye çevir: Merhaba, en yakın metro istasyonu nerede?"
         if q2.button("⏰ Saat & 25 dk Sayaç", use_container_width=True):
@@ -608,7 +626,7 @@ def sistemi_baslat():
             hizli_girdi = "help"
 
         # Tam Genişlikli Ferah Sohbet Penceresi
-        chat_penceresi = st.container(height=525)
+        chat_penceresi = st.container(height=525, key="arex_sohbet")
         with chat_penceresi:
             tum_msj = st.session_state.messages
             if len(tum_msj) > 24 and not st.session_state.get("tum_mesajlari_goster", False):
@@ -650,7 +668,7 @@ def sistemi_baslat():
             st.session_state.son_ses_bayt = None
 
         prompt = st.chat_input(
-            "AREX'e yaz... (Sohbet, 'Galata Kulesi nerede?', 'fiyat: Arduino Uno', 'vikipedi: Mars', 'help')"
+            "AREX'e bir şey sor…"
         )
         aktif_girdi = hizli_girdi or prompt
         if aktif_girdi is not None and aktif_girdi.strip() != "":

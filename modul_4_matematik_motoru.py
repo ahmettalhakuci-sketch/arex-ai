@@ -44,6 +44,13 @@ def _guvenli_modul_yukle(modul_adi: str):
 _m1 = _guvenli_modul_yukle("modul_1_arayuz_ve_tema")
 bilgi_karti_olustur = _m1.bilgi_karti_olustur
 
+# Profesyonel matematik çekirdeği (Modül 14): gerçek ifade ayrıştırıcı + denklem çözücü.
+try:
+    _m14 = _guvenli_modul_yukle("modul_14_pro_matematik")
+    _pro_matematik_coz = _m14.pro_matematik_coz
+except Exception:
+    _pro_matematik_coz = None
+
 _IZINLI_OPERATORLER = {
     ast.Add: operator.add,
     ast.Sub: operator.sub,
@@ -1998,6 +2005,16 @@ def pisagor_hesapla(dik_kenar1: float, dik_kenar2: float) -> str:
 def matematik_motoru_calistir(user_text: str):
     """Dört işlem, köklü/üslü sayılar, 1. ve 2. derece denklemler, EBOB/EKOK, yüzde, faktöriyel ve sözel geometri/fizik problemlerini çözer."""
     temiz_m = user_text.replace("İ", "i").replace("I", "ı").lower().replace("\u0307", "").strip()
+
+    # 0) Profesyonel çekirdek: işlem önceliği, parantez, kesir, trigonometri, log,
+    #    her biçimde 1./2. derece denklem, asal çarpan, yüzde artış/azalış.
+    if _pro_matematik_coz is not None:
+        try:
+            pro_cevap, pro_etiket = _pro_matematik_coz(user_text)
+            if pro_cevap:
+                return pro_cevap, pro_etiket
+        except Exception:
+            pass  # çekirdek hata verirse eski kalıplarla devam et
 
     # 0-A) 2. Derece Denklem (ax^2 + bx + c = 0 veya ax² + bx + c = d)
     denk2_str = temiz_m.replace("²", "^2").replace(" ", "")

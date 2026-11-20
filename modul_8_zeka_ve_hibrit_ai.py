@@ -82,6 +82,14 @@ json_komut_ekle = _m3.json_komut_ekle
 json_oku = _m3.json_oku
 karekok_sadelestir = _m4.karekok_sadelestir
 matematik_motoru_calistir = _m4.matematik_motoru_calistir
+
+# Güncel kaynaklar & günlük asistan (Modül 16): Kandilli deprem, bugün tarihte, resmî tatiller,
+# İngilizce sözlük, dünya saati, birim çevirici, tarih hesaplayıcı.
+try:
+    _m16 = _guvenli_modul_yukle("modul_16_guncel_asistan")
+    _guncel_asistan_yanitla = _m16.guncel_asistan_yanitla
+except Exception:
+    _guncel_asistan_yanitla = None
 TURKCE_AYLAR = _m5.TURKCE_AYLAR
 TURKCE_GUNLER = _m5.TURKCE_GUNLER
 guvenli_cevir = _m5.guvenli_cevir
@@ -4906,7 +4914,16 @@ def otonom_plan_olustur(kullanici_girdisi: str) -> dict:
         return {"ana_niyet": "KOD_URETIM", "araclar": ["KOD_AI"], "sentez_gerekli": True, "adimlar": ["💻 Kod & yapay zeka motoru çalıştırılıyor"]}
 
     # 1. Matematik & Sözel Problem
-    if re.search(r"(\d+\s*[+\-*/×÷^]\s*\d+|\d*\s*x\s*(?:\^2|²)?\s*[+\-=]|\bkök\b|\bkok\b|\bkarekök\b|\bçarpı\b|\bcarpi\b|\bbölü\b|\bbolu\b|\bartı\b|\barti\b|\beksi\b|\byüzde\b|\byuzde\b|\büzeri\b|\buzeri\b|\büssü\b|\bussu\b|\bebob\b|\bekok\b|\bfaktöriyel|\bfaktoriyel|\basal\b|\bhızla\b|\bhizla\b|\bhipotenüs|\bhipotenus|\bpisagor|üçgenin\s+alanı|ucgenin\s+alani)", raw):
+    # Profesyonel çekirdek (Modül 14) metni çözebiliyorsa (sin 30, log 100, 17 asal mı...) doğrudan matematik say.
+    try:
+        _pro_fn = getattr(_m4, "_pro_matematik_coz", None)
+        _pro_mat_mi = bool(_pro_fn and _pro_fn(kullanici_girdisi)[0])
+    except Exception:
+        _pro_mat_mi = False
+    _aralik_veya_skor = bool(re.search(
+        r"\b\d+\s*-\s*\d+\s*(?:gün|gun|saat|dakika|dk|hafta|ay|yıl|yil|sene|kişi|kisi|kez|defa|tane|kat|yaş|yas|"
+        r"sayfa|soru|km|metre|kilo|tl|lira|dolar|euro)\b|\b(?:skor|maç|mac|kazand|yendi|yenildi|berabere|galip|mağlup)", raw))
+    if _pro_mat_mi or (not _aralik_veya_skor and re.search(r"(\d+\s*[+\-*/×÷^]\s*\d+|\d*\s*x\s*(?:\^2|²)?\s*[+\-=]|\bkök\b|\bkok\b|\bkarekök\b|\bçarpı\b|\bcarpi\b|\bbölü\b|\bbolu\b|\bartı\b|\barti\b|\beksi\b|\byüzde\b|\byuzde\b|\büzeri\b|\buzeri\b|\büssü\b|\bussu\b|\bebob\b|\bekok\b|\bfaktöriyel|\bfaktoriyel|\basal\b|\bhızla\b|\bhizla\b|\bhipotenüs|\bhipotenus|\bpisagor|üçgenin\s+alanı|ucgenin\s+alani)", raw)):
         araclar.append("MATEMATIK")
         adim_ozetleri.append("🧮 Matematik motoru hesaplıyor")
 
@@ -5128,6 +5145,15 @@ def akilli_yanit_uret(kullanici_girdisi: str, hedef_dil: str = "tr"):
     if _ai_onek:
         ozel_ai_saglayici = _saglayici_onek_map[_ai_onek.group(1).lower()]
         kullanici_girdisi = _ai_onek.group(2).strip()
+
+    # 0-A3. Güncel kaynaklar & günlük asistan (net kalıplı sorular → doğrudan, hızlı yanıt)
+    if _guncel_asistan_yanitla is not None and not ozel_ai_saglayici:
+        try:
+            _g_yanit, _g_etiket = _guncel_asistan_yanitla(kullanici_girdisi)
+        except Exception:
+            _g_yanit, _g_etiket = None, None
+        if _g_yanit:
+            return _g_yanit, hedef_dil, _g_etiket
 
     # 0-B. GERÇEK BAĞLAM / KONU DEVAMLILIĞI & ÖNCEKİ KONU İZOLASYONU
     _onceki_aktif_konu = st.session_state.get("aktif_konu", "").strip()

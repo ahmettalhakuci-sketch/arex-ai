@@ -1,0 +1,14 @@
+# Gizli anahtarlar — ASLA GitHub'a yüklenmez (Streamlit Cloud'da "Secrets" ayarına girilir)
+.streamlit/secrets.toml
+
+# Geçici ses dosyaları
+gecici_ses_*.mp3
+temp_audio.mp3
+
+# Python / sistem
+__pycache__/
+*.pyc
+.venv/
+venv/
+.DS_Store
+.idea/
