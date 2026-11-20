@@ -55,7 +55,19 @@ def _net_hesapla(t: str):
         return None
     parcalar = _PARCA.findall(t)
     if not parcalar:
-        return None
+        m = re.search(r"(\d{1,3})\s*soru(?:da|dan|nun)?\s*(\d{1,3})\s*yanlış(?:\s*(?:ve\s*)?(\d{1,3})\s*boş)?", t)
+        if not m or not re.search(r"\bnet\b", t):
+            return None
+        toplam, y, b = int(m.group(1)), int(m.group(2)), int(m.group(3) or 0)
+        if y + b > toplam:
+            return "🤔 Yanlış ve boş sayısı toplam sorudan fazla olamaz; tekrar yazar mısın?", "🧮 Net Hesaplama"
+        lgs = bool(re.search(r"\blgs\b", t))
+        bolen = 3 if lgs else 4
+        d = toplam - y - b
+        return (f"🧮 **Net Hesabı** — {'LGS' if lgs else 'YKS / genel'} ({bolen} yanlış 1 doğruyu götürür)\n\n"
+                f"- {toplam} sorudan {y} yanlış" + (f", {b} boş" if b else "") + f" → **{d} doğru** varsaydım"
+                + ("" if b else " (boş bıraktığın varsa söyle, yeniden hesaplayayım)") + "\n"
+                f"- 🎯 **Net: {_sayi(d - y / bolen)}**"), "🧮 Net Hesaplama"
     lgs = bool(re.search(r"\blgs\b|teog|ortaokul|8\.\s*sınıf", t))
     bolen = 3 if lgs else 4
     sinav = "LGS" if lgs else next((s.upper() for s in ("tyt", "ayt", "ydt", "kpss", "ales", "dgs", "yks", "msü", "msu")
@@ -169,6 +181,8 @@ def _denemeler(t: str):
         return f"🗑️ Deneme #{no} silindi.", "📈 Deneme Takibi"
     if not re.search(r"denemelerim|deneme\s*(?:sonuçlarım|grafiğ|geçmiş|takib|analiz)|netlerim", t):
         return None
+    if re.search(r"ne\s*yapay|ne\s*yapmal|nasıl|neden|niye|kötü|düşük|artır|yükselt|\?", t) and not re.search(r"göster|grafi", t):
+        return None  # "denemelerim hep kötü geçiyor ne yapayım" → tavsiye, sohbet motoruna
     if not liste:
         return ("📈 Henüz kayıtlı denemen yok. Örnek: *\"deneme: türkçe 30 doğru 6 yanlış matematik 22 doğru 8 yanlış\"*",
                 "📈 Deneme Takibi")
@@ -308,6 +322,9 @@ def _sinav(t: str, ham: str):
 def _pomodoro(t: str):
     if not re.search(r"pomodoro|odak\s*modu|odaklanma\s*(?:modu|süresi)\s*başlat", t):
         return None
+    if (re.search(r"tekniği|nedir|ne\s*demek|nasıl|neden|işe\s*yarar|faydası|\?|\bm[ıiuü]\b|\bm[ıiuü]\s*$", t)
+            and not re.search(r"başlat|kur\b|aç\b|kaç\s*pomodoro", t)):
+        return None  # "pomodoro tekniği nedir" → bilgi sorusu, sayaç kurulmaz
     ayar = _oku(m18.AYAR_DOSYASI, {})
     bugun = _simdi().date().isoformat()
     sayac = ayar.get("pomodoro", {})

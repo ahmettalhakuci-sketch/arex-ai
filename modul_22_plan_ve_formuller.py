@@ -287,7 +287,11 @@ _FORMUL_ESANLAM = {"türev": "türev", "turev": "türev", "integral": "integral"
 def _formuller(t: str):
     if not re.search(r"formüller|formuller|formül\s*(?:kartı|kartları|özeti|ozeti|kağıdı|listesi)", t):
         return None
+    if re.search(r"excel|sheets|tablo|hücre|word|kimyasal|bileşik|ilaç", t):
+        return None
     anahtar = next((v for k, v in _FORMUL_ESANLAM.items() if re.search(r"\b" + k, t)), None)
+    if not anahtar and not re.search(r"^(?:tüm\s*|bütün\s*)?(?:formül\s*kart\w*|formüller(?:im)?|formül\s*listesi)\W*$", t):
+        return None
     if not anahtar:
         satirlar = ["📐 **Formül Kartları** — hangisini açayım?", ""]
         for k, (ad, liste) in FORMULLER.items():
@@ -504,7 +508,8 @@ def plan_ve_formul_yanitla(metin: str):
         return None, None
     t = _kucult(metin)
     if re.search(r"(?:çalışma|calisma|ders)?\s*program\w*\s*(?:hazırla|hazirla|yap|oluştur|olustur|çıkar|cikar|güncelle)"
-                 r"|program\w*\s*(?:ister|lazım)|haftalık\s*(?:çalışma\s*)?plan", t) and not re.search(r"bilgisayar|python|yazılım|kod", t):
+                 r"|program\w*\s*(?:ister|lazım)|haftalık\s*(?:çalışma\s*)?plan", t) and not re.search(r"bilgisayar|python|yazılım|kod", t) \
+            and not re.search(r"nasıl\s*(?:yapılır|hazırlanır|olmalı|düzenle)|nedir|püf|ipucu|tavsiye|\?", t):
         try:
             return _program_olustur(t)
         except Exception:

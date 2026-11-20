@@ -244,7 +244,7 @@ def _hedef_ayarla(t: str):
 
 
 def _rapor(t: str):
-    if not re.search(r"(?:bu\s*hafta|haftalık|haftalik|son\s*7\s*gün|bugün).{0,25}(?:ne\s*kadar|kaç\s*soru|çalıştım|rapor|özet)"
+    if not re.search(r"(?:bu\s*hafta|haftalık|haftalik|son\s*7\s*gün|bugün).{0,25}(?:ne\s*kadar\s*(?:çalış|soru|ders)|kaç\s*soru|çalıştım|rapor|özet)"
                      r"|çalışma\s*(?:raporu|özeti|istatisti)|istatistiklerim|ilerlememi\s*göster", t):
         return None
     gunler, dersler, kayitlar = _gunluk_toplamlar()

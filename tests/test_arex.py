@@ -407,6 +407,61 @@ class ErisimSifresi(unittest.TestCase):
                 os.environ["AR_ADMIN_PIN"] = eski_admin
 
 
+class YanlisTetiklemeYok(unittest.TestCase):
+    """Öğrenci araçları gündelik sorulara karışmamalı (bilgi soruları sohbet motoruna gitmeli)."""
+
+    SOHBETE_GITMELI = [
+        "doğru ile yanlış arasındaki fark nedir", "sınav kaygısı nasıl yenilir", "yks sınavı kaç dakika",
+        "sınavım iyi geçmedi moralim bozuk", "net nedir", "internet hızımı nasıl artırırım",
+        "pomodoro tekniği nedir", "pomodoro tekniği işe yarar mı", "kredi kartı borcu nasıl kapatılır",
+        "ingilizce kelime nasıl ezberlenir", "bugün ne yemek yapayım", "program nasıl yazılır",
+        "haftalık plan nasıl yapılır", "formül 1 yarışı ne zaman", "excel formülleri", "türev nedir",
+        "güneş paneli kaç watt", "rozet ne demek", "deneme yazısı nasıl yazılır",
+        "denemelerim hep kötü geçiyor ne yapayım", "bu hafta ne kadar sıcak olacak",
+        "günde 3 saat ders çalışmak yeterli mi", "yanlışlarımı affet",
+    ]
+    ARACA_GITMELI = [
+        "pomodoro başlat", "bana haftalık çalışma programı hazırla", "türev formülleri", "formül kartları",
+        "denemelerim", "40 doğru 12 yanlış kaç net", "lgs 40 soruda 6 yanlış 2 boş kaç net",
+        "bu hafta ne kadar çalıştım", "yanlış defterim", "rozetlerim", "panelim", "sınavlarıma kaç gün kaldı",
+    ]
+
+    def setUp(self):
+        self.klasor = tempfile.mkdtemp()
+        self._eski = {(m, a): getattr(m, a) for m, a in [
+            (m18, "TAKIP_DOSYASI"), (m18, "AYAR_DOSYASI"), (m18, "HATIRLATICI_DOSYASI"), (m18, "YANLIS_DOSYASI"),
+            (m21, "SINAV_DOSYASI"), (m21, "KART_DOSYASI"), (m21, "DENEME_DOSYASI")]}
+        for (m, a) in self._eski:
+            setattr(m, a, os.path.join(self.klasor, a + ".json"))
+
+    def tearDown(self):
+        for (m, a), v in self._eski.items():
+            setattr(m, a, v)
+
+    def _arac(self, q):
+        for f in (lambda: m18.calisma_kocu_yanitla(q, {}), lambda: m21.ogrenci_araclari_yanitla(q, {}),
+                  lambda: m22.plan_ve_formul_yanitla(q)):
+            y, e = f()
+            if y:
+                return e
+        return None
+
+    def test_gundelik_sorular_sohbete_gider(self):
+        for q in self.SOHBETE_GITMELI:
+            self.assertIsNone(self._arac(q), q)
+        # bilgi sorusu hiçbir dosyaya yazmamalı (ör. pomodoro hatırlatıcısı kurulmamalı)
+        self.assertEqual(os.listdir(self.klasor), [])
+
+    def test_komutlar_araca_gider(self):
+        for q in self.ARACA_GITMELI:
+            self.assertIsNotNone(self._arac(q), q)
+
+    def test_eksik_dogru_sayisi_ile_net(self):
+        cevap = m21.ogrenci_araclari_yanitla("40 soruda 10 yanlış kaç net eder", {})[0]
+        self.assertIn("**30 doğru**", cevap)
+        self.assertIn("Net: 27,5", cevap)
+
+
 class SohbetYonlendirme(unittest.TestCase):
     """Sohbet motorunun soruları doğru modüle yönlendirdiğini doğrular (ağ kapalı)."""
 
