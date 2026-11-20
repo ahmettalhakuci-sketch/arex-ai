@@ -17,3 +17,6 @@ venv/
 ahmet_soru_takip.json
 arex_calisma_ayarlari.json
 arex_hatirlaticilar.json
+
+# Geri yükleme öncesi otomatik güvenlik kopyaları (kişisel veri)
+ar_acil_yedekler/geri_yukleme_oncesi_*/

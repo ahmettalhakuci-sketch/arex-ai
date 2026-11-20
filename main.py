@@ -594,6 +594,12 @@ def sistemi_baslat():
                 else:
                     st.error(f"❌ **{_t_ad}:** {_t_msj}")
 
+        try:
+            import modul_20_yedekleme as _m20_yedek
+            _m20_yedek.yedekleme_paneli()
+        except Exception:
+            pass
+
         with st.expander("🔑 Hızlı Groq / Bulut Anahtarı Bağla", expanded=(not bool(st.session_state.get("acik_kaynak_api_key", "").strip()))):
             _gir_key = st.text_input(
                 "API Anahtarı (gsk_ / csk- / nvapi- / ghp_):",
