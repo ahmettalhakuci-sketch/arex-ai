@@ -73,6 +73,16 @@ def aktif_pin_ozetini_getir() -> str:
             return pin_ozetle(str(sec_pin))
     except Exception:
         pass
+    # Ayrı yönetici PIN'i yoksa ama erişim şifresi tanımlıysa (Modül 23) onu kullan:
+    # kodda yazılı varsayılan PIN herkese açık depoda tahmin edilebilir olduğundan bulutta geçersiz kalır.
+    erisim = os.environ.get("AREX_ERISIM_SIFRESI", "").strip()
+    if not erisim:
+        try:
+            erisim = str(st.secrets.get("AREX_ERISIM_SIFRESI", "") or "").strip()
+        except Exception:
+            erisim = ""
+    if erisim:
+        return pin_ozetle(erisim)
     return _VARSAYILAN_PIN_OZETI
 
 

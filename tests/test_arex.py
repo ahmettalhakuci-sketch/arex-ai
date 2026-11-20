@@ -379,6 +379,18 @@ class ErisimSifresi(unittest.TestCase):
         self.assertFalse(m23.sifre_dogru_mu("", hedef))
         self.assertEqual([m23.bekleme_suresi(n) for n in (0, 4, 5, 6, 100)], [0, 0, 30, 60, 600])
 
+    def test_yonetici_pin_erisim_sifresine_baglanir(self):
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            import modul_11_guvenlik_kalkani as m11
+        eski_admin = os.environ.pop("AR_ADMIN_PIN", None)
+        try:
+            os.environ["AREX_ERISIM_SIFRESI"] = "test-sifre-xyz"
+            self.assertTrue(m11.pin_dogrula("test-sifre-xyz"))
+            self.assertFalse(m11.pin_dogrula("1453"))  # koddaki varsayılan PIN bulutta geçersiz
+        finally:
+            if eski_admin is not None:
+                os.environ["AR_ADMIN_PIN"] = eski_admin
+
 
 class SohbetYonlendirme(unittest.TestCase):
     """Sohbet motorunun soruları doğru modüle yönlendirdiğini doğrular (ağ kapalı)."""
