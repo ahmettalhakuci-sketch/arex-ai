@@ -35,6 +35,8 @@ YEDEK_DOSYALARI = {
     "ahmet_soru_takip.json": "📊 Çalışma takibi",
     "arex_calisma_ayarlari.json": "🎯 Günlük hedef",
     "arex_hatirlaticilar.json": "⏰ Hatırlatıcılar",
+    "arex_sinavlar.json": "📅 Sınav takvimi",
+    "arex_kartlar.json": "🃏 Kelime kartları",
     "tdk_anlam_onbellek.json": "📕 TDK önbelleği",
 }
 _EN_FAZLA_BAYT = 20 * 1024 * 1024

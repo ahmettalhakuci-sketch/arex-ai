@@ -336,6 +336,18 @@ def oturum_durumunu_hazirla():
         yeni_temiz_sohbet_baslat()
 
 
+def _sohbeti_markdowna_cevir(mesajlar) -> str:
+    """Aktif sohbeti okunabilir Markdown metnine çevirir (telefonda paylaşmak / ders notu olarak saklamak için)."""
+    satirlar = [f"# AREX AI Sohbeti — {datetime.now():%d.%m.%Y %H:%M}", ""]
+    for m in mesajlar or []:
+        icerik = re.sub(r"<!--AREX_SVG:[A-Za-z0-9+/=]+-->", "", str(m.get("content", ""))).strip()
+        if not icerik:
+            continue
+        satirlar.append("**🧑 Sen:**" if m.get("role") == "user" else "**⚡ AREX:**")
+        satirlar += [icerik, "", "---", ""]
+    return "\n".join(satirlar)
+
+
 def _sesi_yaziya_dok(ses_bayt: bytes):
     """Önce Groq Whisper (çok daha isabetli Türkçe), olmazsa Google ücretsiz tanıma."""
     groq_key = ""
@@ -661,6 +673,13 @@ def sistemi_baslat():
                 data=json.dumps(st.session_state.messages, ensure_ascii=False, indent=2),
                 file_name=f"arex_sohbet_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
                 mime="application/json",
+                use_container_width=True,
+            )
+            st.download_button(
+                label="📄 Sohbeti Metin Olarak İndir (.md)",
+                data=_sohbeti_markdowna_cevir(st.session_state.messages),
+                file_name=f"arex_sohbet_{datetime.now().strftime('%Y%m%d_%H%M')}.md",
+                mime="text/markdown",
                 use_container_width=True,
             )
 

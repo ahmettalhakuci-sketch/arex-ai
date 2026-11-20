@@ -107,6 +107,13 @@ try:
 except Exception:
     _calisma_kocu_yanitla = None
 
+# Öğrenci araçları (Modül 21): net hesaplama, sınav geri sayımı, pomodoro, kelime kartları
+try:
+    _m21 = _guvenli_modul_yukle("modul_21_ogrenci_araclari")
+    _ogrenci_araclari_yanitla = _m21.ogrenci_araclari_yanitla
+except Exception:
+    _ogrenci_araclari_yanitla = None
+
 # Grafik çizici (Modül 17): "y = x^2 - 4 grafiğini çiz"
 try:
     _m17 = _guvenli_modul_yukle("modul_17_medya_ve_grafik")
@@ -4137,6 +4144,10 @@ YARDIM_VE_HELP_YANITI = """🤝 **Elbette Ahmet! İşte seninle neler yapabilece
 * 📊 **Çalışma Takibi:** *"bugün 30 matematik sorusu çözdüm"*, *"45 dakika fizik çalıştım"*, *"günlük hedefim 50 soru"*, *"bu hafta ne kadar çalıştım"*
 * 📝 **Sohbet İçi Test:** *"bana 5 matematik sorusu sor"*, *"köklü sayılardan test yap"* (ipucu · geç · testi bitir)
 * ⏰ **Hatırlatıcı:** *"yarın 8'de fizik sınavımı hatırlat"*, *"20 dakika sonra su içmeyi hatırlat"*, *"hatırlatıcılarım"*
+* 🧮 **Net hesaplama:** *"40 doğru 12 yanlış kaç net"*, *"lgs 15 doğru 3 yanlış"*
+* 📅 **Sınav geri sayımı:** *"fizik sınavım 5 aralıkta"*, *"sınavlarıma kaç gün kaldı"*
+* 🍅 **Pomodoro:** *"pomodoro başlat"*, *"50 dakika pomodoro"*
+* 🃏 **Kelime kartları:** *"kart ekle: apple = elma; book = kitap"*, *"kartları çalış"*
 
 *Hangisiyle başlamak istersin canım kardeşim?* ⚡"""
 
@@ -5211,6 +5222,13 @@ def akilli_yanit_uret(kullanici_girdisi: str, hedef_dil: str = "tr"):
             _ck_yanit, _ck_etiket = None, None
         if _ck_yanit:
             return _ck_yanit, hedef_dil, _ck_etiket
+    if _ogrenci_araclari_yanitla is not None and not ozel_ai_saglayici:
+        try:
+            _oa_yanit, _oa_etiket = _ogrenci_araclari_yanitla(kullanici_girdisi, st.session_state)
+        except Exception:
+            _oa_yanit, _oa_etiket = None, None
+        if _oa_yanit:
+            return _oa_yanit, hedef_dil, _oa_etiket
     if _grafik_ciz is not None and not ozel_ai_saglayici and _m17.youtube_kimligi(kullanici_girdisi):
         try:
             _yt_yanit, _yt_etiket = _m17.youtube_ozetle(

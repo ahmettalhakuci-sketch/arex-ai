@@ -43,6 +43,7 @@ import modul_17_medya_ve_grafik as m17  # noqa: E402
 import modul_18_calisma_kocu as m18  # noqa: E402
 import modul_19_cevap_varyantlari as m19  # noqa: E402
 import modul_20_yedekleme as m20  # noqa: E402
+import modul_21_ogrenci_araclari as m21  # noqa: E402
 
 
 def _sonuc(metin):
@@ -222,6 +223,58 @@ class Yedekleme(unittest.TestCase):
             m20._KOK = eski_kok
 
 
+class OgrenciAraclari(unittest.TestCase):
+    def setUp(self):
+        self.klasor = tempfile.mkdtemp()
+        self._eski = (m18.AYAR_DOSYASI, m18.HATIRLATICI_DOSYASI)
+        m18.AYAR_DOSYASI = os.path.join(self.klasor, "ayar.json")
+        m18.HATIRLATICI_DOSYASI = os.path.join(self.klasor, "hat.json")
+        m21.SINAV_DOSYASI = os.path.join(self.klasor, "sinav.json")
+        m21.KART_DOSYASI = os.path.join(self.klasor, "kart.json")
+        self.oturum = {}
+
+    def tearDown(self):
+        m18.AYAR_DOSYASI, m18.HATIRLATICI_DOSYASI = self._eski
+
+    def _y(self, metin):
+        return m21.ogrenci_araclari_yanitla(metin, self.oturum)
+
+    def test_net_hesaplama(self):
+        self.assertIn("Net: 37**", self._y("40 doğru 12 yanlış kaç net")[0])
+        self.assertIn("Net: 14**", self._y("lgs 15 doğru 3 yanlış")[0])
+        tablo = self._y("türkçe 30 doğru 6 yanlış matematik 22 doğru 8 yanlış")[0]
+        self.assertIn("**48,5**", tablo)
+        self.assertIn("Türkçe", tablo)
+
+    def test_sinav_takvimi(self):
+        self.assertIn("Kaydettim (#1)", self._y("fizik sınavım 5 aralıkta")[0])
+        self.assertIn("Fizik sınavı", self._y("sınavlarıma kaç gün kaldı")[0])
+        self.assertIn("silindi", self._y("#1 sınavı sil")[0])
+        self.assertIsNone(self._y("yarın fizik sınavım var çok stresliyim")[0])
+
+    def test_pomodoro_hatirlatici_kurar(self):
+        self.assertIn("Pomodoro başladı", self._y("pomodoro başlat")[0])
+        with open(m18.HATIRLATICI_DOSYASI, encoding="utf-8") as f:
+            self.assertIn("Pomodoro bitti", json.load(f)[0]["baslik"])
+
+    def test_kartlar_leitner(self):
+        random.seed(3)
+        self.assertIn("2 kart eklendi", self._y("kart ekle: apple = elma; book = kitap")[0])
+        self.assertIn("Kart tekrarı başladı", self._y("kartları çalış")[0])
+        with open(m21.KART_DOSYASI, encoding="utf-8") as f:
+            kartlar = json.load(f)
+        ilk = kartlar[self.oturum["arex_kart"]["sira"][0]]
+        self.assertIn("✅", self._y(ilk["arka"])[0])
+        self.assertIn("Tekrar bitti", self._y("bilmiyorum")[0])
+        with open(m21.KART_DOSYASI, encoding="utf-8") as f:
+            kutular = sorted(k["kutu"] for k in json.load(f))
+        self.assertEqual(kutular, [1, 2])
+
+    def test_ilgisiz_sorulara_karismaz(self):
+        for soru in ("internet nedir", "2+3*4", "fotosentez nedir", "yks ne zaman", "bana 5 matematik sorusu sor"):
+            self.assertIsNone(self._y(soru)[0], soru)
+
+
 class SohbetYonlendirme(unittest.TestCase):
     """Sohbet motorunun soruları doğru modüle yönlendirdiğini doğrular (ağ kapalı)."""
 
@@ -235,6 +288,10 @@ class SohbetYonlendirme(unittest.TestCase):
         m8._m18.TAKIP_DOSYASI = os.path.join(klasor, "t.json")
         m8._m18.AYAR_DOSYASI = os.path.join(klasor, "a.json")
         m8._m18.HATIRLATICI_DOSYASI = os.path.join(klasor, "h.json")
+        m8._m21.SINAV_DOSYASI = os.path.join(klasor, "s.json")
+        m8._m21.KART_DOSYASI = os.path.join(klasor, "k.json")
+        m8._m21.m18.AYAR_DOSYASI = os.path.join(klasor, "a.json")
+        m8._m21.m18.HATIRLATICI_DOSYASI = os.path.join(klasor, "h.json")
         st.session_state["messages"] = []
 
     def _etiket(self, metin):
@@ -251,6 +308,8 @@ class SohbetYonlendirme(unittest.TestCase):
         self.assertNotIn("Matematik", self._etiket("1-2 gün sonra gel"))
         self.assertNotIn("Hal", self._etiket("çalışmalar nasıl gidiyor"))
         self.assertIn("Çalışma", self._etiket("bugün 10 fizik sorusu çözdüm"))
+        self.assertIn("Net", self._etiket("40 doğru 12 yanlış kaç net"))
+        self.assertIn("Pomodoro", self._etiket("pomodoro başlat"))
 
 
 if __name__ == "__main__":
