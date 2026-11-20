@@ -1,0 +1,64 @@
+{
+  "surum": "7.6-CYBER-SHIELD-BALANCED",
+  "esik_tehdit_skoru_kilit": 250,
+  "maks_girdi_karakter": 6000,
+  "izinli_ek_hostlar": [],
+  "engellenen_ipler": [],
+  "zararli_bot_imzalari": [
+    "sqlmap",
+    "nikto",
+    "nmap",
+    "masscan",
+    "hydra",
+    "dirbuster",
+    "gobuster",
+    "wfuzz",
+    "burpsuite",
+    "zaproxy",
+    "acunetix",
+    "nessus",
+    "nuclei",
+    "metasploit",
+    "havij",
+    "commix",
+    "wpscan",
+    "ffuf",
+    "feroxbuster"
+  ],
+  "sqli_imzalari": [
+    "(?i)\\bunion\\s+select\\b",
+    "(?i)'\\s*or\\s*'1'\\s*=\\s*'1",
+    "(?i)\\bdrop\\s+table\\b",
+    "(?i)\\bdelete\\s+from\\b",
+    "(?i)\\bwaitfor\\s+delay\\b",
+    "(?i)\\bsleep\\s*\\(\\s*\\d+\\s*\\)"
+  ],
+  "xss_imzalari": [
+    "(?i)<\\s*script\\b",
+    "(?i)</\\s*script\\s*>",
+    "(?i)javascript\\s*:",
+    "(?i)\\bon(?:error|load|click|mouseover|focus)\\s*=",
+    "(?i)document\\.cookie",
+    "(?i)<\\s*iframe\\b",
+    "(?i)<\\s*svg\\b[^>]*onload"
+  ],
+  "rce_komut_imzalari": [
+    "(?i)__import__\\s*\\(\\s*['\\\"]os['\\\"]",
+    "(?i)\\bos\\.system\\s*\\(",
+    "(?i);\\s*(?:rm\\s+-rf|cat\\s+/etc/|wget\\s+|curl\\s+|powershell\\b|cmd\\.exe\\b)"
+  ],
+  "path_traversal_imzalari": [
+    "\\.\\./",
+    "\\.\\.\\\\",
+    "(?i)/etc/passwd",
+    "(?i)c:\\\\windows\\\\win\\.ini",
+    "(?i)ar_guvenlik_log\\.json",
+    "(?i)ar_siber_guvenlik_datasi\\.json"
+  ],
+  "veri_sizdirma_prompt_imzalari": [
+    "(?i)ignore\\s+(?:all\\s+)?previous\\s+instructions",
+    "(?i)reveal\\s+(?:your\\s+)?system\\s+prompt",
+    "(?i)t[üu]m\\s+kodlar[ıi]n[ıi]\\s*(?:dök|ver|sızdır)",
+    "(?i)şifreleri\\s*(?:ver|göster|söyle)"
+  ]
+}

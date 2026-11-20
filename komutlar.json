@@ -1,0 +1,172 @@
+{
+    "hal_hatir": {
+        "kelimeler": [
+            "nasılsın",
+            "ne haber",
+            "naber",
+            "iyi misin",
+            "how are you"
+        ],
+        "yanit": "Sistemlerim tam kapasite çalışıyor, gayet iyiyim! Seni sormalı?"
+    },
+    "kimlik": {
+        "kelimeler": [
+            "sen kimsin",
+            "adın ne",
+            "ismin ne",
+            "kendini tanıt"
+        ],
+        "yanit": "Benim adım Ar. Ahmet tarafından Python ve Streamlit kullanılarak geliştirilen akıllı bir yapay zeka asistanıyım."
+    },
+    "proje_durumu": {
+        "kelimeler": [
+            "proje nasıl gidiyor",
+            "ne yapıyorsun",
+            "çalışmalar"
+        ],
+        "yanit": "Harika gidiyor! JSON veri tabanım ve sesli yanıt modüllerim güncellendi."
+    },
+    "vedalasma": {
+        "kelimeler": [
+            "görüşürüz",
+            "hoşça kal",
+            "bay bay",
+            "kapat"
+        ],
+        "yanit": "Görüşmek üzere! İhtiyacın olduğunda buradayım."
+    },
+    "tanıtma": {
+        "kelimeler": [
+            "kimim ben"
+        ],
+        "yanit": "sen beni tasarlayan insansın ismin Ahmet"
+    },
+    "bilim_insanı_tanıtma": {
+        "kelimeler": [
+            "harizmi kim"
+        ],
+        "yanit": "Hârizmî, 8. yüzyılda yaşamış matematik, astronomi ve coğrafya alanlarında önemli eserler veren Fars veya Türk kökenli bir bilim insanıdır. Cebirin kurucusu kabul edilir; \"El-Kitab’ül-Muhtasar fi Hısab’il Cebri ve’l-Mukabele\" adlı eseriyle bu disiplinin temellerini atmış ve \"cebir\" terimini kullanmıştır."
+    },
+    "tasarlayıcı_hakkında_bilgi": {
+        "kelimeler": [
+            "ahmet talha muta kuçi kimdir"
+        ],
+        "yanit": "Ahmet Talha Muta Kuçi beni tasarlayan ve geliştiren bir lise öğrencisi"
+    },
+    "konuşma": {
+        "kelimeler": [
+            "selamünaleyküm"
+        ],
+        "yanit": "aleykümselam"
+    },
+    "ogrenilen_48472": {
+        "kelimeler": [
+            "adam ne demek"
+        ],
+        "yanit": "kim"
+    },
+    "ogrenilen_48543": {
+        "kelimeler": [
+            "soru ve cevabı lügatından sil"
+        ],
+        "yanit": "sana söylediğim şeyleri sil demek"
+    },
+    "ogrenilen_48997": {
+        "kelimeler": [
+            "sami önler kim"
+        ],
+        "yanit": ", İstanbul Fatih'te bulunan tarihi İskenderpaşa Camii'nin imam hatibi ve din görevlisidir.• Görevi: Fatih'teki İskenderpaşa Camii'nde imam hatip olarak görev yapmaktadır.\n• Eğitim Geçmişi: Sakarya İmam Hatip Lisesi'nin 1992 yılı mezunudur. Ayrıca hadis literatürü alanında yüksek lisans çalışması bulunmaktadır.\n• Faaliyetleri ve Sohbetleri: Camideki görevinin yanı sıra çeşitli sivil toplum kuruluşları, dernekler ve vakıflar bünyesinde dini sohbetler, hadis dersleri (örneğin Riyâzü's-Sâlihîn okumaları) ve Kur'an-ı Kerim programları düzenlemektedir"
+    },
+    "tdk_ogrenilen_ben": {
+        "kelimeler": [
+            "ben",
+            "ben nedir",
+            "ben ne demek"
+        ],
+        "yanit": "📖 **Öğrendiğim TDK Kavramı (`ben`):**\nÇoğu doğuştan, tende bulunan ufak, koyu renkli leke veya kabartı\n💬 *Örnek:* Dedim tane tane olmuş benlerin / Dedi zülfüm değdi tel yarasıdır\n\n💡 *Bu kelimeyi TDK'den otomatik öğrenip hafızama kaydettim Ahmet!*"
+    },
+    "tdk_ogrenilen_mus": {
+        "kelimeler": [
+            "mus",
+            "mus nedir",
+            "mus ne demek"
+        ],
+        "yanit": "📖 **Öğrendiğim TDK Kavramı (`mus`):**\nKöpük kıvamında tatlı veya tuzlu bir tür yiyecek\n\n💡 *Bu kelimeyi TDK'den otomatik öğrenip hafızama kaydettim Ahmet!*"
+    },
+    "tdk_ogrenilen_kapı": {
+        "kelimeler": [
+            "kapı",
+            "kapı nedir",
+            "kapı ne demek"
+        ],
+        "yanit": "📖 **Öğrendiğim TDK Kavramı (`kapı`):**\nBir yere girip çıkarken geçilen ve açılıp kapanma düzeni olan duvar veya bölme açıklığı; bap\n💬 *Örnek:* Çıtalarla yapılma telli bir kapı koymuşlardı ortasına.\n\n💡 *Bu kelimeyi TDK'den otomatik öğrenip hafızama kaydettim Ahmet!*"
+    },
+    "tdk_ogrenilen_açmak": {
+        "kelimeler": [
+            "açmak",
+            "açmak nedir",
+            "açmak ne demek"
+        ],
+        "yanit": "📖 **Öğrendiğim TDK Kavramı (`açmak`):**\nBir şeyi kapalı durumdan açık duruma getirmek\n💬 *Örnek:* Kapıyı açıp içeri giriyorum.\n\n💡 *Bu kelimeyi TDK'den otomatik öğrenip hafızama kaydettim Ahmet!*"
+    },
+    "tdk_ogrenilen_deyim": {
+        "kelimeler": [
+            "deyim",
+            "deyim nedir",
+            "deyim ne demek"
+        ],
+        "yanit": "📖 **Öğrendiğim TDK Kavramı (`deyim`):**\nGenellikle gerçek anlamından az çok ayrı, kendine özgü bir anlam taşıyan kalıplaşmış söz öbeği; tabir\n💬 *Örnek:* Bu deyim seni korkutmasın. Çünkü fazlasıyla basit bir şeyden bahsediyorum.\n\n💡 *Bu kelimeyi TDK'den otomatik öğrenip hafızama kaydettim Ahmet!*"
+    },
+    "tdk_ogrenilen_kutsal": {
+        "kelimeler": [
+            "kutsal",
+            "kutsal nedir",
+            "kutsal ne demek"
+        ],
+        "yanit": "📖 **Öğrendiğim TDK Kavramı (`kutsal`):**\nGüçlü bir dinî saygı uyandıran veya uyandırması gereken; kutsi, mukaddes, mübarek\n💬 *Örnek:* Aşkın kutsal tarafına inanmamı sarhoşluk belirtisi diye yorumladım.\n\n💡 *Bu kelimeyi TDK'den otomatik öğrenip hafızama kaydettim Ahmet!*"
+    },
+    "tdk_ogrenilen_biri": {
+        "kelimeler": [
+            "biri",
+            "biri nedir",
+            "biri ne demek"
+        ],
+        "yanit": "📖 **Öğrendiğim TDK Kavramı (`biri`):**\nBir tanesi\n💬 *Örnek:* Kurşun vınlayarak gidip bahçedeki ağaçlardan birine saplanmıştı.\n\n💡 *Bu kelimeyi TDK'den otomatik öğrenip hafızama kaydettim Ahmet!*"
+    },
+    "tdk_ogrenilen_cevap": {
+        "kelimeler": [
+            "cevap",
+            "cevap nedir",
+            "cevap ne demek"
+        ],
+        "yanit": "📖 **Öğrendiğim TDK Kavramı (`cevap`):**\nBir soruya, bir isteğe, bir söz, bir davranış veya yazıya verilen karşılık; yanıt\n💬 *Örnek:* Çocuklara verecek cevabı her zaman vardı.\n\n💡 *Bu kelimeyi TDK'den otomatik öğrenip hafızama kaydettim Ahmet!*"
+    },
+    "dini_selam": {
+        "kelimeler": [
+            "selamünaleyküm",
+            "selamun aleykum",
+            "selamün aleyküm",
+            "sa",
+            "s.a"
+        ],
+        "yanit": "Aleykümselam Ahmet! ⚡ Hoş geldin, bugün sana nasıl yardımcı olabilirim?"
+    },
+    "merhaba_selam": {
+        "kelimeler": [
+            "merhaba",
+            "mrb",
+            "merhabalar",
+            "hey",
+            "hello"
+        ],
+        "yanit": "Merhaba Ahmet! ⚡ Hoş geldin, sana nasıl yardımcı olabilirim?"
+    },
+    "gunluk_selam": {
+        "kelimeler": [
+            "selam",
+            "slm",
+            "selamlar"
+        ],
+        "yanit": "Selam Ahmet! ⚡ Hoş geldin, bugün hangi konu veya proje üzerinde çalışıyoruz?"
+    }
+}

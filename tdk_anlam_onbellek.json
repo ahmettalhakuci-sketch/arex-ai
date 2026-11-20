@@ -1,0 +1,104 @@
+{
+  "ben": {
+    "kaynak": "TDK Canlı GTS (sozluk.gov.tr)",
+    "madde": "ben",
+    "tur": "TDK Madde",
+    "anlamlar": [
+      "Çoğu doğuştan, tende bulunan ufak, koyu renkli leke veya kabartı",
+      "En çok üzümde görülen olgunlaşma belirtisi",
+      "Saçta, sakalda beliren beyazlık"
+    ],
+    "ornekler": [
+      "Dedim tane tane olmuş benlerin / Dedi zülfüm değdi tel yarasıdır"
+    ]
+  },
+  "mus": {
+    "kaynak": "TDK Canlı GTS (sozluk.gov.tr)",
+    "madde": "mus",
+    "tur": "TDK Madde",
+    "anlamlar": [
+      "Köpük kıvamında tatlı veya tuzlu bir tür yiyecek"
+    ],
+    "ornekler": []
+  },
+  "kapı": {
+    "kaynak": "TDK Canlı GTS (sozluk.gov.tr)",
+    "madde": "kapı",
+    "tur": "TDK Madde",
+    "anlamlar": [
+      "Bir yere girip çıkarken geçilen ve açılıp kapanma düzeni olan duvar veya bölme açıklığı; bap",
+      "Bu açıklıktaki açılıp kapanan kanat",
+      "Tavla oyununda iki pul üst üste getirilerek karşı oyuncunun o haneyi kullanmasına engel olunan yer",
+      "Geçim sağlamak için çalışılan iş yeri"
+    ],
+    "ornekler": [
+      "Çıtalarla yapılma telli bir kapı koymuşlardı ortasına.",
+      "Evlerin kapılarında kocaman yeşil bronz tokmaklar vardı."
+    ]
+  },
+  "açmak": {
+    "kaynak": "TDK Canlı GTS (sozluk.gov.tr)",
+    "madde": "açmak",
+    "tur": "TDK Madde",
+    "anlamlar": [
+      "Bir şeyi kapalı durumdan açık duruma getirmek",
+      "Engeli kaldırmak",
+      "Sarılmış, katlanmış, örtülmüş veya iliklenmiş olan şeyleri açık duruma getirmek",
+      "Bir şeyi, bir yeri oyarak veya kazarak çukur, delik oluşturmak"
+    ],
+    "ornekler": [
+      "Kapıyı açıp içeri giriyorum.",
+      "Karla kapanan yolu açmak."
+    ]
+  },
+  "deyim": {
+    "kaynak": "TDK Canlı GTS (sozluk.gov.tr)",
+    "madde": "deyim",
+    "tur": "TDK Madde",
+    "anlamlar": [
+      "Genellikle gerçek anlamından az çok ayrı, kendine özgü bir anlam taşıyan kalıplaşmış söz öbeği; tabir"
+    ],
+    "ornekler": [
+      "Bu deyim seni korkutmasın. Çünkü fazlasıyla basit bir şeyden bahsediyorum."
+    ]
+  },
+  "kutsal": {
+    "kaynak": "TDK Canlı GTS (sozluk.gov.tr)",
+    "madde": "kutsal",
+    "tur": "TDK Madde",
+    "anlamlar": [
+      "Güçlü bir dinî saygı uyandıran veya uyandırması gereken; kutsi, mukaddes, mübarek",
+      "Tapınılacak veya yolunda can verilecek derecede sevilen; kutsi, mukaddes, lahut",
+      "Bozulmaması, dokunulmaması, karşı çıkılmaması gereken, üstüne titrenilen",
+      "Tanrı'ya adanmış olan, tanrısal olan"
+    ],
+    "ornekler": [
+      "Aşkın kutsal tarafına inanmamı sarhoşluk belirtisi diye yorumladım."
+    ]
+  },
+  "biri": {
+    "kaynak": "TDK Canlı GTS (sozluk.gov.tr)",
+    "madde": "biri",
+    "tur": "TDK Madde",
+    "anlamlar": [
+      "Bir tanesi",
+      "Bilinmeyen, tanınmayan bir kimse",
+      "Bilinen ancak adı söylenmeyen bir kimse"
+    ],
+    "ornekler": [
+      "Kurşun vınlayarak gidip bahçedeki ağaçlardan birine saplanmıştı.",
+      "İhtimal, hırsız Eşref'in hayranlarından biriydi."
+    ]
+  },
+  "cevap": {
+    "kaynak": "TDK Canlı GTS (sozluk.gov.tr)",
+    "madde": "cevap",
+    "tur": "TDK Madde",
+    "anlamlar": [
+      "Bir soruya, bir isteğe, bir söz, bir davranış veya yazıya verilen karşılık; yanıt"
+    ],
+    "ornekler": [
+      "Çocuklara verecek cevabı her zaman vardı."
+    ]
+  }
+}
