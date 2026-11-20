@@ -32,6 +32,17 @@ uygulama gibi (ana ekrana eklenerek), bilgisayarda masaüstü düzeninde çalı�
 | 📏 Günlük araçlar | birim çevirici, tarih/yaş hesabı, dünya saati, gün doğumu/batımı, İngilizce sözlük, TDK |
 | 🎓 Öğretme | *"öğret: favori rengim = lacivert"* — öğretilen cevaplar olasılıklı çeşitlenir |
 
+## 🚀 Hemen kullan (bilgisayar + aynı Wi-Fi'deki telefon)
+
+1. Proje klasöründe **`baslat.command`** dosyasına çift tıkla (ilk seferde paketleri kendisi kurar)
+2. Bilgisayarda tarayıcı otomatik açılır: `http://localhost:8501`
+3. Telefonda, pencerede yazan adresi aç (ör. `http://192.168.1.45:8501`) → Chrome ⋮ → **Ana ekrana ekle**
+
+> Bu yöntemde bilgisayar açık ve aynı Wi-Fi'de olmalı. Mikrofonla sesli soru, tarayıcı güvenliği
+> nedeniyle yalnızca `https` (Streamlit Cloud) veya `localhost` adresinde çalışır; telefonda yazarak
+> ve fotoğraf yükleyerek kullanabilirsin. Ev ağında başkaları da açabileceği için
+> `.streamlit/secrets.toml` dosyasına `AREX_ERISIM_SIFRESI = "..."` eklemen önerilir.
+
 ## Yerelde çalıştırma
 
 ```bash
