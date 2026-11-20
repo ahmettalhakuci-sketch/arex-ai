@@ -860,7 +860,7 @@ def sistemi_baslat():
                 st.rerun()
 
             for m_no, m_dosya, m_aciklama, m_aktif in MODUL_DURUM_LISTESI:
-                durum = "✅ AKTİF VE BAĞLI" if m_aktif else "❌ BULUNAMADI"
+                durum = "✅ AKTİF " if m_aktif else "❌ BULUNAMADI"
                 st.markdown(
                     m1_arayuz.bilgi_karti_olustur(f"📦 {m_no}: {m_dosya}", durum, m_aciklama),
                     unsafe_allow_html=True,
