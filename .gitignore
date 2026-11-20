@@ -24,3 +24,9 @@ arex_yanlis_defteri.json
 
 # Geri yükleme öncesi otomatik güvenlik kopyaları (kişisel veri)
 ar_acil_yedekler/geri_yukleme_oncesi_*/
+
+# Sohbet kayıtları ve güvenlik günlüğü (kişisel veri — uygulama çalışırken kendisi oluşturur)
+ar_sohbet_oturumlari.json
+arex_sohbet_oturumlari.json
+sohbet_gecmisi.json
+ar_guvenlik_log.json
