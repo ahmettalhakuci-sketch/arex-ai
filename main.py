@@ -439,6 +439,11 @@ def sistemi_baslat():
     if m15_mobil is not None:
         m15_mobil.mobil_stilleri_yukle()
 
+    # 🔐 Zorunlu erişim şifresi: Secrets'ta AREX_ERISIM_SIFRESI tanımlıysa her ziyaretçiden istenir
+    # (veriler, hatırlatıcılar ve yan menü dahil hiçbir şey şifre girilmeden yüklenmez)
+    import modul_23_erisim as _m23_erisim
+    _m23_erisim.erisim_kapisi()
+
     # ⏰ Hatırlatıcı denetleyicisi: uygulama açıkken 30 sn'de bir zamanı gelenleri ekranda bildirir
     if hasattr(st, "fragment"):
         @st.fragment(run_every="30s")
@@ -606,6 +611,10 @@ def sistemi_baslat():
                 else:
                     st.error(f"❌ **{_t_ad}:** {_t_msj}")
 
+        try:
+            _m23_erisim.korumasiz_bulut_uyarisi()
+        except Exception:
+            pass
         try:
             import modul_20_yedekleme as _m20_yedek
             _m20_yedek.yedekleme_paneli()

@@ -45,6 +45,7 @@ import modul_19_cevap_varyantlari as m19  # noqa: E402
 import modul_20_yedekleme as m20  # noqa: E402
 import modul_21_ogrenci_araclari as m21  # noqa: E402
 import modul_22_plan_ve_formuller as m22  # noqa: E402
+import modul_23_erisim as m23  # noqa: E402
 
 
 def _sonuc(metin):
@@ -354,6 +355,29 @@ class PlanVeFormuller(unittest.TestCase):
         self.assertIn("hangisini", self._y("formül kartları")[0])
         for soru in ("suyun formülü nedir", "python program yaz", "tv programı ne", "türev nedir"):
             self.assertIsNone(self._y(soru)[0], soru)
+
+
+class ErisimSifresi(unittest.TestCase):
+    def setUp(self):
+        self._eski = os.environ.pop("AREX_ERISIM_SIFRESI", None)
+
+    def tearDown(self):
+        os.environ.pop("AREX_ERISIM_SIFRESI", None)
+        if self._eski is not None:
+            os.environ["AREX_ERISIM_SIFRESI"] = self._eski
+
+    def test_varsayilan_sifre_yok(self):
+        # Kodda gömülü varsayılan şifre olmamalı: tanımlı değilse kilit devre dışı, hiçbir şifre kabul edilmez
+        self.assertEqual(m23.tanimli_sifre_ozeti(), "")
+        self.assertFalse(m23.sifre_dogru_mu("1453", m23.tanimli_sifre_ozeti()))
+
+    def test_dogrulama_ve_bekleme(self):
+        os.environ["AREX_ERISIM_SIFRESI"] = "  test-sifre-xyz "
+        hedef = m23.tanimli_sifre_ozeti()
+        self.assertTrue(m23.sifre_dogru_mu("test-sifre-xyz", hedef))
+        self.assertFalse(m23.sifre_dogru_mu("test-sifre-xy", hedef))
+        self.assertFalse(m23.sifre_dogru_mu("", hedef))
+        self.assertEqual([m23.bekleme_suresi(n) for n in (0, 4, 5, 6, 100)], [0, 0, 30, 60, 600])
 
 
 class SohbetYonlendirme(unittest.TestCase):

@@ -47,11 +47,23 @@ GROQ_API_KEY = "gsk_..."        # https://console.groq.com/keys (ücretsiz)
 # GEMINI_API_KEY = "AIza..."    # isteğe bağlı: fotoğraf çözümü daha isabetli olur
 ```
 
+## 🔐 Erişim şifresi (yayına almadan önce mutlaka)
+
+Streamlit Cloud adresi herkese açıktır; adresi bilen herkes notlarını, sohbetlerini ve
+yedeklerini görebilir. `secrets.toml` / Streamlit Cloud **Secrets** kısmına bir şifre ekle:
+
+```toml
+AREX_ERISIM_SIFRESI = "en-az-8-karakterli-uzun-bir-sifre"
+```
+
+Tanımlıysa uygulama her yeni oturumda bu şifreyi sorar (5 hatalı denemeden sonra artan bekleme).
+Kodda varsayılan şifre yoktur; tanımlamazsan bulutta yan menüde uyarı görürsün.
+
 ## Telefona kurulum (Streamlit Community Cloud — ücretsiz)
 
 1. Kodu GitHub'a gönder: `git push -u origin mobil-premium-v14`
 2. [share.streamlit.io](https://share.streamlit.io) → **New app** → depo, dal `mobil-premium-v14`, dosya `main.py`
-3. **Advanced settings → Secrets** kısmına `GROQ_API_KEY = "..."` yaz → **Deploy**
+3. **Advanced settings → Secrets** kısmına `GROQ_API_KEY = "..."` ve `AREX_ERISIM_SIFRESI = "..."` yaz → **Deploy**
    (`packages.txt` sayesinde Tesseract ve ffmpeg otomatik kurulur)
 4. Telefonda adresi Chrome'da aç → ⋮ → **Ana ekrana ekle** → AREX ikonuyla tam ekran açılır
 5. İstersen [pwabuilder.com](https://www.pwabuilder.com)'a adresi verip Android paketi (APK/AAB) üretebilirsin
@@ -89,3 +101,4 @@ yedekleme ve sohbet yönlendirmesini doğrular. Kod değiştirdikten sonra çal�
 | `modul_20_yedekleme.py` | Kişisel veri yedekleme / geri yükleme |
 | `modul_21_ogrenci_araclari.py` | Net hesaplama, deneme takibi, sınav geri sayımı, pomodoro, kelime kartları |
 | `modul_22_plan_ve_formuller.py` | Kişisel haftalık çalışma programı, formül kartları, Panelim |
+| `modul_23_erisim.py` | Zorunlu erişim şifresi (Secrets) ve korumasız bulut uyarısı |
