@@ -44,6 +44,7 @@ import modul_18_calisma_kocu as m18  # noqa: E402
 import modul_19_cevap_varyantlari as m19  # noqa: E402
 import modul_20_yedekleme as m20  # noqa: E402
 import modul_21_ogrenci_araclari as m21  # noqa: E402
+import modul_22_plan_ve_formuller as m22  # noqa: E402
 
 
 def _sonuc(metin):
@@ -291,6 +292,39 @@ class OgrenciAraclari(unittest.TestCase):
             self.assertIsNone(self._y(soru)[0], soru)
 
 
+class PlanVeFormuller(unittest.TestCase):
+    def setUp(self):
+        self.klasor = tempfile.mkdtemp()
+        self._eski = (m18.AYAR_DOSYASI, m18.TAKIP_DOSYASI, m21.SINAV_DOSYASI, m21.DENEME_DOSYASI)
+        m18.AYAR_DOSYASI = os.path.join(self.klasor, "ayar.json")
+        m18.TAKIP_DOSYASI = os.path.join(self.klasor, "takip.json")
+        m21.SINAV_DOSYASI = os.path.join(self.klasor, "sinav.json")
+        m21.DENEME_DOSYASI = os.path.join(self.klasor, "deneme.json")
+
+    def tearDown(self):
+        m18.AYAR_DOSYASI, m18.TAKIP_DOSYASI, m21.SINAV_DOSYASI, m21.DENEME_DOSYASI = self._eski
+
+    def _y(self, metin):
+        return m22.plan_ve_formul_yanitla(metin)
+
+    def test_program_kisisellesir(self):
+        self.assertIn("Henüz bir programın yok", self._y("bugün ne çalışayım")[0])
+        m21.ogrenci_araclari_yanitla("deneme: tyt türkçe 31 doğru 5 yanlış matematik 22 doğru 6 yanlış fizik 3 doğru 1 yanlış", {})
+        program = self._y("tyt için günde 3 saat program yap")[0]
+        self.assertIn("(YKS", program)
+        self.assertIn("**Fizik** → ek oturum", program)
+        self.assertIn("Deneme sınavı", program)
+        self.assertEqual(program.count("| **"), 7)
+        self.assertIn("programın:", self._y("bugün ne çalışayım")[0])
+
+    def test_formuller(self):
+        self.assertIn("Zincir", self._y("türev formülleri")[0])
+        self.assertIn("P·V = n·R·T", self._y("kimya formülleri")[0])
+        self.assertIn("hangisini", self._y("formül kartları")[0])
+        for soru in ("suyun formülü nedir", "python program yaz", "tv programı ne", "türev nedir"):
+            self.assertIsNone(self._y(soru)[0], soru)
+
+
 class SohbetYonlendirme(unittest.TestCase):
     """Sohbet motorunun soruları doğru modüle yönlendirdiğini doğrular (ağ kapalı)."""
 
@@ -307,6 +341,10 @@ class SohbetYonlendirme(unittest.TestCase):
         m8._m21.SINAV_DOSYASI = os.path.join(klasor, "s.json")
         m8._m21.KART_DOSYASI = os.path.join(klasor, "k.json")
         m8._m21.DENEME_DOSYASI = os.path.join(klasor, "d.json")
+        m8._m22.m18.AYAR_DOSYASI = os.path.join(klasor, "a.json")
+        m8._m22.m18.TAKIP_DOSYASI = os.path.join(klasor, "t.json")
+        m8._m22.m21.SINAV_DOSYASI = os.path.join(klasor, "s.json")
+        m8._m22.m21.DENEME_DOSYASI = os.path.join(klasor, "d.json")
         m8._m21.m18.AYAR_DOSYASI = os.path.join(klasor, "a.json")
         m8._m21.m18.HATIRLATICI_DOSYASI = os.path.join(klasor, "h.json")
         st.session_state["messages"] = []
@@ -329,6 +367,8 @@ class SohbetYonlendirme(unittest.TestCase):
         self.assertIn("Pomodoro", self._etiket("pomodoro başlat"))
         self.assertIn("Deneme", self._etiket("denemelerim"))
         self.assertIn("Kart", self._etiket("hazır desteler"))
+        self.assertIn("Formül", self._etiket("türev formülleri"))
+        self.assertIn("Program", self._etiket("bana haftalık çalışma programı hazırla"))
 
 
 if __name__ == "__main__":

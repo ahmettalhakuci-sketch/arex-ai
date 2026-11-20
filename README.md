@@ -20,6 +20,8 @@ uygulama gibi (ana ekrana eklenerek), bilgisayarda masaüstü düzeninde çalı�
 | 📅 Sınav geri sayımı | *"fizik sınavım 5 aralıkta"*, *"sınavlarıma kaç gün kaldı"* (+ çalışma planı önerisi) |
 | 🍅 Pomodoro | *"pomodoro başlat"*, *"50 dakika pomodoro"* — süre bitince ekranda hatırlatır |
 | 🃏 Kelime kartları | *"kart ekle: apple = elma; book = kitap"*, *"kartları çalış"* (Leitner aralıklı tekrar), *"hazır desteler"* (İngilizce, başkentler, elementler) |
+| 🗓️ Çalışma programı | *"bana haftalık çalışma programı hazırla"*, *"günde 3 saat program yap"*, *"bugün ne çalışayım"* (sınavına, denemelerine ve çalışma kayıtlarına göre) |
+| 📐 Formül kartları | *"türev formülleri"*, *"trigonometri formülleri"*, *"fizik formülleri"*, *"formül kartları"* (internetsiz) |
 | 📈 Deneme takibi | *"deneme: türkçe 30 doğru 6 yanlış matematik 22 doğru 8 yanlış"* → kaydeder; *"denemelerim"* → gelişim grafiği |
 | ⏰ Hatırlatıcı | *"yarın 8'de fizik sınavımı hatırlat"* (+ Google Takvim'e ekle bağlantısı) |
 | 🌍 Güncel kaynaklar | Kandilli depremleri, hava durumu, döviz/altın/kripto, haberler, resmî tatiller, Tarihte Bugün |
@@ -84,3 +86,4 @@ yedekleme ve sohbet yönlendirmesini doğrular. Kod değiştirdikten sonra çal�
 | `modul_19_cevap_varyantlari.py` | Soru genişletme ve olasılıklı cevaplar |
 | `modul_20_yedekleme.py` | Kişisel veri yedekleme / geri yükleme |
 | `modul_21_ogrenci_araclari.py` | Net hesaplama, deneme takibi, sınav geri sayımı, pomodoro, kelime kartları |
+| `modul_22_plan_ve_formuller.py` | Kişisel haftalık çalışma programı, formül kartları |

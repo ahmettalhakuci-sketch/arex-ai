@@ -114,6 +114,13 @@ try:
 except Exception:
     _ogrenci_araclari_yanitla = None
 
+# Çalışma programı & formül kartları (Modül 22)
+try:
+    _m22 = _guvenli_modul_yukle("modul_22_plan_ve_formuller")
+    _plan_ve_formul_yanitla = _m22.plan_ve_formul_yanitla
+except Exception:
+    _plan_ve_formul_yanitla = None
+
 # Grafik çizici (Modül 17): "y = x^2 - 4 grafiğini çiz"
 try:
     _m17 = _guvenli_modul_yukle("modul_17_medya_ve_grafik")
@@ -4148,6 +4155,8 @@ YARDIM_VE_HELP_YANITI = """🤝 **Elbette Ahmet! İşte seninle neler yapabilece
 * 📅 **Sınav geri sayımı:** *"fizik sınavım 5 aralıkta"*, *"sınavlarıma kaç gün kaldı"*
 * 🍅 **Pomodoro:** *"pomodoro başlat"*, *"50 dakika pomodoro"*
 * 🃏 **Kelime kartları:** *"kart ekle: apple = elma; book = kitap"*, *"kartları çalış"*, *"hazır desteler"*
+* 🗓️ **Çalışma programı:** *"bana haftalık çalışma programı hazırla"*, *"bugün ne çalışayım"*
+* 📐 **Formül kartları:** *"türev formülleri"*, *"fizik formülleri"*, *"formül kartları"*
 * 📈 **Deneme takibi:** *"deneme: türkçe 30 doğru 6 yanlış matematik 22 doğru 8 yanlış"*, *"denemelerim"*
 
 *Hangisiyle başlamak istersin canım kardeşim?* ⚡"""
@@ -5230,6 +5239,13 @@ def akilli_yanit_uret(kullanici_girdisi: str, hedef_dil: str = "tr"):
             _oa_yanit, _oa_etiket = None, None
         if _oa_yanit:
             return _oa_yanit, hedef_dil, _oa_etiket
+    if _plan_ve_formul_yanitla is not None and not ozel_ai_saglayici:
+        try:
+            _pf_yanit, _pf_etiket = _plan_ve_formul_yanitla(kullanici_girdisi)
+        except Exception:
+            _pf_yanit, _pf_etiket = None, None
+        if _pf_yanit:
+            return _pf_yanit, hedef_dil, _pf_etiket
     if _grafik_ciz is not None and not ozel_ai_saglayici and _m17.youtube_kimligi(kullanici_girdisi):
         try:
             _yt_yanit, _yt_etiket = _m17.youtube_ozetle(
