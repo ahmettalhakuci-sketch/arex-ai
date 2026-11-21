@@ -10,7 +10,20 @@ export const ANAHTAR_ADLARI: Record<AnahtarAdi, string> = {
   OPENROUTER_API_KEY: "🔀 OpenRouter",
 };
 
-const VARSAYILAN: Partial<Record<AnahtarAdi, string>> = (Constants.expoConfig?.extra as any)?.anahtarlar || {};
+// Derlemeye gömülü anahtarlar karıştırılmış gelir (bkz. app.config.js); burada çözülür, ilk açılışta şifreli depoya taşınır
+import { sha256 } from "js-sha256";
+function coz(kasa: any): Partial<Record<AnahtarAdi, string>> {
+  if (!kasa?.t || !kasa?.a) return {};
+  const akis = (n: number) => { const parcalar: number[] = []; let i = 0; while (parcalar.length < n) parcalar.push(...sha256.array(kasa.t + ":com.arex.ai:" + i++)); return parcalar; };
+  const out: Partial<Record<AnahtarAdi, string>> = {};
+  for (const [ad, b64] of Object.entries(kasa.a as Record<string, string>)) {
+    const bin = globalThis.atob(b64); const k = akis(bin.length);
+    const bayt = Uint8Array.from(bin, (c, i) => c.charCodeAt(0) ^ k[i]);
+    out[ad as AnahtarAdi] = decodeURIComponent(escape(String.fromCharCode(...bayt)));
+  }
+  return out;
+}
+const VARSAYILAN: Partial<Record<AnahtarAdi, string>> = coz((Constants.expoConfig?.extra as any)?.kasa);
 const onbellek: Partial<Record<AnahtarAdi, string>> = {};
 
 async function guvenliOku(ad: string): Promise<string | null> {
@@ -33,8 +46,10 @@ async function guvenliYaz(ad: string, deger: string | null) {
 
 export async function anahtarlariYukle() {
   for (const ad of Object.keys(ANAHTAR_ADLARI) as AnahtarAdi[]) {
-    const kayitli = await guvenliOku(ad).catch(() => null);
-    onbellek[ad] = (kayitli || VARSAYILAN[ad] || "").trim();
+    let kayitli = await guvenliOku(ad).catch(() => null);
+    // İlk açılış: gömülü anahtarı telefonun şifreli deposuna (Android Keystore) taşı; sonra hep oradan okunur
+    if (!kayitli && VARSAYILAN[ad]) { await guvenliYaz(ad, VARSAYILAN[ad]!).catch(() => {}); kayitli = VARSAYILAN[ad]!; }
+    onbellek[ad] = (kayitli || "").trim();
   }
   return { ...onbellek };
 }

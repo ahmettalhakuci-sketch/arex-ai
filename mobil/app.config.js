@@ -5,6 +5,20 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
+// Anahtarlar APK'ya DÜZ METİN olarak girmez: her derlemede rastgele tuzla SHA-256 akış anahtarıyla XOR'lanıp base64 gömülür.
+// Uygulama ilk açılışta çözer ve Android Keystore destekli şifreli depoya (SecureStore) taşır.
+const crypto = require("crypto");
+function karistir(anahtarlar) {
+  const tuz = crypto.randomBytes(16).toString("base64");
+  const akis = (uzunluk) => { let b = Buffer.alloc(0), i = 0; while (b.length < uzunluk) b = Buffer.concat([b, crypto.createHash("sha256").update(tuz + ":com.arex.ai:" + i++).digest()]); return b; };
+  const out = {};
+  for (const [ad, deger] of Object.entries(anahtarlar)) {
+    const v = Buffer.from(String(deger), "utf8"), k = akis(v.length);
+    out[ad] = Buffer.from(v.map((x, i) => x ^ k[i])).toString("base64");
+  }
+  return { t: tuz, a: out };
+}
+
 function kasaOku() {
   try {
     const veri = JSON.parse(fs.readFileSync(path.join(os.homedir(), ".arex", "anahtarlar.json"), "utf8"));
@@ -20,7 +34,7 @@ module.exports = {
     name: "AREX AI",
     slug: "arex-ai",
     scheme: "arex",
-    version: "15.6.0",
+    version: "15.7.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "dark",
@@ -29,7 +43,7 @@ module.exports = {
       infoPlist: { NSMicrophoneUsageDescription: "Sesli sohbet ve canlı konuşma için", NSCameraUsageDescription: "Canlı görüntülü sohbet ve fotoğraf analizi için" } },
     android: {
       package: "com.arex.ai",
-      versionCode: 156,
+      versionCode: 157,
       adaptiveIcon: { backgroundColor: "#0b1030", foregroundImage: "./assets/android-icon-foreground.png" },
       permissions: ["android.permission.RECORD_AUDIO", "android.permission.CAMERA", "android.permission.MODIFY_AUDIO_SETTINGS", "android.permission.INTERNET"],
       predictiveBackGestureEnabled: false,
@@ -45,6 +59,6 @@ module.exports = {
       "./plugins/asistan.js",
       ["expo-build-properties", { android: { usesCleartextTraffic: false } }],
     ],
-    extra: { anahtarlar: kasaOku(), surumKodu: 156 },
+    extra: { kasa: karistir(kasaOku()), surumKodu: 157 },
   },
 };
