@@ -176,3 +176,55 @@ export async function kitapligaEkle(k: Omit<KitapKaydi, "id" | "tarih">) {
 export async function kitapliktanSil(id: string) {
   await yaz("arex_kitaplik", (await kitaplikOku()).filter((k) => k.id !== id));
 }
+
+// ---------- 📝 Notlarım ----------
+export type Not = { no: number; metin: string; tarih: string; kaynak: string };
+export async function notlariOku(): Promise<Not[]> {
+  return oku<Not[]>("arex_notlarim", []);
+}
+export async function notKaydet(metin: string, kaynak = "sohbet"): Promise<Not> {
+  const l = await notlariOku();
+  const n: Not = { no: (l.reduce((m, x) => Math.max(m, x.no), 0) || 0) + 1, metin: metin.trim().slice(0, 4000), tarih: new Date().toLocaleString("tr-TR"), kaynak };
+  await yaz("arex_notlarim", [...l, n]);
+  return n;
+}
+export async function notuSil(no: number): Promise<boolean> {
+  const l = await notlariOku();
+  const y = l.filter((x) => x.no !== no);
+  await yaz("arex_notlarim", y);
+  return y.length !== l.length;
+}
+const kisalt = (t: string, n = 140) => { const s = t.replace(/[#*`>|]/g, "").replace(/\s+/g, " ").trim(); return s.length > n ? s.slice(0, n) + "…" : s; };
+
+/** Sohbet not komutları: "notlarıma kaydet: …", "not al …", "bunu not al", "notlarım", "3. notu sil", "notlarımda X ara" */
+export async function notKomutu(metin: string, sonCevap: string): Promise<string | null> {
+  const t = metin.trim();
+  const tl = t.toLocaleLowerCase("tr");
+  if (/^(?:notlar[ıi]m|notlar[ıi]m[ıi]\s+(?:göster|listele|oku|aç)|notlar[ıi]ma\s+bak)[.!?]*$/.test(tl)) {
+    const l = await notlariOku();
+    if (!l.length) return "📝 Henüz notun yok. *\"notlarıma kaydet: …\"* yazarak ya da 🎙️ ile söyleyerek ekleyebilirsin.";
+    return "### 📝 Notlarım\n\n" + l.slice(-25).reverse().map((n) => `**${n.no}.** ${kisalt(n.metin)}  _(${n.tarih})_`).join("\n\n") + "\n\n_Silmek için: \"3. notu sil\"_";
+  }
+  let m = tl.match(/notlar[ıi]mda\s+(.+?)\s+(?:ara|bul)/);
+  if (m) {
+    const b = (await notlariOku()).filter((n) => n.metin.toLocaleLowerCase("tr").includes(m![1]));
+    return b.length ? "### 🔎 Bulunan notlar\n\n" + b.map((n) => `**${n.no}.** ${kisalt(n.metin, 200)}`).join("\n\n") : `🔎 Notlarında **${m[1]}** geçen bir şey yok.`;
+  }
+  m = tl.match(/(?:^|\s)(\d+)\s*\.?\s*not(?:u|umu)?\s+sil|not(?:u|umu)?\s+sil\s*(\d+)/);
+  if (m && tl.includes("sil")) {
+    const no = Number(m[1] || m[2]);
+    return (await notuSil(no)) ? `🗑️ ${no}. notu sildim.` : `❓ ${no} numaralı not yok.`;
+  }
+  const bunu = /^(?:bunu|bunları|şunu|son cevabı|cevabı)?$/i;
+  let icerik: string | null = null;
+  const bas = t.match(/^(?:lütfen\s+)?(?:notlar[ıi]ma\s+(?:kaydet|ekle|yaz|al)|not(?:larıma)?\s+(?:al|et|ekle|kaydet|düş)|(?:şunu|bunu|bunları)\s+(?:notlar[ıi]ma\s+(?:kaydet|ekle)|not\s+(?:al|et))|yeni\s+not)\s*[:\-,]?\s*([\s\S]*)$/i);
+  if (bas) icerik = bunu.test(bas[1].trim()) ? sonCevap : bas[1].trim();
+  else {
+    const son = t.match(/^([\s\S]+?)\s*(?:diye\s+)?(?:notlar[ıi]ma\s+(?:kaydet|ekle|yaz)|not\s+(?:al|et))[.!]?$/i);
+    if (son) icerik = bunu.test(son[1].trim()) ? sonCevap : son[1].trim();
+  }
+  if (icerik === null) return null;
+  if (!icerik) return "📝 Neyi not almamı istersin? Ör: *\"notlarıma kaydet: cuma fizik sınavı\"*";
+  const n = await notKaydet(icerik);
+  return `📝 **Notlarına kaydettim (#${n.no})**\n\n> ${kisalt(icerik, 300)}\n\n_Görmek için: "notlarım"_`;
+}

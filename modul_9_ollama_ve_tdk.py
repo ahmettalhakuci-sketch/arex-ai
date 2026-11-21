@@ -54,11 +54,29 @@ def _kisisel_sistem_eki() -> str:
           "istenirse anlamı, deyimleri ve tonu koruyarak ana dili gibi doğal çevir; gerekiyorsa okunuşunu ekle. "
           "SOHBET: Konuşmanın akışını ve önceki mesajları hatırla, aynı cümle kalıplarını tekrarlama; yaratıcı, "
           "esprili ve sıcak ol, uygun yerde ilgili bir soru sorarak sohbeti sürdür.")
+    _mod = "kisisel"
     try:
-        import modul_28_kisisel_hafiza as _m28
-        ek += _m28.sistem_eki()
+        _mod = st.session_state.get("kullanim_modu", "kisisel")
     except Exception:
         pass
+    if _mod == "kisisel":
+        try:
+            import modul_28_kisisel_hafiza as _m28
+            ek += _m28.sistem_eki()
+        except Exception:
+            pass
+    else:
+        ek += {
+            "genel": " GENEL/MİSAFİR MODU (EN ÖNCELİKLİ KURAL): Karşındaki kişi uygulamanın sahibi DEĞİL, bir misafir. Sahibin adını, "
+                     "okulunu, projelerini veya herhangi bir kişisel bilgisini ASLA söyleme, kimseye 'Ahmet' diye hitap etme. Kibar, "
+                     "net ve tanıtıcı ol; istenirse AREX AI'ın neler yapabildiğini anlat.",
+            "genc": " GENÇ MODU: Karşındaki 13-17 yaşında bir genç (uygulamanın sahibi değil; ona isimle hitap etme). Saygılı, "
+                    "motive edici, yargılamayan bir mentor gibi konuş; ders, kariyer, arkadaşlık ve duygularda destekleyici ol; "
+                    "uygunsuz/tehlikeli içerik verme.",
+            "yetiskin": " YETİŞKİN MODU: Karşındaki bir yetişkin (uygulamanın sahibi değil; ona isimle hitap etme). Profesyonel, "
+                        "net ve verimli konuş; istenirse derinleş.",
+            "cocuk": " Karşındaki bir çocuk (uygulamanın sahibi değil; ona isimle hitap etme).",
+        }.get(_mod, "")
     try:
         if st.session_state.get("cocuk_dostu_mod", False):
             yas = st.session_state.get("cocuk_yas_grubu", "7-9")

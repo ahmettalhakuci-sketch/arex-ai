@@ -187,7 +187,8 @@ def yeni_temiz_sohbet_baslat():
     st.session_state["messages"] = [
         {
             "role": "assistant",
-            "content": "Merhaba Ahmet! ⚡ Yeni bir sohbete başladık. Şehirler, ülkeler, yemek tarifleri, adres, fiyat, matematik veya sohbet için doğrudan yazabilirsin.",
+            "content": ("Merhaba Ahmet! ⚡ Yeni bir sohbete başladık." if st.session_state.get("kullanim_modu", "kisisel") == "kisisel"
+                        else "Merhaba! ⚡ Ben AREX AI.") + " Şehirler, ülkeler, yemek tarifleri, adres, fiyat, matematik veya sohbet için doğrudan yazabilirsin.",
             "zaman": simdi.strftime("%H:%M:%S"),
             "tarih": simdi.strftime("%Y-%m-%d"),
             "etiket": "Yeni Sohbet",
@@ -344,7 +345,7 @@ def mesaji_isle_ve_arastir(girdi_metni: str, hedef_dil: str):
     try:
         import modul_28_kisisel_hafiza as _m28
         st.session_state["_yabanci_dil_serbest"] = _m28.yabanci_dil_serbest_mi(girdi_metni, hedef_dil)
-        _ogrenilen = _m28.sohbetten_ogren(girdi_metni)
+        _ogrenilen = _m28.sohbetten_ogren(girdi_metni) if _kisisel_mod_mu() else ""
         if _ogrenilen:
             st.toast(f"🧠 Hafızama ekledim: {_ogrenilen}", icon="💙")
     except Exception:
@@ -366,6 +367,8 @@ def mesaji_isle_ve_arastir(girdi_metni: str, hedef_dil: str):
         cevap, _yanit_svg = m17_medya.svg_ayikla(cevap)
     if m19_varyant is not None:  # yerel cevaplarda olasılıklı çeşitlilik (AI cevaplarına dokunmaz)
         cevap = m19_varyant.cevabi_cesitlendir(cevap, islem_etiketi)
+    if not _kisisel_mod_mu():  # misafir/genel modda sahibin adı ve kişisel hitaplar gösterilmez
+        cevap = re.sub(r"\bAhmet(?:'?(?:çim|cim|ciğim|im|cığım))?\b", "dostum", cevap)
     st.session_state.messages.append(
         {"role": "user", "content": girdi_metni, "zaman": su_an, "tarih": bugun_str, "etiket": islem_etiketi}
     )
@@ -387,26 +390,83 @@ def _canli_bolumu_goster():
         st.warning("Canlı sohbet için Gemini anahtarı gerekli → yan menü 🔑 API Anahtarlarım.")
         return
     c1, c2 = st.columns(2)
-    _mod = c1.selectbox("Başlangıç modu", ["asistan", "cocuk", "masal", "ceviri", "dil", "analiz"], key="canli_mod",
+    _mod = c1.selectbox("Başlangıç modu", ["asistan", "masal", "ceviri", "dil", "analiz"], key="canli_mod",
                         format_func=lambda k: {"asistan": "🤖 Asistan", "cocuk": "🧸 Çocuk Arkadaşı", "masal": "📖 Canlı Masalcı",
                                                "ceviri": "🌐 Canlı Tercüman", "dil": "🗣️ Dil Pratiği",
                                                "analiz": "🔬 Kamera Analizi"}[k])
     _dil = c2.selectbox("Dil", ["tr", "en", "bn", "ar", "ru", "de", "fr", "es", "az", "ur", "hi", "zh", "ja", "fa"],
                         key="canli_dil")
     if st.button("🔄 Yeni canlı oturum hazırla", key="canli_yenile") or "canli_html" not in st.session_state \
-            or st.session_state.get("canli_html_ayar") != (_mod, _dil):
+            or st.session_state.get("canli_html_ayar") != (_mod, _dil, st.session_state.get("kullanim_modu"), st.session_state.get("goz_koruma")):
         _profil, _ad = "", ""
         try:
             import modul_28_kisisel_hafiza as _m28
             _profil, _ad = _m28.profil_ozeti(), _m28.profil_oku().get("ad", "")
         except Exception:
             pass
+        _kmod = st.session_state.get("kullanim_modu", "kisisel")
+        _notlar = []
+        if _kmod == "kisisel":
+            try:
+                import modul_30_notlarim as _m30c
+                _notlar = [n["metin"][:200] for n in _m30c.notlari_oku()[-20:]]
+            except Exception:
+                pass
+        else:
+            _profil, _ad = "", ""
         st.session_state["canli_html"] = m25_ai.canli_sayfa_html(
-            mod=_mod, dil=_dil, yas=st.session_state.get("cocuk_yas_grubu", "7-9"), profil=_profil, ad=_ad)
-        st.session_state["canli_html_ayar"] = (_mod, _dil)
-    _bilesen.html(st.session_state["canli_html"], height=720, scrolling=False)
+            mod=_mod, dil=_dil, yas=st.session_state.get("cocuk_yas_grubu", "7-9"), profil=_profil, ad=_ad,
+            kmod=_kmod, goz=bool(st.session_state.get("goz_koruma")), notlar=_notlar)
+        st.session_state["canli_html_ayar"] = (_mod, _dil, st.session_state.get("kullanim_modu"), st.session_state.get("goz_koruma"))
+    _bilesen.html(st.session_state["canli_html"], height=760, scrolling=False)
     st.caption("🔐 Tarayıcıya yalnızca 30 dakikalık geçici bir anahtar gönderilir. Telefonda mikrofon için https "
                "(Streamlit Cloud) veya AREX APK'sı gerekir; yerel ağ adresinde (http) tarayıcı mikrofonu engeller.")
+
+
+_MOTOR_ADI = [("groq", "⚡ Groq"), ("gemini", "💎 Gemini"), ("openrouter", "🔀 OpenRouter"), ("claude", "🟣 Claude"),
+              ("pollinations", "🌸 Pollinations"), ("ollama", "🦙 Ollama"), ("sympy", "🧮 Matematik"), ("matematik", "🧮 Matematik"),
+              ("wikipedia", "🌐 Wikipedia"), ("open-meteo", "🌤️ Open-Meteo"), ("finans", "💰 Piyasa"), ("aladhan", "🕌 AlAdhan"),
+              ("deprem", "🌍 Kandilli"), ("biyografi", "📜 Biyografi"), ("not", "📝 Notlar"), ("sınav strateji", "🎯 Sınav"),
+              ("konu devamı", "🧵 Konu devamı"), ("yaratıcı", "✍️ Yaratıcı"), ("çeviri", "🌐 Çeviri"), ("analiz", "🔬 Analiz")]
+
+
+def _etiket_sade(etiket: str) -> str:
+    """'🧠 Otonom Sentez (Açık Kaynak AI (groq_cloud))' → '⚡ Groq' gibi kısa, göz yormayan etiket."""
+    e = (etiket or "").lower()
+    bulunan = [ad for anahtar, ad in _MOTOR_ADI if anahtar in e]
+    if bulunan:
+        return " · ".join(dict.fromkeys(bulunan[:2]))
+    return re.sub(r"\s*\(.*$", "", etiket or "").strip()[:28]
+
+
+def _mesaj_gorunumu(icerik: str):
+    """Mesaj gövdesinden teknik başlıkları/kocaman kaynak satırlarını ayıklar → (temiz_metin, [(ad, url)])."""
+    metin = str(icerik or "")
+    kaynaklar = []
+    metin = re.sub(r"^\s*(?:🤖|🧠)\s*\*\*AREX AI[^*\n]*\*\*\s*", "", metin)
+    for ad, url in re.findall(r"\[🔗\s*([^\]]+)\]\((https?://[^)\s]+)\)", metin):
+        kaynaklar.append((re.sub(r"(?i)sayfasını aç|sayfasini ac|aç$", "", ad).strip() or "Kaynak", url))
+    metin = re.sub(r"[ \t]*\|?[ \t]*\[🔗\s*[^\]]+\]\(https?://[^)\s]+\)", "", metin)
+    for kaynak_adi in re.findall(r"\*🔍\s*Araştırıldı\s*—\s*Kaynak:\s*`([^`]+)`\*", metin):
+        kaynaklar.append((kaynak_adi, ""))
+    metin = re.sub(r"[ \t]*\*🔍\s*Araştırıldı\s*—\s*Kaynak:\s*`[^`]+`\*[ \t]*\|?[ \t]*", "", metin)
+    metin = re.sub(r"\n{3,}", "\n\n", metin)
+    metin = re.sub(r"^###\s*🌐\s*Wikipedia:\s*\*\*(.+?)\*\*\s*$", r"#### 🌐 \1", metin, flags=re.MULTILINE)
+    return metin.strip(), kaynaklar[:6]
+
+
+def _kaynak_etiketleri_html(kaynaklar, etiket: str, saat: str) -> str:
+    parcalar = []
+    for ad, url in kaynaklar:
+        ad_k = ad.replace("<", "").replace(">", "")[:34]
+        parcalar.append(f'<a class="arex-kaynak" href="{url}" target="_blank" rel="noopener">🔗 {ad_k}</a>' if url
+                        else f'<span class="arex-kaynak">📚 {ad_k}</span>')
+    alt = " · ".join(x for x in (_etiket_sade(etiket), saat[:5]) if x)
+    return f'<div class="arex-mesaj-alt">{"".join(parcalar)}<span class="arex-motor">{alt}</span></div>'
+
+
+def _kisisel_mod_mu() -> bool:
+    return st.session_state.get("kullanim_modu", "kisisel") == "kisisel"
 
 
 def _kucuk_resim_b64(veri: bytes, kenar: int = 360) -> str:
@@ -464,6 +524,9 @@ def sistemi_baslat():
     m1_arayuz.arayuz_stillerini_yukle(st.session_state.secili_tema)
     if m15_mobil is not None:
         m15_mobil.mobil_stilleri_yukle()
+    if st.session_state.get("goz_koruma", False):
+        st.markdown("<style>.stApp{filter:sepia(.32) saturate(.82) brightness(.92) hue-rotate(-10deg)}"
+                    "[data-testid='stMarkdownContainer'] p{letter-spacing:.1px}</style>", unsafe_allow_html=True)
 
     # 🔐 Zorunlu erişim şifresi: Secrets'ta AREX_ERISIM_SIFRESI tanımlıysa her ziyaretçiden istenir
     # (veriler, hatırlatıcılar ve yan menü dahil hiçbir şey şifre girilmeden yüklenmez)
@@ -552,13 +615,26 @@ def sistemi_baslat():
         "🔌 API": "🔌 Çoklu API, DeepSeek & Canlı Bağlantı",
         "⚙️ Ayarlar": "⚙️ Açık Kaynak AI & Sistem Ayarları",
     }
+    if st.session_state.pop("_canliya_git", False):
+        st.session_state["arex_nav_secim"] = "🎙️ Canlı"
+        st.session_state["_arex_aktif_bolum"] = _BOLUMLER["🎙️ Canlı"]
     if m15_mobil is not None:
         bolum = m15_mobil.ust_gezinme(_BOLUMLER, "💬 Sohbet & Wikipedia Araştırma Botu")
     else:
         bolum = st.radio("Çalışma Alanı Seçin:", list(_BOLUMLER.values()), horizontal=True)
 
     with st.sidebar:
-        st.markdown("### ⚡ AREX-1 Studio")
+        st.markdown("### ⚡ AREX AI Studio")
+        _MODLAR = {"kisisel": "👤 Kişisel asistanım", "genel": "🌐 Genel / misafir", "genc": "🎓 Genç (13-17)",
+                   "yetiskin": "💼 Yetişkin", "cocuk": "🧸 Çocuk"}
+        st.session_state["kullanim_modu"] = st.selectbox(
+            "Kullanım modu", list(_MODLAR), format_func=_MODLAR.get,
+            index=list(_MODLAR).index(st.session_state.get("kullanim_modu", "kisisel")),
+            help="Misafir modunda kişisel bilgilerin, notların ve hafızan gizlenir — başkalarına tanıtmak için.")
+        if st.session_state["kullanim_modu"] == "cocuk":
+            st.session_state.cocuk_dostu_mod = True
+        st.session_state["goz_koruma"] = st.toggle("👁️ Göz koruma (sıcak, yumuşak renkler)",
+                                                   value=st.session_state.get("goz_koruma", False))
         st.caption("v14 • Mobil Premium • Mantık Motoru • 23 Modül")
 
         _aktif_sag_kod = st.session_state.get("acik_kaynak_saglayici", "pollinations_free")
@@ -691,13 +767,35 @@ def sistemi_baslat():
                         st.success(f"✅ Kalıcı olarak kaydedildi: {', '.join(m25_ai.ANAHTAR_ADLARI[a] for a in _kaydedilen)}")
                         st.rerun()
 
-        with st.expander("💬 Sohbet Geçmişi (Kayıtlı Oturumlar)", expanded=False):
+        with st.expander("💬 Sohbet Geçmişi", expanded=True):
             kayitli_oturumlar = sohbet_oturumlarini_yukle()
+            _ara = st.text_input("🔎 Sohbetlerde ara", key="gecmis_ara", label_visibility="collapsed",
+                                 placeholder="🔎 Sohbetlerde ara…").strip().lower()
             if kayitli_oturumlar:
-                for o_id, o_veri in list(reversed(list(kayitli_oturumlar.items())))[:12]:
-                    oc1, oc2 = st.columns([4, 1])
+                def _grup_adi(o_id):
+                    try:
+                        _t = int(str(o_id).split("_")[-1]) / 1000
+                    except Exception:
+                        return "Daha eski"
+                    _gun = (time.time() - _t) / 86400
+                    return "Bugün" if _gun < 1 else "Dün" if _gun < 2 else "Son 7 gün" if _gun < 7 else "Daha eski"
+                _onceki_grup, _gosterilen = None, 0
+                for o_id, o_veri in list(reversed(list(kayitli_oturumlar.items()))):
+                    if _ara and _ara not in json.dumps(o_veri, ensure_ascii=False).lower():
+                        continue
+                    if _gosterilen >= 30:
+                        break
+                    _g = _grup_adi(o_id)
+                    if _g != _onceki_grup:
+                        st.markdown(f'<div class="arex-gecmis-grup">{_g}</div>', unsafe_allow_html=True)
+                        _onceki_grup = _g
+                    _gosterilen += 1
+                    oc1, oc2 = st.columns([5, 1])
                     with oc1:
-                        if st.button(f"💬 {o_veri.get('baslik', 'Sohbet')} ({o_veri.get('tarih', '')})", key=f"ac_{o_id}", use_container_width=True):
+                        _aktif = o_id == st.session_state.get("aktif_sohbet_id")
+                        if st.button(f"{'🟣' if _aktif else '💬'} {o_veri.get('baslik', 'Sohbet')}", key=f"ac_{o_id}",
+                                     use_container_width=True, help=o_veri.get("tarih", "")):
+                            aktif_sohbeti_oturuma_kaydet()
                             st.session_state.aktif_sohbet_id = o_id
                             st.session_state.messages = o_veri.get("mesajlar", [])
                             st.session_state["aktif_konu"] = ""
@@ -707,6 +805,8 @@ def sistemi_baslat():
                             del kayitli_oturumlar[o_id]
                             sohbet_oturumlarini_kaydet(kayitli_oturumlar)
                             st.rerun()
+                if not _gosterilen:
+                    st.caption("Eşleşen sohbet yok.")
             else:
                 st.caption("Henüz kayıtlı eski sohbet yok. Mesaj yazdığında otomatik kaydedilir.")
 
@@ -771,18 +871,17 @@ def sistemi_baslat():
                             for i in range(0, len(parcalar), adim):
                                 yield "".join(parcalar[i:i + adim])
                                 time.sleep(0.008)
-                        st.write_stream(_kelime_akisi(msg["content"]))
+                        st.write_stream(_kelime_akisi(_mesaj_gorunumu(msg["content"])[0] if msg["role"] == "assistant" else msg["content"]))
                     else:
-                        st.markdown(msg["content"])
+                        st.markdown(_mesaj_gorunumu(msg["content"])[0] if msg["role"] == "assistant" else msg["content"])
                     if msg.get("gorsel"):
                         st.markdown(f'<img class="arex-kucuk-gorsel" src="{msg["gorsel"]}" alt="eklenen fotoğraf">',
                                     unsafe_allow_html=True)
                     if msg.get("svg"):
                         st.markdown(msg["svg"], unsafe_allow_html=True)
-                    saat_bilgi = msg.get("zaman", "")
-                    etiket_bilgi = msg.get("etiket", "")
-                    if saat_bilgi or etiket_bilgi:
-                        st.caption(f"🕒 {saat_bilgi}  |  🏷️ {etiket_bilgi}")
+                    if msg["role"] == "assistant":
+                        st.markdown(_kaynak_etiketleri_html(_mesaj_gorunumu(msg["content"])[1], msg.get("etiket", ""),
+                                                            msg.get("zaman", "")), unsafe_allow_html=True)
 
         # 🎤 Sesli soru + 📸 Fotoğraftan soru (telefonda tek dokunuşla)
         with st.container(key="arex_medya"):
@@ -823,6 +922,10 @@ def sistemi_baslat():
                                 st.rerun()
                             else:
                                 st.error(f"Özetlenemedi: {_m_hata}")
+
+        if st.button("✨ Canlı sohbet — sesli & kameralı konuş", key="arex_canli_kisayol", use_container_width=True, type="primary"):
+            st.session_state["_canliya_git"] = True
+            st.rerun()
 
         # Sesli okuma: Önce metin ekranda ANINDA görünür, ses hemen ardından hazırlanır (arayüzü kilitlemez!)
         if st.session_state.get("bekleyen_ses"):
@@ -1006,13 +1109,18 @@ def sistemi_baslat():
     # MERKEZ 5: AÇIK KAYNAK AI, JSON HAFIZA & SİSTEM AYARLARI (Birleştirilmiş Merkez)
     # ==========================================================================
     elif bolum == "⚙️ Açık Kaynak AI & Sistem Ayarları":
-        ay_tab0, ay_tab1, ay_tab2, ay_tab3, ay_tab4 = st.tabs([
+        ay_tabN, ay_tab0, ay_tab1, ay_tab2, ay_tab3, ay_tab4 = st.tabs([
+            "📝 Notlarım",
             "🧠 Beni Tanı (Hafıza)",
             "🤖 Açık Kaynak AI & Ollama",
             "🛡️ Güvenlik Kalkanı & Rate Limit",
             "🧠 JSON Hafıza & Öğretilenler",
             "📊 Modül Sistem Durumu",
         ])
+        with ay_tabN:
+            import modul_30_notlarim as _m30p
+            _m30p.notlarim_paneli()
+
         with ay_tab0:
             import modul_28_kisisel_hafiza as _m28p
             _m28p.hafiza_paneli()

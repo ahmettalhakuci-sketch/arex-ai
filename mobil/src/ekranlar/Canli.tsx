@@ -6,7 +6,7 @@ import { ActivityIndicator, Platform, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { canliToken } from "../ai";
 import { useAyar } from "../ayar";
-import { anahtar, profilOku, profilOzeti } from "../depo";
+import { anahtar, notKaydet, notlariOku, profilOku, profilOzeti } from "../depo";
 import { CANLI_HTML, YEREL_HTML } from "../gomuluHtml";
 import { R } from "../tema";
 import { Dugme, Hap, s as us } from "../ui";
@@ -14,7 +14,7 @@ import WebSayfa from "../WebSayfa";
 
 export default function CanliEkrani({ sohbeteGonder }: { sohbeteGonder: (metin: string, cevap: string) => void }) {
   const ic = useSafeAreaInsets();
-  const { ayar } = useAyar();
+  const { ayar, guncelle } = useAyar();
   const [sekme, setSekme] = useState<"canli" | "yerel">("canli");
   const [izin, setIzin] = useState(Platform.OS === "web");
   const [cfg, setCfg] = useState<Record<string, unknown> | null>(null);
@@ -32,9 +32,12 @@ export default function CanliEkrani({ sohbeteGonder }: { sohbeteGonder: (metin: 
     setHata(""); setCfg(null);
     if (!anahtar("GEMINI_API_KEY")) { setHata("Canlı sohbet için Gemini anahtarı gerekli (⚙️ Ayarlar)."); return; }
     const t = await canliToken();
-    const [p, oz] = await Promise.all([profilOku(), profilOzeti()]);
+    const kisisel = (ayar.kullanimModu || "kisisel") === "kisisel";
+    const [p, oz, notlar] = await Promise.all([profilOku(), profilOzeti(), notlariOku()]);
     // Geçici token alınamazsa doğrudan anahtarla (yalnızca bu cihazda) bağlanır
-    setCfg({ ...(t ? { t } : { k: anahtar("GEMINI_API_KEY") }), mod: ayar.cocukModu ? "cocuk" : "asistan", dil: ayar.yanitDili, yas: ayar.yas, profil: oz, ad: p.ad });
+    setCfg({ ...(t ? { t } : { k: anahtar("GEMINI_API_KEY") }), mod: "asistan", kmod: ayar.cocukModu ? "cocuk" : (ayar.kullanimModu || "kisisel"),
+      dil: ayar.yanitDili, yas: ayar.yas, profil: kisisel ? oz : "", ad: kisisel ? p.ad : "", goz: ayar.gozKoruma,
+      notlar: kisisel ? notlar.slice(-20).map((n) => n.metin.slice(0, 200)) : [], acc: R.acc, acc2: R.acc2 });
   };
   useEffect(() => { if (sekme === "canli" && izin && !cfg) hazirla(); }, [sekme, izin]);
 
@@ -51,7 +54,10 @@ export default function CanliEkrani({ sohbeteGonder }: { sohbeteGonder: (metin: 
           {hata ? <Text style={{ color: R.kirmizi, marginTop: 10 }}>{hata}</Text> : null}
         </View>
       ) : sekme === "canli" ? (
-        cfg ? <WebSayfa key={JSON.stringify(cfg).length + String(cfg.mod)} html={CANLI_HTML} ayar={cfg} /> : (
+        cfg ? <WebSayfa key={JSON.stringify(cfg).length + String(cfg.kmod)} html={CANLI_HTML} ayar={cfg} onMesaj={(v) => {
+          if (v?.tur === "arex_not" && v.metin) notKaydet(String(v.metin), "canlı");
+          if (v?.tur === "arex_goz") guncelle({ gozKoruma: !!v.acik });
+        }} /> : (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 20 }}>
             {hata ? <><Text style={{ color: R.kirmizi, textAlign: "center" }}>{hata}</Text><Dugme yazi="Tekrar dene" onPress={hazirla} style={{ marginTop: 12 }} /></> : <ActivityIndicator color={R.acc2} size="large" />}
           </View>

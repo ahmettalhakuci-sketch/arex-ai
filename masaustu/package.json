@@ -1,0 +1,16 @@
+{
+  "name": "arex-ai-masaustu",
+  "version": "15.0.0",
+  "description": "AREX AI — masaüstü uygulaması (mobil arayüzün aynısı)",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "web": "cd ../mobil && node scripts/html-gom.js && npx expo export --platform web --output-dir ../masaustu/web",
+    "start": "electron .",
+    "paketle": "electron-packager . \"AREX AI\" --platform=darwin --arch=arm64 --out=cikti --overwrite --icon=simge.icns --app-bundle-id=com.arex.ai.masaustu --ignore=\"^/cikti\" --extend-info=info-ek.plist"
+  },
+  "devDependencies": {
+    "electron": "44.10.2",
+    "@electron/packager": "20.3.0"
+  }
+}

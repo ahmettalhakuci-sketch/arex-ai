@@ -491,11 +491,11 @@ def canli_gecici_token(dakika: int = 30, kullanim: int = 20) -> str:
 
 
 def canli_sayfa_html(mod: str = "asistan", dil: str = "tr", ses: str = "Leda", yas: str = "7-9",
-                     profil: str = "", ad: str = "") -> str:
+                     profil: str = "", ad: str = "", **ek) -> str:
     """static/canli.html'i geçici token ve ayarlarla gömülmeye hazır hale getirir."""
     yol = os.path.join(_PROJE, "static", "canli.html")
     with open(yol, "r", encoding="utf-8") as f:
         html = f.read()
-    cfg = {"t": canli_gecici_token(), "mod": mod, "dil": dil, "ses": ses, "yas": yas, "profil": profil[:1500], "ad": ad}
+    cfg = {"t": canli_gecici_token(), "mod": mod, "dil": dil, "ses": ses, "yas": yas, "profil": profil[:1500], "ad": ad, **ek}
     enjekte = "<script>window.AREX_CANLI=" + json.dumps(cfg, ensure_ascii=False).replace("</", "<\\/") + ";</script>"
     return html.replace("<head>", "<head>" + enjekte, 1)

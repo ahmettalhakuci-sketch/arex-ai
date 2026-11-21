@@ -8,8 +8,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { medyaAnaliz, sesiYaziyaDok, type Rol } from "../ai";
 import { analizTalimati, ETIK, turTahmin } from "../analiz";
 import { useAyar } from "../ayar";
-import { cevapUret } from "../beyin";
-import { sohbetKaydet, sohbetleriOku, sohbetSil, sohbettenOgren, yeniId, type Mesaj, type Sohbet } from "../depo";
+import { cevapUret, KULLANIM_MODLARI } from "../beyin";
+import { notKomutu, sohbetKaydet, sohbetleriOku, sohbettenOgren, yeniId, type Mesaj, type Sohbet } from "../depo";
+import GecmisPaneli from "../GecmisPaneli";
+import { SYMPY_KURALI, yanitiDogrula } from "../matematik";
 import { medyaSec, type Ek } from "../medya";
 import { anlat, sesiDurdur } from "../ses";
 import { DILLER, GRADYAN, R, RTL_DILLER, yazidanDilTahmin } from "../tema";
@@ -20,8 +22,8 @@ const ONERILER = [
   "🧮 Bir matematik sorusu sor", "🌍 'Merhaba dostum' Bengalce, Arapça ve Rusça nasıl denir?",
 ];
 
-export default function SohbetEkrani({ disaridanMesaj, temizle }: { disaridanMesaj?: { metin: string; cevap: string } | null; temizle?: () => void }) {
-  const { ayar } = useAyar();
+export default function SohbetEkrani({ disaridanMesaj, temizle, canliyaGit }: { disaridanMesaj?: { metin: string; cevap: string } | null; temizle?: () => void; canliyaGit?: () => void }) {
+  const { ayar, guncelle } = useAyar();
   const ic = useSafeAreaInsets();
   const [sohbet, setSohbet] = useState<Sohbet>({ id: yeniId(), baslik: "Yeni sohbet", mesajlar: [], guncel: Date.now() });
   const [girdi, setGirdi] = useState("");
@@ -30,7 +32,6 @@ export default function SohbetEkrani({ disaridanMesaj, temizle }: { disaridanMes
   const [kayitta, setKayitta] = useState(false);
   const [ekMenu, setEkMenu] = useState(false);
   const [gecmisAcik, setGecmisAcik] = useState(false);
-  const [gecmis, setGecmis] = useState<Sohbet[]>([]);
   const [konusan, setKonusan] = useState<string | null>(null);
   const liste = useRef<FlatList<Mesaj>>(null);
   const kaydedici = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
@@ -67,15 +68,26 @@ export default function SohbetEkrani({ disaridanMesaj, temizle }: { disaridanMes
     ekle([kullanici]);
     setBekliyor(true);
     try {
-      const ogrenilen = await sohbettenOgren(metin);
+      const kisisel = (ayar.kullanimModu || "kisisel") === "kisisel";
+      // 📝 Not komutları (yazılı veya sesli): "notlarıma kaydet: …", "bunu not al", "notlarım", "3. notu sil"
+      if (!ekSimdi) {
+        const sonCevap = [...onceki].reverse().find((m) => m.rol === "assistant")?.metin || "";
+        const notCevap = await notKomutu(metin, sonCevap);
+        if (notCevap) {
+          ekle([{ id: yeniId(), rol: "assistant", metin: kisisel ? notCevap : "🔒 Notlar yalnızca 👤 Kişisel modda kullanılabilir.", etiket: "📝 Notlarım", zaman: Date.now() }]);
+          return;
+        }
+      }
+      const ogrenilen = kisisel ? await sohbettenOgren(metin) : "";
       let cevap: string, motor: string;
       if (ekSimdi) {
         const turler = turTahmin(metin, ekSimdi.video);
-        const { talimat, derin, maks } = analizTalimati(turler.length || metin ? turler : [ekSimdi.video ? "v_genel" : "genel"], metin);
+        const { talimat: t0, derin, maks } = analizTalimati(turler.length || metin ? turler : [], metin);
+        const talimat = turler.length ? t0 : t0 + " Görselde bir ders/sınav sorusu veya ödev varsa onu çöz (soruyu yaz, adım adım çöz, sonucu ve doğru şıkkı kalın yaz).";
         const dil = DILLER[yazidanDilTahmin(metin) || ayar.yanitDili]?.ad || "Türkçe";
         const gec: Rol[] = onceki.slice(-6).map((m) => ({ role: m.rol, content: m.metin }));
-        const r = await medyaAnaliz(ekSimdi.b64, ekSimdi.mime, talimat, { sistem: ETIK(dil), gecmis: gec, derin: derin || ekSimdi.video, maks });
-        cevap = r.metin || "⚠️ " + r.motor;
+        const r = await medyaAnaliz(ekSimdi.b64, ekSimdi.mime, talimat + (ekSimdi.video ? "" : SYMPY_KURALI), { sistem: ETIK(dil), gecmis: gec, derin: derin || ekSimdi.video, maks });
+        cevap = r.metin ? yanitiDogrula(r.metin) : "⚠️ " + r.motor;
         motor = r.metin ? r.motor : "Görsel analiz";
       } else {
         const r = await cevapUret(onceki, metin, ayar);
@@ -131,11 +143,11 @@ export default function SohbetEkrani({ disaridanMesaj, temizle }: { disaridanMes
     const rtl = RTL_DILLER.has(yazidanDilTahmin(m.metin));
     return (
       <View style={[st.satir, ben ? { justifyContent: "flex-end" } : null]}>
-        {!ben && <LinearGradient colors={GRADYAN as unknown as string[]} style={st.avatar}><Text style={{ fontSize: 15 }}>⚡</Text></LinearGradient>}
-        <View style={[st.balon, ben ? st.balonBen : st.balonO]}>
+        {!ben && <LinearGradient colors={GRADYAN } style={st.avatar}><Text style={{ fontSize: 15 }}>⚡</Text></LinearGradient>}
+        <View style={[st.balon, ben ? [st.balonBen, { backgroundColor: R.balon }] : st.balonO]}>
           {m.gorsel ? <Image source={{ uri: m.gorsel }} style={st.onizleme} resizeMode="cover" /> : null}
           {m.video ? <Text style={st.videoEtiket}>🎬 {m.video}</Text> : null}
-          {ben ? <Text style={[st.benYazi, rtl && { textAlign: "right" }]}>{m.metin}</Text> : <MdMetin rtl={rtl}>{m.metin}</MdMetin>}
+          {ben ? <Text style={[st.benYazi, { fontSize: 16 * (R.olcek || 1), lineHeight: 23 * (R.olcek || 1) }, rtl && { textAlign: "right" }]}>{m.metin}</Text> : <MdMetin rtl={rtl}>{m.metin}</MdMetin>}
           {!ben && (
             <View style={st.altSatir}>
               <Text style={st.etiket} numberOfLines={1}>{m.etiket}</Text>
@@ -151,12 +163,15 @@ export default function SohbetEkrani({ disaridanMesaj, temizle }: { disaridanMes
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={[st.ust, { paddingTop: ic.top + 6 }]}>
-        <Pressable onPress={async () => { setGecmis(await sohbetleriOku()); setGecmisAcik(true); }} hitSlop={10}><Text style={st.ustIkon}>☰</Text></Pressable>
+        <Pressable onPress={() => setGecmisAcik(true)} hitSlop={10}><Text style={st.ustIkon}>☰</Text></Pressable>
         <View style={{ alignItems: "center" }}>
           <Text style={st.marka}>⚡ AREX <Text style={{ color: R.acc2 }}>AI</Text></Text>
-          <Text style={st.durum}>{ayar.cocukModu ? "🧸 Çocuk modu • " : ""}{DILLER[ayar.yanitDili]?.bayrak} çok dilli • bağlamlı</Text>
+          <Text style={st.durum}>{KULLANIM_MODLARI[ayar.kullanimModu || "kisisel"]} • {DILLER[ayar.yanitDili]?.bayrak} çok dilli</Text>
         </View>
-        <Pressable onPress={yeniSohbet} hitSlop={10}><Text style={st.ustIkon}>✚</Text></Pressable>
+        <View style={{ flexDirection: "row", gap: 6 }}>
+          <Pressable onPress={() => guncelle({ gozKoruma: !ayar.gozKoruma })} hitSlop={10}><Text style={[st.ustIkon, { opacity: ayar.gozKoruma ? 1 : 0.55 }]}>👁️</Text></Pressable>
+          <Pressable onPress={yeniSohbet} hitSlop={10}><Text style={st.ustIkon}>✚</Text></Pressable>
+        </View>
       </View>
 
       <FlatList
@@ -169,7 +184,7 @@ export default function SohbetEkrani({ disaridanMesaj, temizle }: { disaridanMes
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <View style={st.bos}>
-            <LinearGradient colors={GRADYAN as unknown as string[]} style={st.bosKure}><Text style={{ fontSize: 40 }}>⚡</Text></LinearGradient>
+            <LinearGradient colors={GRADYAN } style={st.bosKure}><Text style={{ fontSize: 40 }}>⚡</Text></LinearGradient>
             <Text style={st.bosBaslik}>Merhaba! Bugün ne yapalım?</Text>
             <Text style={st.bosAlt}>Yaz, konuş ya da 📎 ile fotoğraf/video ekle. Her dilde konuşabilirim.</Text>
             <View style={st.oneriler}>
@@ -195,14 +210,25 @@ export default function SohbetEkrani({ disaridanMesaj, temizle }: { disaridanMes
           <TextInput
             style={st.girdi} value={girdi} onChangeText={setGirdi} placeholder={kayitta ? "🎙️ Dinliyorum… bitince tekrar dokun" : "AREX'e yaz…"}
             placeholderTextColor={R.soluk} multiline maxLength={6000}
-            onSubmitEditing={() => Platform.OS === "web" && gonder()} blurOnSubmit={false}
+            blurOnSubmit={false}
+            onKeyPress={(e: any) => {
+              // Bilgisayarda Enter = gönder, Shift+Enter = yeni satır
+              if (Platform.OS === "web" && e.nativeEvent.key === "Enter" && !e.nativeEvent.shiftKey) { e.preventDefault?.(); gonder(); }
+            }}
           />
           {girdi.trim() || ek ? (
             <Pressable onPress={() => gonder()} disabled={bekliyor}>
-              <LinearGradient colors={GRADYAN as unknown as string[]} style={st.gonder}><Text style={st.gonderIkon}>➤</Text></LinearGradient>
+              <LinearGradient colors={GRADYAN } style={st.gonder}><Text style={st.gonderIkon}>➤</Text></LinearGradient>
             </Pressable>
           ) : (
-            <Pressable style={[st.yuvarlak, kayitta && { backgroundColor: R.kirmizi }]} onPress={mikrofon}><Text style={st.cubukIkon}>{kayitta ? "⏹" : "🎙️"}</Text></Pressable>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <Pressable style={[st.yuvarlak, kayitta && { backgroundColor: R.kirmizi }]} onPress={mikrofon}><Text style={st.cubukIkon}>{kayitta ? "⏹" : "🎙️"}</Text></Pressable>
+              {!kayitta && canliyaGit ? (
+                <Pressable onPress={canliyaGit} accessibilityLabel="Canlı sohbet">
+                  <LinearGradient colors={GRADYAN} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.gonder}><Text style={{ fontSize: 19 }}>✨</Text></LinearGradient>
+                </Pressable>
+              ) : null}
+            </View>
           )}
         </View>
       </View>
@@ -217,22 +243,7 @@ export default function SohbetEkrani({ disaridanMesaj, temizle }: { disaridanMes
         </Pressable>
       </Modal>
 
-      <Modal visible={gecmisAcik} transparent animationType="slide" onRequestClose={() => setGecmisAcik(false)}>
-        <Pressable style={st.perde} onPress={() => setGecmisAcik(false)}>
-          <View style={[st.menu, { maxHeight: "75%", paddingBottom: ic.bottom + 16 }]}>
-            <Text style={[st.menuYazi, { fontWeight: "800", marginBottom: 8 }]}>💬 Sohbet geçmişi</Text>
-            <FlatList data={gecmis} keyExtractor={(x) => x.id} renderItem={({ item }) => (
-              <View style={st.gecmisSatir}>
-                <Pressable style={{ flex: 1 }} onPress={() => { setSohbet(item); setGecmisAcik(false); }}>
-                  <Text style={st.menuYazi} numberOfLines={1}>{item.baslik}</Text>
-                  <Text style={st.durum}>{new Date(item.guncel).toLocaleString("tr-TR")} • {item.mesajlar.length} mesaj</Text>
-                </Pressable>
-                <Pressable hitSlop={10} onPress={async () => { await sohbetSil(item.id); setGecmis(await sohbetleriOku()); }}><Text style={st.ikon}>🗑️</Text></Pressable>
-              </View>
-            )} ListEmptyComponent={<Text style={st.durum}>Henüz kayıtlı sohbet yok.</Text>} />
-          </View>
-        </Pressable>
-      </Modal>
+      <GecmisPaneli acik={gecmisAcik} kapat={() => setGecmisAcik(false)} sec={(x) => { sesiDurdur(); setSohbet(x); }} aktifId={sohbet.id} />
     </KeyboardAvoidingView>
   );
 }

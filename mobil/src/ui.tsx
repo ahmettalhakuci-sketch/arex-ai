@@ -10,7 +10,7 @@ export const titret = () => { if (Platform.OS !== "web") Haptics.selectionAsync(
 
 export function Arkaplan({ children }: { children: React.ReactNode }) {
   return (
-    <LinearGradient colors={ARKA_GRADYAN as unknown as string[]} locations={[0, 0.45, 1]} style={{ flex: 1 }}>
+    <LinearGradient colors={ARKA_GRADYAN } locations={[0, 0.45, 1]} style={{ flex: 1 }}>
       {children}
     </LinearGradient>
   );
@@ -40,14 +40,14 @@ export function Dugme({ yazi, onPress, yukleniyor, ikincil, kucuk, style, devreD
   return (
     <Pressable disabled={yukleniyor || devreDisi} onPress={() => { titret(); onPress(); }}
       style={({ pressed }) => [{ borderRadius: 16, overflow: "hidden", opacity: devreDisi ? 0.5 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] }, style]}>
-      {ikincil ? <View style={[s.ikincil]}>{ic}</View> : <LinearGradient colors={GRADYAN as unknown as string[]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>{ic}</LinearGradient>}
+      {ikincil ? <View style={[s.ikincil]}>{ic}</View> : <LinearGradient colors={GRADYAN } start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>{ic}</LinearGradient>}
     </Pressable>
   );
 }
 
 export function Hap({ yazi, secili, onPress }: { yazi: string; secili?: boolean; onPress: () => void }) {
   return (
-    <Pressable onPress={() => { titret(); onPress(); }} style={({ pressed }) => [s.hap, secili && s.hapSecili, pressed && { opacity: 0.7 }]}>
+    <Pressable onPress={() => { titret(); onPress(); }} style={({ pressed }) => [s.hap, secili && { backgroundColor: R.hap, borderColor: R.acc }, pressed && { opacity: 0.7 }]}>
       <Text style={[s.hapYazi, secili && { color: "#fff" }]}>{yazi}</Text>
     </Pressable>
   );
@@ -103,9 +103,11 @@ const mdStil = StyleSheet.create({
 });
 
 export function MdMetin({ children, rtl }: { children: string; rtl?: boolean }) {
+  const o = R.olcek || 1;
+  const stil = o === 1 ? mdStil : { ...mdStil, body: { ...mdStil.body, fontSize: 16 * o, lineHeight: 24 * o }, link: { color: R.acc2 } };
   return (
     <View style={rtl ? { direction: "rtl" } as ViewStyle : undefined}>
-      <Markdown style={mdStil as any}>{children || ""}</Markdown>
+      <Markdown style={stil as any}>{children || ""}</Markdown>
     </View>
   );
 }

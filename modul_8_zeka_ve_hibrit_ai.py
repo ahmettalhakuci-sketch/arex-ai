@@ -5402,6 +5402,17 @@ def akilli_yanit_uret(kullanici_girdisi: str, hedef_dil: str = "tr"):
         return guvenlik_mesaji, hedef_dil, "🛡️ Güvenlik Kalkanı"
     kullanici_girdisi = temiz_girdi
 
+    # 0-N. 📝 Notlarım: "notlarıma kaydet: …", "bunu not al", "notlarım", "3. notu sil" (yazılı veya sesli)
+    try:
+        import modul_30_notlarim as _m30
+        _n_y, _n_e = _m30.notlarim_yanitla(kullanici_girdisi, st.session_state)
+        if _n_y and st.session_state.get("kullanim_modu", "kisisel") != "kisisel":
+            _n_y = "🔒 Notlar yalnızca **👤 Kişisel** modda kullanılabilir."
+        if _n_y:
+            return _n_y, hedef_dil, _n_e
+    except Exception:
+        pass
+
     # 0-A. Doğrudan Sohbetten Öğretme Komutu ("öğret: soru = cevap")
     ogret_eslesme = re.match(r"^(?:bana\s+)?(?:öğret|ogret)\s*[:\-]?\s*(.+?)\s*[=:]\s*(.+)$", kullanici_girdisi.strip(), flags=re.IGNORECASE)
     if ogret_eslesme:

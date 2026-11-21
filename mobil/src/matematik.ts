@@ -130,7 +130,7 @@ export function coz(girdi: string): MatSonuc | null {
       const ifade = `(${hazirla(sol)})-(${hazirla(sag || "0")})`;
       const k = polinomKatsayi(ifade);
       if (k) {
-        const kk = kokler(k);
+        const kk = kokler(k).sort((a, b) => (a.im === 0 ? 0 : 1) - (b.im === 0 ? 0 : 1) || a.re - b.re || a.im - b.im);
         const yaz = kk.map((z) => (z.im === 0 ? fmt(z.re) + kesir(z.re) : `${fmt(z.re)} ${z.im > 0 ? "+" : "-"} ${fmt(Math.abs(z.im))}i`));
         return { baslik: `Denklem (${k.length - 1}. derece)`, girdi: `${sol.trim()} = ${(sag || "0").trim()}`, sonuc: kk.length ? "x ∈ { " + yaz.join(" ; ") + " }" : "Çözüm yok / her x için doğru",
           ek: kk.some((z) => z.im !== 0) ? `Reel kök: ${kk.filter((z) => z.im === 0).length}, karmaşık kök: ${kk.filter((z) => z.im !== 0).length}` : "" };

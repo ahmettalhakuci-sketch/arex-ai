@@ -293,6 +293,15 @@ iframe[title="st.iframe"], [data-testid="stIFrame"], .stIFrame { border-radius: 
 /* Genişleticiler (expander) kart görünümü */
 [data-testid="stExpander"] details { border-radius: 16px !important; border: 1px solid var(--border-subtle) !important; }
 
+/* ---------- v15.2: yeni öğeler (mevcut görünüme dokunmadan) ---------- */
+/* Sohbet penceresi ekran yüksekliğine uyar (kısa ekranlarda ilk mesaj menünün altında kalmasın) */
+.st-key-arex_sohbet { height: min(525px, calc(100dvh - 360px)) !important; min-height: 260px; }
+.arex-mesaj-alt { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:4px; }
+.arex-kaynak { font-size:11px; padding:3px 8px; border-radius:999px; border:1px solid var(--border-subtle);
+  color: inherit !important; text-decoration:none !important; opacity:.75; white-space:nowrap; max-width:60vw; overflow:hidden; text-overflow:ellipsis; }
+.arex-motor { font-size:11px; opacity:.5; margin-left:auto; }
+.arex-gecmis-grup { font-size:11px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; opacity:.55; margin:8px 2px 2px; }
+
 /* ---------- Telefon (≤ 768px) ---------- */
 @media (max-width: 768px) {
   html { -webkit-text-size-adjust: 100%; }

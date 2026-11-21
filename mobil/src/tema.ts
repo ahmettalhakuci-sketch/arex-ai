@@ -1,5 +1,8 @@
 // AREX — premium koyu tema ve ortak sabitler
-export const R = {
+export const R: Record<string, any> = {
+  balon: "rgba(124,92,255,0.42)",
+  hap: "rgba(124,92,255,0.45)",
+  olcek: 1,
   bg1: "#050816",
   bg2: "#0b1030",
   bg3: "#151a45",
@@ -15,8 +18,8 @@ export const R = {
   sari: "#ffc145",
 };
 
-export const GRADYAN = ["#7c5cff", "#22d3ee"] as const;
-export const ARKA_GRADYAN = ["#1a1550", "#0b1030", "#050816"] as const;
+export const GRADYAN: [string, string] = ["#7c5cff", "#22d3ee"];
+export const ARKA_GRADYAN: [string, string, string] = ["#1a1550", "#0b1030", "#050816"];
 
 export const DILLER: Record<string, { ad: string; bayrak: string; speech: string }> = {
   tr: { ad: "Türkçe", bayrak: "🇹🇷", speech: "tr-TR" },
@@ -54,4 +57,23 @@ export function yazidanDilTahmin(metin: string): string {
   const ing = new Set(["the", "is", "are", "what", "how", "you", "i", "my", "can", "please", "tell", "me", "a", "an", "and", "story", "write", "why", "do", "hello", "hi"]);
   if (k.length >= 3 && k.filter((x) => ing.has(x)).length / k.length >= 0.25) return "en";
   return "";
+}
+
+// ---------- Renk temaları (tutarlı ton: arka plan + vurgu + balon aynı aileden) ----------
+export const TEMALAR: Record<string, { ad: string; acc: string; acc2: string; arka: [string, string, string]; balon: string; hap: string }> = {
+  gece: { ad: "🌌 Gece Moru", acc: "#7c5cff", acc2: "#22d3ee", arka: ["#1a1550", "#0b1030", "#050816"], balon: "rgba(124,92,255,0.42)", hap: "rgba(124,92,255,0.45)" },
+  okyanus: { ad: "🌊 Okyanus", acc: "#0ea5e9", acc2: "#2dd4bf", arka: ["#0c2a43", "#071a2c", "#030b14"], balon: "rgba(14,165,233,0.38)", hap: "rgba(14,165,233,0.42)" },
+  gul: { ad: "🌸 Gül Altın", acc: "#ec4899", acc2: "#fbbf24", arka: ["#3a1230", "#1c0b1d", "#0b0510"], balon: "rgba(236,72,153,0.36)", hap: "rgba(236,72,153,0.42)" },
+  zumrut: { ad: "🌿 Zümrüt", acc: "#10b981", acc2: "#a3e635", arka: ["#0b3327", "#071d17", "#03100c"], balon: "rgba(16,185,129,0.36)", hap: "rgba(16,185,129,0.42)" },
+  gunbatimi: { ad: "🌅 Gün Batımı", acc: "#f97316", acc2: "#f43f5e", arka: ["#3d1a0c", "#1f0d08", "#0d0604"], balon: "rgba(249,115,22,0.36)", hap: "rgba(249,115,22,0.42)" },
+  safir: { ad: "💎 Safir", acc: "#3b82f6", acc2: "#a78bfa", arka: ["#121d4a", "#0a1230", "#050818"], balon: "rgba(59,130,246,0.40)", hap: "rgba(59,130,246,0.45)" },
+};
+
+/** Temayı uygular: ortak renk nesnelerini yerinde günceller (bileşenler yeniden çizildiğinde yeni tonu alır). */
+export function temaUygula(kod: string, yaziOlcek = 1) {
+  const t = TEMALAR[kod] || TEMALAR.gece;
+  R.acc = t.acc; R.acc2 = t.acc2; R.balon = t.balon; R.hap = t.hap; R.olcek = yaziOlcek;
+  R.bg1 = t.arka[2]; R.bg2 = t.arka[1]; R.bg3 = t.arka[0];
+  GRADYAN[0] = t.acc; GRADYAN[1] = t.acc2;
+  ARKA_GRADYAN[0] = t.arka[0]; ARKA_GRADYAN[1] = t.arka[1]; ARKA_GRADYAN[2] = t.arka[2];
 }
