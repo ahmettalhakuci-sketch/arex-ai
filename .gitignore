@@ -30,3 +30,9 @@ ar_sohbet_oturumlari.json
 arex_sohbet_oturumlari.json
 sohbet_gecmisi.json
 ar_guvenlik_log.json
+.ar_modul_surum
+
+# v15 kişisel veriler ve önbellek
+arex_profil.json
+arex_masal_kitapligi.json
+.masal_onbellek/

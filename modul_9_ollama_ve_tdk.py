@@ -41,7 +41,34 @@ YANIT_USLUBU = (
 
 def _uslup_ekle(sistem: str) -> str:
     sistem = sistem or ""
-    return sistem if "YANIT ÜSLUBU (ÖNEMLİ)" in sistem else sistem + YANIT_USLUBU
+    if "YANIT ÜSLUBU (ÖNEMLİ)" in sistem:
+        return sistem
+    if "Baş Hakem" in sistem:
+        return sistem + YANIT_USLUBU
+    return sistem + YANIT_USLUBU + _kisisel_sistem_eki()
+
+
+def _kisisel_sistem_eki() -> str:
+    """Profil hafızası + çok dilli yanıt + yaratıcılık + çocuk yaş grubu kuralları."""
+    ek = (" ÇOK DİLLİ KURAL: Kullanıcı hangi dilde yazarsa o dilde yanıt ver (Türkçe yazarsa Türkçe). Çeviri "
+          "istenirse anlamı, deyimleri ve tonu koruyarak ana dili gibi doğal çevir; gerekiyorsa okunuşunu ekle. "
+          "SOHBET: Konuşmanın akışını ve önceki mesajları hatırla, aynı cümle kalıplarını tekrarlama; yaratıcı, "
+          "esprili ve sıcak ol, uygun yerde ilgili bir soru sorarak sohbeti sürdür.")
+    try:
+        import modul_28_kisisel_hafiza as _m28
+        ek += _m28.sistem_eki()
+    except Exception:
+        pass
+    try:
+        if st.session_state.get("cocuk_dostu_mod", False):
+            yas = st.session_state.get("cocuk_yas_grubu", "7-9")
+            ek += {"3-6": " Çocuk 3-6 yaşında: çok kısa, çok basit cümleler; ses taklitleri; korkutucu hiçbir şey yok.",
+                   "7-9": " Çocuk 7-9 yaşında: anlaşılır, neşeli; küçük örnekler ve minik hikâyeler.",
+                   "10-12": " Çocuk 10-12 yaşında: zengin ama anlaşılır dil, ilginç bilimsel bilgiler."}.get(yas, "")
+    except Exception:
+        pass
+    return ek
+
 
 def _guvenli_modul_yukle(modul_adi: str):
     if modul_adi in sys.modules and getattr(sys.modules[modul_adi], "__file__", None):
@@ -400,6 +427,11 @@ def _turkce_dil_kilidi_uygula(metin: str, gtx_url_ozel: str = None) -> str:
     Yanıtta İngilizce karışması tespit edilirse kod bloklarını (```...```) %100 koruyarak
     yalnızca düz metin kısımlarını akıcı Türkçeye çevirir.
     """
+    try:
+        if st.session_state.get("_yabanci_dil_serbest"):
+            return metin  # kullanıcı başka dilde yazdı / yabancı dil ya da çeviri istedi → dokunma
+    except Exception:
+        pass
     if not _ingilizce_sizinti_var_mi(metin):
         return metin
 
@@ -934,9 +966,9 @@ ACIK_KAYNAK_AI_SAGLAYICILARI = {
         "aciklama": "DeepSeek resmi API'si üzerinden 1 milyon token bağlamlı deepseek-flash (V4.1-Flash) ve deepseek-v4-pro modellerini çalıştırır.",
     },
     "gemini_free": {
-        "ad": "💎 Google AI Studio — Gemini 4 Hydrogen (Ücretsiz 1M Bağlam)",
+        "ad": "💎 Google AI Studio — Gemini 3.5 Flash (Ücretsiz)",
         "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-        "model": "gemini-4-hydrogen",
+        "model": "gemini-3.5-flash-lite",
         "anahtar_gerekli": True,
         "site": "https://aistudio.google.com/apikey",
         "aciklama": "Google AI Studio ücretsiz katmanı üzerinden 1 milyon token bağlam penceresiyle hızlı, derin ve akıcı Türkçe yanıt üretir.",
@@ -1189,7 +1221,16 @@ def _gecmis_kisalt(icerik, sinir: int = 1500) -> str:
     """Geçmiş mesajı token tasarrufu için kısaltır: gömülü grafik (SVG) ve kaynak bağlantı satırları atılır."""
     metin = re.sub(r"<!--AREX_SVG:[A-Za-z0-9+/=]+-->", "", str(icerik or ""))
     metin = re.sub(r"\[🔗[^\]]*\]\([^)]*\)", "", metin)
+    metin = _etiket_basligini_sil(metin)
     return metin[:sinir]
+
+
+_ETIKET_BASLIK_RE = re.compile(r"^\s*(?:🤖|🧠)\s*\*\*AREX AI[^*\n]*\*\*\s*\n*", re.MULTILINE)
+
+
+def _etiket_basligini_sil(metin: str) -> str:
+    """'🤖 **AREX AI (model):**' gibi arayüz etiketlerini siler (model geçmişten kopyalamasın, çift çıkmasın)."""
+    return _ETIKET_BASLIK_RE.sub("", str(metin or "")).lstrip()
 # Kota (HTTP 429) alan model → bu zamana kadar atlanır (her mesajda boşa yeniden denenmez)
 _KOTA_BEKLEME = {}
 
@@ -1417,7 +1458,7 @@ def _bulut_anahtarli_ai_cagir(
             if _yedek_m not in _model_adaylari:
                 _model_adaylari.append(_yedek_m)
     elif hedef_kod == "gemini_free":
-        for _yedek_m in ("gemini-2.5-flash", "gemini-2.0-flash"):
+        for _yedek_m in ("gemini-3.5-flash", "gemini-3.5-flash-lite"):
             if _yedek_m not in _model_adaylari:
                 _model_adaylari.append(_yedek_m)
     elif hedef_kod == "cerebras_cloud":
@@ -1446,7 +1487,7 @@ def _bulut_anahtarli_ai_cagir(
                     ]
                     + [{"role": "user", "content": soru}]
                 ),
-                "temperature": 0.45 if not ek_baglam else 0.35,
+                "temperature": 0.72 if not ek_baglam else 0.35,
                 # Groq ücretsiz plan: dakikada 8.000 token ve sınır hesabında İSTENEN max_tokens da sayılır.
                 # 4096 istemek tek mesajda kotanın çoğunu ayırıyordu; gerçek yanıtlar ~250-1100 token.
                 "max_tokens": 3000 if "UZUN ANLATIM" in (ek_baglam or "") else 1800,
@@ -1474,7 +1515,7 @@ def _bulut_anahtarli_ai_cagir(
             )
             with urllib.request.urlopen(req, timeout=(15 if hedef_kod == "groq_cloud" else 6.5)) as resp:
                 veri = json.loads(resp.read().decode("utf-8"))
-                cevap = _ollama_yanit_temizle(veri["choices"][0]["message"]["content"])
+                cevap = _etiket_basligini_sil(_ollama_yanit_temizle(veri["choices"][0]["message"]["content"]))
                 if cevap:
                     _hata_kaydet(hedef_kod, f"OK ({_aktif_model})")
                     try:
@@ -1524,7 +1565,7 @@ def _pollinations_ai_cagir(
                 ]
                 + [{"role": "user", "content": soru}]
             ),
-            "temperature": 0.45 if not ek_baglam else 0.35,
+            "temperature": 0.72 if not ek_baglam else 0.35,
             "max_tokens": 2048,
         }
         _poll_uclar = [endpoint_url]
@@ -1672,7 +1713,7 @@ def coklu_ai_ortak_akil_sor(
     ollama_url = _ollama_url_normallestir(st.session_state.get("ollama_url", OLLAMA_VARSAYILAN_URL))
     ollama_model = st.session_state.get("ollama_secili_model", "llama3.2")
     pollinations_url = st.session_state.get("pollinations_url_ozel", "https://text.pollinations.ai/openai")
-    gecmis_mesajlar = ((st.session_state.get("messages") or [])[-10:] if gecmis_kullan else [])
+    gecmis_mesajlar = (st.session_state.get("messages") or [])[-10:] if gecmis_kullan else (st.session_state.get("messages") or [])[-4:]
     ollama_izinli = bool(st.session_state.get("ollama_aktif", False)) or secili == "ollama_local" or saglayici_kodu == "ollama_local"
 
     sistem_prompt = (
@@ -1850,7 +1891,7 @@ def acik_kaynak_ai_sor(soru: str, saglayici_kodu: str = None, api_key: str = "",
     bulut_kod = _anahtardan_bulut_saglayici_bul(secili, anahtar)
     ollama_url = _ollama_url_normallestir(st.session_state.get("ollama_url", OLLAMA_VARSAYILAN_URL))
     pollinations_url = st.session_state.get("pollinations_url_ozel", "https://text.pollinations.ai/openai")
-    gecmis_mesajlar = ((st.session_state.get("messages") or [])[-10:] if gecmis_kullan else [])
+    gecmis_mesajlar = (st.session_state.get("messages") or [])[-10:] if gecmis_kullan else (st.session_state.get("messages") or [])[-4:]
     ollama_izinli = bool(st.session_state.get("ollama_aktif", False)) or secili == "ollama_local" or saglayici_kodu == "ollama_local"
 
     # 0. Çoklu AI + Ollama Ortak Akıl Konseyi
@@ -2009,6 +2050,11 @@ def coklu_api_ve_canli_baglanti_paneli_goster():
                 if _gk:
                     ACIK_KAYNAK_AI_SAGLAYICILARI["groq_cloud"]["model"] = _groq_model_sec
                     st.session_state["coklu_api_anahtarlari"]["groq_cloud"] = _gk
+                    try:
+                        import modul_25_ai_cekirdek as _m25k
+                        _m25k.anahtar_kaydet("GROQ_API_KEY", _gk)
+                    except Exception:
+                        pass
                     st.session_state["acik_kaynak_saglayici"] = "groq_cloud"
                     st.session_state["acik_kaynak_api_key"] = _gk
                     st.session_state["acik_kaynak_ai_aktif"] = True
@@ -2097,6 +2143,15 @@ def coklu_api_ve_canli_baglanti_paneli_goster():
                 st.session_state["acik_kaynak_api_key"] = st.session_state["coklu_api_anahtarlari"][ilk_kod]
                 st.session_state["acik_kaynak_ai_aktif"] = True
 
+            # Kalıcı anahtar kasasına (~/.arex) yaz → git/klasör değişimi silemez
+            try:
+                import modul_25_ai_cekirdek as _m25k
+                _env_ad_map = {k: v[0] for k, v in _BULUT_ENV_HARITASI}
+                for _k, _v in st.session_state["coklu_api_anahtarlari"].items():
+                    if _k in _env_ad_map:
+                        _m25k.anahtar_kaydet(_env_ad_map[_k], _v)
+            except Exception:
+                pass
             # Yerel PC'de .streamlit/secrets.toml dosyasına da güvenli kaydet
             if not _bulut_ortami_mi() and st.session_state["coklu_api_anahtarlari"]:
                 try:

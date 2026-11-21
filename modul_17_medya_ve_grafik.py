@@ -347,7 +347,7 @@ def fotograftan_soru_coz(gorsel_bayt: bytes, gemini_anahtar: str, ek_not: str = 
     kullanici = [{"type": "text", "text": ("Bu fotoğraftaki soruyu çöz." + (f" Not: {ek_not}" if ek_not else ""))},
                  {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}}]
     son_hata = None
-    for model in ("gemini-2.5-flash", "gemini-2.0-flash", "gemini-4-hydrogen"):
+    for model in ("gemini-3.5-flash", "gemini-3.5-flash-lite"):
         govde = json.dumps({"model": model, "temperature": 0.2,
                             "messages": [{"role": "system", "content": _FOTO_TALIMATI},
                                          {"role": "user", "content": kullanici}]}).encode()

@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AREX Canlı</title>
+<style>
+:root{--bg1:#050816;--bg2:#0b1030;--acc:#7c5cff;--acc2:#22d3ee;--txt:#eef2ff;--mut:#9aa3c7;--card:rgba(255,255,255,.06);--brd:rgba(255,255,255,.12);--red:#ff4d6d}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:radial-gradient(120% 80% at 50% 0%,#1a1550 0%,var(--bg2) 45%,var(--bg1) 100%);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans","Noto Sans Bengali","Noto Sans Arabic",sans-serif;overflow:hidden}
+#app{position:relative;height:100%;min-height:560px;display:flex;flex-direction:column}
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 6px}
+.marka{font-weight:800;letter-spacing:.3px;font-size:17px}
+.marka span{background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.durum{font-size:12px;color:var(--mut);display:flex;align-items:center;gap:6px}
+.nokta{width:8px;height:8px;border-radius:50%;background:#556}
+.nokta.on{background:#2ee59d;box-shadow:0 0 10px #2ee59d}
+.nokta.bag{background:#ffc145;animation:yan 1s infinite}
+@keyframes yan{50%{opacity:.3}}
+#sahne{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#video{position:absolute;inset:10px;width:calc(100% - 20px);height:calc(100% - 20px);object-fit:cover;border-radius:24px;display:none;border:1px solid var(--brd)}
+#video.on{display:block}
+#video.ayna{transform:scaleX(-1)}
+#kure{width:170px;height:170px;border-radius:50%;position:relative;transition:transform .08s linear;
+ background:radial-gradient(circle at 35% 30%,#fff9 0%,#a78bfa 18%,#7c5cff 45%,#2a1b7a 75%,#120c3a 100%);
+ box-shadow:0 0 60px #7c5cff88,0 0 140px #22d3ee33,inset 0 0 40px #fff3}
+#kure::after{content:"";position:absolute;inset:-18px;border-radius:50%;border:2px solid #22d3ee55;animation:halka 3.2s ease-in-out infinite}
+@keyframes halka{0%,100%{transform:scale(.96);opacity:.5}50%{transform:scale(1.08);opacity:.15}}
+#kure.konusuyor{background:radial-gradient(circle at 35% 30%,#fffa 0%,#67e8f9 18%,#22d3ee 45%,#0e5f7a 75%,#062a3a 100%);box-shadow:0 0 80px #22d3eeaa,0 0 160px #7c5cff44}
+#kure.dinliyor::after{border-color:#2ee59d88}
+#video.on ~ #kure{position:absolute;bottom:22px;right:22px;width:70px;height:70px}
+#altyazi{position:absolute;left:14px;right:14px;bottom:12px;max-height:38%;overflow-y:auto;display:flex;flex-direction:column;gap:6px;pointer-events:none;scrollbar-width:none}
+#altyazi::-webkit-scrollbar{display:none}
+.satir{align-self:flex-start;max-width:88%;padding:8px 12px;border-radius:16px;background:rgba(10,14,40,.72);backdrop-filter:blur(8px);border:1px solid var(--brd);font-size:15px;line-height:1.45}
+.satir.ben{align-self:flex-end;background:rgba(124,92,255,.35)}
+.ipucu{position:absolute;top:18px;left:0;right:0;text-align:center;color:var(--mut);font-size:14px;padding:0 24px}
+footer{padding:10px 14px calc(14px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px}
+.yazibar{display:flex;gap:8px}
+.yazibar input{flex:1;background:var(--card);border:1px solid var(--brd);color:var(--txt);border-radius:999px;padding:11px 16px;font-size:15px;outline:none}
+.yazibar button{border:none;border-radius:999px;padding:0 16px;background:var(--card);color:var(--txt);font-size:16px}
+.kontrol{display:flex;justify-content:center;align-items:center;gap:14px}
+.btn{width:56px;height:56px;border-radius:50%;border:1px solid var(--brd);background:var(--card);color:var(--txt);font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .12s,background .2s}
+.btn:active{transform:scale(.92)}
+.btn.buyuk{width:74px;height:74px;font-size:30px;background:linear-gradient(135deg,var(--acc),var(--acc2));border:none;box-shadow:0 8px 30px #7c5cff66}
+.btn.buyuk.aktif{background:var(--red);box-shadow:0 8px 30px #ff4d6d66}
+.btn.secili{background:#22d3ee33;border-color:#22d3ee}
+.ayarlar{display:flex;gap:8px;overflow-x:auto;padding:0 2px 2px;scrollbar-width:none}
+.ayarlar::-webkit-scrollbar{display:none}
+.ayarlar select{flex:0 0 auto;background:var(--card);color:var(--txt);border:1px solid var(--brd);border-radius:999px;padding:8px 12px;font-size:13px;appearance:none;-webkit-appearance:none}
+.ayarlar select option{background:#0b1030}
+.hata{color:#ffb4c1;font-size:13px;text-align:center;min-height:16px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="marka">⚡ AREX <span>Canlı</span></div>
+    <div class="durum"><div class="nokta" id="nokta"></div><span id="durumYazi">Hazır</span></div>
+  </header>
+  <div id="sahne">
+    <div class="ipucu" id="ipucu">🎙️ Başlat'a dokun ve konuşmaya başla. Sözünü kesebilirsin; kamerayı açarsan gördüğünü anlar.</div>
+    <video id="video" playsinline muted autoplay></video>
+    <div id="kure"></div>
+    <div id="altyazi"></div>
+  </div>
+  <footer>
+    <div class="ayarlar">
+      <select id="mod">
+        <option value="asistan">🤖 Asistan</option>
+        <option value="cocuk">🧸 Çocuk Arkadaşı</option>
+        <option value="masal">📖 Canlı Masalcı</option>
+        <option value="ceviri">🌐 Canlı Tercüman</option>
+        <option value="dil">🗣️ Dil Pratiği</option>
+        <option value="analiz">🔬 Kamera Analizi</option>
+      </select>
+      <select id="yas">
+        <option value="3-6">🐣 3-6 yaş</option>
+        <option value="7-9" selected>🦊 7-9 yaş</option>
+        <option value="10-12">🚀 10-12 yaş</option>
+      </select>
+      <select id="dil">
+        <option value="tr">🇹🇷 Türkçe</option><option value="en">🇬🇧 English</option><option value="bn">🇧🇩 বাংলা</option>
+        <option value="ar">🇸🇦 العربية</option><option value="ru">🇷🇺 Русский</option><option value="de">🇩🇪 Deutsch</option>
+        <option value="fr">🇫🇷 Français</option><option value="es">🇪🇸 Español</option><option value="az">🇦🇿 Azərbaycan</option>
+        <option value="ur">🇵🇰 اردو</option><option value="hi">🇮🇳 हिन्दी</option><option value="zh">🇨🇳 中文</option>
+        <option value="ja">🇯🇵 日本語</option><option value="fa">🇮🇷 فارسی</option>
+      </select>
+      <select id="ses">
+        <option value="Leda">🧚 Leda (genç, sıcak)</option><option value="Sulafat">👩 Sulafat (anne)</option>
+        <option value="Aoede">🌸 Aoede (ferah)</option><option value="Kore">💼 Kore (net)</option>
+        <option value="Achernar">🌙 Achernar (yumuşak)</option><option value="Puck">😄 Puck (neşeli)</option>
+        <option value="Algieba">👴 Algieba (dede)</option><option value="Charon">🎓 Charon (öğretmen)</option>
+        <option value="Fenrir">⚡ Fenrir (heyecanlı)</option>
+      </select>
+    </div>
+    <div class="hata" id="hata"></div>
+    <div class="yazibar"><input id="yazi" placeholder="İstersen yaz da sor…" enterkeyhint="send"><button id="gonder">➤</button></div>
+    <div class="kontrol">
+      <button class="btn" id="kamera" title="Kamera">📷</button>
+      <button class="btn" id="cevir" title="Kamerayı çevir">🔄</button>
+      <button class="btn buyuk" id="basla" title="Başlat / Bitir">🎙️</button>
+      <button class="btn" id="ekran" title="Ekran paylaş">🖥️</button>
+      <button class="btn" id="sessiz" title="Mikrofonu kapat">🔇</button>
+    </div>
+  </footer>
+</div>
+<script>
+(() => {
+"use strict";
+// ---------- Yapılandırma: window.AREX_CANLI (gömülü) veya URL #hash ----------
+const hash = new URLSearchParams(location.hash.slice(1));
+const CFG = Object.assign({}, window.AREX_CANLI || {});
+["t","k","mod","dil","ses","yas","profil","ad"].forEach(a => { if (hash.get(a)) CFG[a] = hash.get(a); });
+let tokenAlFn = window.AREX_TOKEN_AL || null; // (async) yeni geçici token döndürebilir (React Native / masaüstü)
+const MODELLER = ["gemini-3.8-live", "gemini-3.1-flash-live-preview", "gemini-2.5-flash-native-audio-latest"];
+const DIL_ADLARI = {tr:"Türkçe",en:"English",bn:"Bengalce (বাংলা)",ar:"Arapça (العربية)",ru:"Rusça (Русский)",de:"Almanca",fr:"Fransızca",es:"İspanyolca",az:"Azerbaycan Türkçesi",ur:"Urduca",hi:"Hintçe",zh:"Çince",ja:"Japonca",fa:"Farsça"};
+const $ = id => document.getElementById(id);
+for (const a of ["mod","dil","ses","yas"]) if (CFG[a] && $(a).querySelector(`option[value="${CFG[a]}"]`)) $(a).value = CFG[a];
+
+function sistemTalimati() {
+  const mod = $("mod").value, dil = DIL_ADLARI[$("dil").value] || "Türkçe", yas = $("yas").value;
+  const profil = CFG.profil ? `\nKullanıcı hakkında bildiklerin: ${CFG.profil}` : "";
+  const ad = CFG.ad ? ` Kullanıcının adı ${CFG.ad}.` : "";
+  const cocukKural = `Karşındaki ${yas} yaşında bir çocuk. Şiddet, korku, yetişkin içeriği, kaba dil YOK. Kişisel bilgi (adres, okul, telefon) isteme. Çocuk üzgün ya da tehlikedeyse nazikçe dinle ve güvendiği bir yetişkine anlatmasını öner. ${yas==="3-6"?"Çok kısa, basit cümleler kur.":yas==="7-9"?"Anlaşılır, neşeli ve meraklı konuş.":"Zengin ama anlaşılır konuş, ilginç bilgiler ekle."}`;
+  const ortak = `Bu bir CANLI SESLİ sohbet: doğal, sıcak, insan gibi konuş; konuşma dilinde kısa cevaplar ver (genelde 1-3 cümle), liste/markdown okuma. Kullanıcı sözünü keserse hemen bırak ve onu dinle. Kamera ya da ekran görüntüsü geliyorsa gördüğünü doğal biçimde kullan. Bilmediğini uydurma.${ad}${profil}`;
+  const T = {
+    asistan: `Sen AREX AI Studio'nun canlı sesli asistanısın. Varsayılan dilin ${dil}; kullanıcı başka dilde konuşursa onun dilinde cevap ver. Yaratıcı, esprili ama saygılı ol; konunun akışını takip et.`,
+    cocuk: `Sen çocukların sevimli, oyunbaz canlı arkadaşı "Bilge Baykuş Bilgin"sin. ${dil} konuş. Bilmeceler, oyunlar, merak soruları ve kısa hikâyelerle eğlendir; sohbeti hep bir soruyla sürdür. ${cocukKural}`,
+    masal: `Sen usta, sıcak sesli bir CANLI MASALCISIN. ${dil} anlat. Masalı bölüm bölüm, doğal duraksamalarla ve karakterlere farklı ses tonları vererek anlat; her bölümden sonra çocuğa ne olacağını seçtir ("Sence tavşan kapıyı açsın mı, yoksa…?"). Çocuğun fikirlerini hikâyeye kat. ${cocukKural}`,
+    ceviri: `Sen profesyonel bir CANLI TERCÜMANSIN. Türkçe duyduğunu ${dil} diline, ${dil} ya da başka bir dilde duyduğunu Türkçeye çevir. Yalnızca çeviriyi, doğal ve akıcı biçimde söyle; yorum ekleme. Hedef dil Türkçe ise duyduğunu Türkçeye çevir.`,
+    dil: `Sen sabırlı ve eğlenceli bir ${dil} konuşma pratiği öğretmenisin. Çoğunlukla ${dil} konuş, seviyeye uyarla; hataları nazikçe, kısaca düzelt; takıldığında kısa Türkçe ipucu ver; her turda bir soru sorarak konuşmayı sürdür.`,
+    analiz: `Sen kamera görüntüsünü canlı inceleyen bir görsel analiz uzmanısın. ${dil} konuş. Sorulana göre sahneyi, nesneleri, yazıları, görünen yüz ifadesini, beden dilini ve durumsal riskleri (ör. tartışmanın kavgaya dönüşme olasılığı) KANIT ve güven düzeyiyle anlat. Kimseyi tanımlama/isim tahmini yapma; etnik köken, sağlık, din gibi hassas özellik çıkarma; duyguları 'görünen ifade' olarak, kesin olmadığını belirterek söyle; görünüşe göre kişi yargılama.`
+  };
+  return T[mod] + "\n" + ortak;
+}
+
+// ---------- Durum ----------
+let ws = null, aktif = false, modelSira = 0, kurulumTamam = false, devamHandle = null, kapatiliyor = false;
+let micCtx = null, micStream = null, micNode = null, micSrc = null, sessiz = false;
+let calCtx = null, calZaman = 0, kaynaklar = [], analyser = null;
+let kamStream = null, kamYuz = "user", kareTimer = null, ekranMi = false;
+let sonGirdi = null, sonCikti = null;
+
+const durum = (y, c) => { $("durumYazi").textContent = y; $("nokta").className = "nokta " + (c || ""); };
+const hata = y => { $("hata").textContent = y || ""; };
+
+function satirEkle(kim, metin, birlestir) {
+  const kutu = $("altyazi");
+  let el = kim === "ben" ? sonGirdi : sonCikti;
+  if (!birlestir || !el) {
+    el = document.createElement("div"); el.className = "satir" + (kim === "ben" ? " ben" : "");
+    el.dir = "auto"; kutu.appendChild(el);
+    if (kim === "ben") sonGirdi = el; else sonCikti = el;
+    while (kutu.children.length > 14) kutu.removeChild(kutu.firstChild);
+  }
+  el.textContent += metin; kutu.scrollTop = kutu.scrollHeight; $("ipucu").style.display = "none";
+}
+
+// ---------- Ses çalma (24 kHz PCM16) ----------
+function calHazirla() {
+  if (calCtx) return;
+  calCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+  analyser = calCtx.createAnalyser(); analyser.fftSize = 256; analyser.connect(calCtx.destination);
+  animasyon();
+}
+function pcmCal(b64) {
+  calHazirla();
+  const bin = atob(b64), n = bin.length >> 1, f = new Float32Array(n);
+  for (let i = 0; i < n; i++) { let v = bin.charCodeAt(2*i) | (bin.charCodeAt(2*i+1) << 8); if (v >= 32768) v -= 65536; f[i] = v / 32768; }
+  const buf = calCtx.createBuffer(1, n, 24000); buf.copyToChannel(f, 0);
+  const src = calCtx.createBufferSource(); src.buffer = buf; src.connect(analyser);
+  const t = Math.max(calCtx.currentTime + 0.03, calZaman); src.start(t); calZaman = t + buf.duration;
+  kaynaklar.push(src); src.onended = () => { kaynaklar = kaynaklar.filter(s => s !== src); };
+}
+function caliKes() { kaynaklar.forEach(s => { try { s.stop(); } catch (e) {} }); kaynaklar = []; calZaman = 0; }
+let micSeviye = 0;
+function animasyon() {
+  const d = new Uint8Array(128);
+  const dongu = () => {
+    let s = 0; if (analyser) { analyser.getByteTimeDomainData(d); for (const v of d) s = Math.max(s, Math.abs(v - 128)); }
+    const kon = s > 4 && kaynaklar.length > 0, olcek = 1 + Math.min(.35, s / 220) + Math.min(.2, micSeviye * 2);
+    const k = $("kure"); k.style.transform = `scale(${olcek.toFixed(3)})`;
+    k.classList.toggle("konusuyor", kon); k.classList.toggle("dinliyor", aktif && !kon);
+    requestAnimationFrame(dongu);
+  }; dongu();
+}
+
+// ---------- Mikrofon (16 kHz PCM16) ----------
+const WORKLET = `class P extends AudioWorkletProcessor{constructor(){super();this.b=[];this.n=0}process(i){const c=i[0]&&i[0][0];if(c){this.b.push(new Float32Array(c));this.n+=c.length;if(this.n>=1600){const o=new Float32Array(this.n);let k=0;for(const x of this.b){o.set(x,k);k+=x.length}this.port.postMessage(o,[o.buffer]);this.b=[];this.n=0}}return true}}registerProcessor('p',P)`;
+async function mikrofonAc() {
+  micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
+  micCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+  await micCtx.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLET], { type: "application/javascript" })));
+  micSrc = micCtx.createMediaStreamSource(micStream);
+  micNode = new AudioWorkletNode(micCtx, "p");
+  micNode.port.onmessage = e => {
+    const f = e.data; let m = 0; for (let i = 0; i < f.length; i += 8) m = Math.max(m, Math.abs(f[i])); micSeviye = m;
+    if (!ws || ws.readyState !== 1 || !kurulumTamam || sessiz) return;
+    const i16 = new Int16Array(f.length); for (let i = 0; i < f.length; i++) i16[i] = Math.max(-1, Math.min(1, f[i])) * 32767;
+    const u8 = new Uint8Array(i16.buffer); let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+    ws.send(JSON.stringify({ realtimeInput: { audio: { data: btoa(s), mimeType: "audio/pcm;rate=16000" } } }));
+  };
+  micSrc.connect(micNode);
+}
+function mikrofonKapat() {
+  try { micSrc && micSrc.disconnect(); micNode && micNode.disconnect(); } catch (e) {}
+  micStream && micStream.getTracks().forEach(t => t.stop()); micCtx && micCtx.close().catch(() => {});
+  micStream = micCtx = micNode = micSrc = null; micSeviye = 0;
+}
+
+// ---------- Kamera / ekran (saniyede 1 kare JPEG) ----------
+async function kameraAc(ekran) {
+  kameraKapat();
+  try {
+    kamStream = ekran ? await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 5 } })
+                      : await navigator.mediaDevices.getUserMedia({ video: { facingMode: kamYuz, width: { ideal: 1280 }, height: { ideal: 720 } } });
+  } catch (e) { hata(ekran ? "Ekran paylaşımı açılamadı." : "Kameraya izin verilmedi."); return; }
+  ekranMi = !!ekran;
+  const v = $("video"); v.srcObject = kamStream; v.classList.add("on"); v.classList.toggle("ayna", !ekran && kamYuz === "user");
+  $(ekran ? "ekran" : "kamera").classList.add("secili");
+  kamStream.getVideoTracks()[0].onended = kameraKapat;
+  const c = document.createElement("canvas");
+  kareTimer = setInterval(() => {
+    if (!ws || ws.readyState !== 1 || !kurulumTamam || !v.videoWidth) return;
+    const o = Math.min(1, 768 / Math.max(v.videoWidth, v.videoHeight));
+    c.width = v.videoWidth * o; c.height = v.videoHeight * o; c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
+    const b64 = c.toDataURL("image/jpeg", 0.7).split(",")[1];
+    ws.send(JSON.stringify({ realtimeInput: { video: { data: b64, mimeType: "image/jpeg" } } }));
+  }, 1000);
+}
+function kameraKapat() {
+  clearInterval(kareTimer); kareTimer = null;
+  kamStream && kamStream.getTracks().forEach(t => t.stop()); kamStream = null;
+  $("video").classList.remove("on"); $("kamera").classList.remove("secili"); $("ekran").classList.remove("secili");
+}
+
+// ---------- Gemini Live bağlantısı ----------
+async function adresAl() {
+  if (tokenAlFn) { try { const t = await tokenAlFn(); if (t) CFG.t = t; } catch (e) {} }
+  if (CFG.t) return "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained?access_token=" + encodeURIComponent(CFG.t);
+  if (CFG.k) return "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=" + encodeURIComponent(CFG.k);
+  return null;
+}
+async function baglan() {
+  const adres = await adresAl();
+  if (!adres) { hata("Gemini anahtarı bulunamadı — API bölümünden ekle."); bitir(); return; }
+  kurulumTamam = false; durum("Bağlanıyor…", "bag");
+  ws = new WebSocket(adres);
+  const model = MODELLER[modelSira % MODELLER.length];
+  ws.onopen = () => {
+    const kurulum = {
+      model: "models/" + model,
+      generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: $("ses").value } } } },
+      systemInstruction: { parts: [{ text: sistemTalimati() }] },
+      inputAudioTranscription: {}, outputAudioTranscription: {},
+      contextWindowCompression: { slidingWindow: {} },
+      sessionResumption: devamHandle ? { handle: devamHandle } : {}
+    };
+    ws.send(JSON.stringify({ setup: kurulum }));
+  };
+  ws.onmessage = async e => {
+    const s = typeof e.data === "string" ? e.data : await e.data.text();
+    let m; try { m = JSON.parse(s); } catch (x) { return; }
+    if (m.setupComplete) { kurulumTamam = true; hata(""); durum("Dinliyorum", "on"); return; }
+    if (m.sessionResumptionUpdate && m.sessionResumptionUpdate.resumable && m.sessionResumptionUpdate.newHandle) devamHandle = m.sessionResumptionUpdate.newHandle;
+    if (m.goAway) { durum("Yenileniyor…", "bag"); try { ws.close(); } catch (x) {} return; }
+    const sc = m.serverContent; if (!sc) return;
+    if (sc.interrupted) { caliKes(); sonCikti = null; }
+    if (sc.inputTranscription && sc.inputTranscription.text) satirEkle("ben", sc.inputTranscription.text, true);
+    if (sc.outputTranscription && sc.outputTranscription.text) { satirEkle("o", sc.outputTranscription.text, true); sonGirdi = null; }
+    for (const p of ((sc.modelTurn || {}).parts || [])) if (p.inlineData && p.inlineData.data) pcmCal(p.inlineData.data);
+    if (sc.turnComplete) { sonCikti = null; sonGirdi = null; }
+  };
+  ws.onclose = ev => {
+    const kuruldu = kurulumTamam; kurulumTamam = false;
+    if (!aktif || kapatiliyor) return;
+    if (!kuruldu) { // model reddettiyse sıradakini dene
+      modelSira++;
+      if (modelSira < MODELLER.length * 2) { setTimeout(baglan, 400); return; }
+      hata("Canlı bağlantı kurulamadı (" + (ev.reason || ev.code) + ")."); bitir(); return;
+    }
+    setTimeout(baglan, 300); // oturum devam ettirme ile yeniden bağlan
+  };
+  ws.onerror = () => {};
+}
+
+async function basla() {
+  hata(""); calHazirla(); if (calCtx.state === "suspended") await calCtx.resume();
+  try { await mikrofonAc(); } catch (e) { hata("Mikrofona izin verilmedi (tarayıcı ayarlarından izin ver; telefonda https gerekir)."); return; }
+  aktif = true; kapatiliyor = false; modelSira = 0; devamHandle = null;
+  $("basla").classList.add("aktif"); $("basla").textContent = "⏹";
+  await baglan();
+}
+function bitir() {
+  aktif = false; kapatiliyor = true; kurulumTamam = false;
+  try { ws && ws.close(); } catch (e) {} ws = null;
+  mikrofonKapat(); kameraKapat(); caliKes();
+  $("basla").classList.remove("aktif"); $("basla").textContent = "🎙️"; durum("Hazır", "");
+}
+function yaziGonder() {
+  const t = $("yazi").value.trim(); if (!t) return;
+  if (!aktif || !ws || ws.readyState !== 1 || !kurulumTamam) { hata("Önce 🎙️ ile canlı oturumu başlat."); return; }
+  satirEkle("ben", t, false); sonGirdi = null; $("yazi").value = "";
+  ws.send(JSON.stringify({ realtimeInput: { text: t } }));
+}
+
+$("basla").onclick = () => aktif ? bitir() : basla();
+$("kamera").onclick = () => (kamStream && !ekranMi) ? kameraKapat() : kameraAc(false);
+$("ekran").onclick = () => (kamStream && ekranMi) ? kameraKapat() : kameraAc(true);
+$("cevir").onclick = () => { kamYuz = kamYuz === "user" ? "environment" : "user"; if (kamStream && !ekranMi) kameraAc(false); };
+$("sessiz").onclick = () => { sessiz = !sessiz; $("sessiz").classList.toggle("secili", sessiz); $("sessiz").textContent = sessiz ? "🎤" : "🔇"; };
+$("gonder").onclick = yaziGonder;
+$("yazi").addEventListener("keydown", e => { if (e.key === "Enter") yaziGonder(); });
+for (const a of ["mod","dil","ses","yas"]) $(a).onchange = () => { if (aktif && ws) { devamHandle = null; caliKes(); try { ws.close(); } catch (e) {} } }; // onclose yeni ayarlarla yeniden bağlanır
+if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia || /Android|iPhone|iPad/i.test(navigator.userAgent)) $("ekran").style.display = "none";
+window.AREX_CANLI_DIS = { basla, bitir, ayarla: (k, v) => { CFG[k] = v; } };
+})();
+</script>
+</body>
+</html>

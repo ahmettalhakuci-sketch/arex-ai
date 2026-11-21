@@ -3752,7 +3752,7 @@ def hibrit_ai_yanit_uret(kullanici_girdisi: str, ek_baglam: str = "", saglayici_
     api_key = st.session_state.get("gemini_api_key", "").strip() or os.environ.get("GEMINI_API_KEY", "").strip()
     if api_key and saglayici_kodu in (None, "gemini_free"):
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={api_key}"
             sistem_prompt = (
                 "Sen Ahmet tarafından geliştirilen 'AREX AI Studio' adlı süper asistansın. "
                 "Ahmet İstanbul Fatih'te Fen ve Sosyal Bilimler Proje Okulu 9. sınıf öğrencisi, "
@@ -5413,7 +5413,15 @@ def akilli_yanit_uret(kullanici_girdisi: str, hedef_dil: str = "tr"):
                 return (selam_oneki + icerik.get("yanit") if selam_oneki else icerik.get("yanit")), hedef_dil, f"Öğretilen Hafıza: {kat}"
 
     # 1-A. Sohbet İçi Anlık Çeviri (Telefondan dışarıda kullanım için!)
-    if re.search(r"\b(çevir|cevir|translate|tercüme\s*et|tercume\s*et)\b|(?:\b(?:ingilizceye|arapçaya|arapcaya|almancaya|fransızcaya|fransizcaya|türkçeye|turkceye|ispanyolcaya|italyancaya|rusçaya|japoncaya|koreceye)\s*:)", raw_text):
+    # Önceki mesaja gönderme ("bunu / bu şakayı / yukarıdakini … çevir") veya uzun metin → bağlamı gören
+    # yapay zekâ çevirisi (deyim ve tonu korur); kısa kelime/cümle çevirileri hızlı sözlük motorunda kalır.
+    _gonderme_ceviri = bool(re.search(
+        r"^\s*(?:peki\s+|şimdi\s+|simdi\s+)?(?:bu|bunu|şunu|sunu|onu|bunları|bunlari|yukarıdaki\w*|yukaridaki\w*|"
+        r"son\s+\w+|önceki\s+\w+|onceki\s+\w+|bu\s+\w+(?:yı|yi|yu|yü|ı|i|u|ü|nı|ni)?)\s+\w+(?:ye|ya|e|a|ce|ca|çe|ça)\s+"
+        r"(?:çevir|cevir|tercüme)", raw_text)) and any(
+        m.get("role") == "assistant" for m in (st.session_state.get("messages") or [])[-4:])
+    _uzun_ceviri = len(raw_text.split()) > 14
+    if (not _gonderme_ceviri and not _uzun_ceviri) and re.search(r"\b(çevir|cevir|translate|tercüme\s*et|tercume\s*et)\b|(?:\b(?:ingilizceye|arapçaya|arapcaya|almancaya|fransızcaya|fransizcaya|türkçeye|turkceye|ispanyolcaya|italyancaya|rusçaya|japoncaya|koreceye)\s*:)", raw_text):
         cev_s = sohbet_cevirisi_yap(
             kullanici_girdisi,
             gtx_url_ozel=st.session_state.get("test_gtx_url"),

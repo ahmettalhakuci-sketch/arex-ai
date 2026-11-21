@@ -261,6 +261,38 @@ div:has(> .st-key-arex_nav) {
 .st-key-arex_hizli button:hover { border-color: var(--accent-primary) !important; }
 .st-key-arex_hizli button:active { transform: scale(.97); }
 
+/* ---------- v15 Premium dokunuşlar ---------- */
+/* Sohbete eklenen fotoğraf: büyük değil, Gemini gibi küçük ve yuvarlak köşeli önizleme */
+.arex-kucuk-gorsel {
+  display: block; max-width: min(220px, 62vw); max-height: 220px; width: auto; height: auto;
+  object-fit: cover; border-radius: 16px; margin: 4px 0 6px auto;
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 35%, transparent);
+  box-shadow: 0 8px 22px rgba(0,0,0,.35);
+}
+/* Yazı kutusundaki ek önizlemesi de küçük kalsın, kutu zıplamasın */
+[data-testid="stChatInput"] [data-testid^="stChatInputFile"] img,
+[data-testid="stChatInput"] img { max-height: 56px !important; width: auto !important; border-radius: 10px; }
+[data-testid="stChatInput"] [data-testid^="stChatInputFile"] { max-width: 180px; }
+/* Kaydırma: içerik eklenince sayfa yukarı-aşağı sıçramasın */
+.st-key-arex_sohbet { overflow-anchor: auto; overscroll-behavior: contain; scroll-behavior: smooth; }
+.st-key-arex_sohbet > div { overflow-anchor: none; }
+/* Cam efekti ve yumuşak gölgeler */
+[data-testid="stChatMessage"] { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 6px 20px rgba(0,0,0,.22); }
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p { line-height: 1.62; }
+[data-testid="stChatInput"] { backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+/* Gömülü canlı sohbet çerçevesi */
+iframe[title="st.iframe"], [data-testid="stIFrame"], .stIFrame { border-radius: 24px; border: 0;
+  box-shadow: 0 18px 50px rgba(0,0,0,.45); }
+/* Sekmeler: hap görünümü */
+[data-baseweb="tab-list"] { gap: 6px; }
+[data-baseweb="tab"] { border-radius: 999px !important; }
+[data-baseweb="tab"][aria-selected="true"] {
+  background: color-mix(in srgb, var(--accent-primary) 18%, transparent) !important; }
+[data-baseweb="tab-highlight"] { display: none !important; }
+/* Genişleticiler (expander) kart görünümü */
+[data-testid="stExpander"] details { border-radius: 16px !important; border: 1px solid var(--border-subtle) !important; }
+
 /* ---------- Telefon (≤ 768px) ---------- */
 @media (max-width: 768px) {
   html { -webkit-text-size-adjust: 100%; }
