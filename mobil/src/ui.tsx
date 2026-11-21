@@ -1,0 +1,125 @@
+// AREX — premium arayüz bileşenleri
+import { LinearGradient } from "expo-linear-gradient";
+import * as Haptics from "expo-haptics";
+import React from "react";
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
+import Markdown from "react-native-markdown-display";
+import { ARKA_GRADYAN, GRADYAN, R } from "./tema";
+
+export const titret = () => { if (Platform.OS !== "web") Haptics.selectionAsync().catch(() => {}); };
+
+export function Arkaplan({ children }: { children: React.ReactNode }) {
+  return (
+    <LinearGradient colors={ARKA_GRADYAN as unknown as string[]} locations={[0, 0.45, 1]} style={{ flex: 1 }}>
+      {children}
+    </LinearGradient>
+  );
+}
+
+export function Kart({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+  return <View style={[s.kart, style]}>{children}</View>;
+}
+
+export function Baslik({ children, alt }: { children: React.ReactNode; alt?: string }) {
+  return (
+    <View style={{ marginBottom: 10 }}>
+      <Text style={s.baslik}>{children}</Text>
+      {alt ? <Text style={s.alt}>{alt}</Text> : null}
+    </View>
+  );
+}
+
+export function Dugme({ yazi, onPress, yukleniyor, ikincil, kucuk, style, devreDisi }: {
+  yazi: string; onPress: () => void; yukleniyor?: boolean; ikincil?: boolean; kucuk?: boolean; style?: StyleProp<ViewStyle>; devreDisi?: boolean;
+}) {
+  const ic = (
+    <View style={[s.dugmeIc, kucuk && { paddingVertical: 9 }]}>
+      {yukleniyor ? <ActivityIndicator color="#fff" /> : <Text style={[s.dugmeYazi, kucuk && { fontSize: 14 }]}>{yazi}</Text>}
+    </View>
+  );
+  return (
+    <Pressable disabled={yukleniyor || devreDisi} onPress={() => { titret(); onPress(); }}
+      style={({ pressed }) => [{ borderRadius: 16, overflow: "hidden", opacity: devreDisi ? 0.5 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] }, style]}>
+      {ikincil ? <View style={[s.ikincil]}>{ic}</View> : <LinearGradient colors={GRADYAN as unknown as string[]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>{ic}</LinearGradient>}
+    </Pressable>
+  );
+}
+
+export function Hap({ yazi, secili, onPress }: { yazi: string; secili?: boolean; onPress: () => void }) {
+  return (
+    <Pressable onPress={() => { titret(); onPress(); }} style={({ pressed }) => [s.hap, secili && s.hapSecili, pressed && { opacity: 0.7 }]}>
+      <Text style={[s.hapYazi, secili && { color: "#fff" }]}>{yazi}</Text>
+    </Pressable>
+  );
+}
+
+export function Secici<T extends string>({ secenekler, deger, onChange, etiket, coklu }: {
+  secenekler: { k: T; ad: string }[]; deger: T | T[]; onChange: (v: any) => void; etiket?: string; coklu?: boolean;
+}) {
+  const seciliMi = (k: T) => (Array.isArray(deger) ? deger.includes(k) : deger === k);
+  return (
+    <View style={{ marginBottom: 10 }}>
+      {etiket ? <Text style={s.etiket}>{etiket}</Text> : null}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
+        {secenekler.map((o) => (
+          <Hap key={o.k} yazi={o.ad} secili={seciliMi(o.k)} onPress={() => {
+            if (coklu && Array.isArray(deger)) onChange(deger.includes(o.k) ? deger.filter((x) => x !== o.k) : [...deger, o.k]);
+            else onChange(o.k);
+          }} />
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+export function Girdi(p: React.ComponentProps<typeof TextInput> & { etiket?: string }) {
+  const { etiket, style, ...rest } = p;
+  return (
+    <View style={{ marginBottom: 10 }}>
+      {etiket ? <Text style={s.etiket}>{etiket}</Text> : null}
+      <TextInput placeholderTextColor={R.soluk} {...rest} style={[s.girdi, style as StyleProp<TextStyle>]} />
+    </View>
+  );
+}
+
+const mdStil = StyleSheet.create({
+  body: { color: R.yazi, fontSize: 16, lineHeight: 24 },
+  heading1: { color: "#fff", fontSize: 21, fontWeight: "800", marginBottom: 6 },
+  heading2: { color: "#fff", fontSize: 18, fontWeight: "700", marginTop: 8 },
+  heading3: { color: "#fff", fontSize: 16, fontWeight: "700", marginTop: 6 },
+  strong: { color: "#fff", fontWeight: "700" },
+  em: { color: "#dfe3ff" },
+  bullet_list: { marginVertical: 4 },
+  code_inline: { backgroundColor: "rgba(124,92,255,0.25)", color: "#e9e4ff", borderRadius: 6, paddingHorizontal: 4 },
+  fence: { backgroundColor: "rgba(0,0,0,0.35)", color: "#e9e4ff", borderRadius: 10, padding: 10, borderWidth: 0 },
+  code_block: { backgroundColor: "rgba(0,0,0,0.35)", color: "#e9e4ff", borderRadius: 10, padding: 10, borderWidth: 0 },
+  table: { borderColor: R.cizgi, borderRadius: 8 },
+  th: { padding: 6, backgroundColor: "rgba(124,92,255,0.18)" },
+  td: { padding: 6, borderColor: R.cizgi },
+  tr: { borderColor: R.cizgi },
+  blockquote: { backgroundColor: "rgba(34,211,238,0.08)", borderLeftColor: R.acc2, borderLeftWidth: 3, paddingHorizontal: 8 },
+  link: { color: R.acc2 },
+  hr: { backgroundColor: R.cizgi },
+});
+
+export function MdMetin({ children, rtl }: { children: string; rtl?: boolean }) {
+  return (
+    <View style={rtl ? { direction: "rtl" } as ViewStyle : undefined}>
+      <Markdown style={mdStil as any}>{children || ""}</Markdown>
+    </View>
+  );
+}
+
+export const s = StyleSheet.create({
+  kart: { backgroundColor: R.kart, borderColor: R.cizgi, borderWidth: 1, borderRadius: 22, padding: 16, marginBottom: 12 },
+  baslik: { color: "#fff", fontSize: 24, fontWeight: "800", letterSpacing: 0.2 },
+  alt: { color: R.soluk, fontSize: 14, marginTop: 4, lineHeight: 20 },
+  dugmeIc: { paddingVertical: 14, paddingHorizontal: 18, alignItems: "center", justifyContent: "center" },
+  dugmeYazi: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  ikincil: { backgroundColor: R.kart, borderColor: R.cizgi, borderWidth: 1, borderRadius: 16 },
+  hap: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: R.kart, borderWidth: 1, borderColor: R.cizgi },
+  hapSecili: { backgroundColor: "rgba(124,92,255,0.45)", borderColor: R.acc },
+  hapYazi: { color: R.yazi, fontSize: 14, fontWeight: "600" },
+  etiket: { color: R.soluk, fontSize: 13, marginBottom: 6, fontWeight: "600" },
+  girdi: { backgroundColor: R.kart, borderColor: R.cizgi, borderWidth: 1, borderRadius: 14, color: R.yazi, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16 },
+});

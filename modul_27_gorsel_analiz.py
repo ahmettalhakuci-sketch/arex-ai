@@ -91,8 +91,9 @@ ANALIZLER = {
     },
     "ders": {
         "ad": "🧮 Ders Sorusu Çözümü",
-        "talimat": "Görseldeki soru(lar)ı oku, önce soruyu yaz, sonra adım adım çöz, kullanılan formül/kuralı belirt, "
-                   "sonucu kalın yaz ve tek cümlelik 'akılda kalsın' ipucu ver. Birden fazla soru varsa numarala.",
+        "talimat": "Görseldeki TÜM soru(lar)ı dikkatle oku (şıklar dahil). Her soru için: önce soruyu aynen yaz, sonra adım "
+                   "adım çöz, kullanılan formül/kuralı belirt, sonucu ve doğru şıkkı kalın yaz, tek cümlelik 'akılda kalsın' "
+                   "ipucu ver. Birden fazla soru varsa numarala. El yazısı veya bulanık kısım varsa varsayımını belirt.",
     },
     "kalite": {
         "ad": "📷 Fotoğraf Kalitesi, Kompozisyon & Renk",
@@ -173,7 +174,7 @@ def analiz_turu_tahmin_et(metin: str, video_mu: bool = False) -> list:
         ("catisma", r"kavga|çatışma|catisma|saldır|dövüş|tartışma|kavgaya|tehlikeli bir durum"),
         ("beden", r"beden dili|duruş|durus|jest|el kol"),
         ("yazi", r"yazıyı oku|metni oku|ocr|ne yazıyor|yazıları çıkar|özetle"),
-        ("ders", r"soruyu çöz|çöz|cevabı ne|cevap ne|işlem|denklem|test sorusu"),
+        ("ders", r"soru|çöz|cevabı ne|cevap ne|işlem|denklem|test|ödev|matematik|fizik|kimya|türev|integral|problem"),
         ("kalite", r"kalite|kompozisyon|fotoğraf nasıl|renk paleti|ışık nasıl|netlik"),
         ("sayim", r"kaç tane|say\b|sayısı|envanter"),
         ("guvenlik", r"güvenli mi|tehlike|risk"),
@@ -188,6 +189,47 @@ def analiz_turu_tahmin_et(metin: str, video_mu: bool = False) -> list:
     return secim
 
 
+SYMPY_KURALI = (
+    "\n\nÖNEMLİ — DOĞRULAMA SATIRI: Görselde matematik sorusu varsa, cevabının EN SONUNA her matematik sorusu için ayrı "
+    "bir satırda bilgisayar cebir sistemi için düz metin ifade yaz: `SYMPY: <ifade>`. Örnekler: `SYMPY: 3x+7=22`, "
+    "`SYMPY: x^3-6x^2+11x-6=0`, `SYMPY: x+y=5, x-y=1`, `SYMPY: türev x^2*sin(x)`, `SYMPY: 0'dan 2'ye integral x^2`, "
+    "`SYMPY: limit x->0 sin(x)/x`, `SYMPY: (3/4+1/2)*8`, `SYMPY: 2x-3>5`. Sözel problemlerde kurduğun denklemi yaz. "
+    "Matematik sorusu yoksa bu satırı yazma."
+)
+
+
+def _matematik_dogrula(metin: str) -> str:
+    """Yanıttaki SYMPY satırlarını AREX'in kendi motorlarıyla (Modül 29 + 14) yeniden hesaplar."""
+    satirlar = re.findall(r"(?im)^\s*`?SYMPY:\s*(.+?)`?\s*$", metin or "")
+    temiz = re.sub(r"(?im)^\s*`?SYMPY:.*$\n?", "", metin or "").rstrip()
+    temiz = re.sub(r"(?im)^#+[^\n]*doğrulama satır[^\n]*$", "", temiz).rstrip()
+    temiz = re.sub(r"(?:\n\s*---\s*)+$", "", temiz).rstrip()
+    if not satirlar:
+        return temiz
+    dogrulamalar = []
+    for i, ifade in enumerate(satirlar[:8], 1):
+        sonuc = None
+        try:
+            import modul_29_ileri_matematik as _m29
+            sonuc, _ = _m29.ileri_matematik_coz(ifade)
+        except Exception:
+            pass
+        if not sonuc:
+            try:
+                import modul_14_pro_matematik as _m14
+                sonuc, _ = _m14.pro_matematik_coz(ifade if "=" in ifade else ifade + " kaç")
+            except Exception:
+                sonuc = None
+        if sonuc:
+            ozet = re.sub(r"^#+.*\n+", "", sonuc.strip()).strip()
+            dogrulamalar.append(f"**{i}.** `{ifade}`\n\n{ozet}")
+        else:
+            dogrulamalar.append(f"**{i}.** `{ifade}` — otomatik doğrulama yapılamadı (sözel/şekilli soru); çözümü kontrol et.")
+    return temiz + "\n\n---\n### ✅ AREX Matematik Motoru Doğrulaması (SymPy)\n" + \
+        "_Aşağıdaki sonuçlar yapay zekâdan bağımsız, kesin sembolik hesapla yeniden bulundu. Yukarıdaki çözümle " \
+        "farklıysa bu sonuç esas alınmalı._\n\n" + "\n\n".join(dogrulamalar)
+
+
 def analiz_yap(veri: bytes, dosya_adi: str, turler: list, not_metni: str = "", dil: str = "Türkçe",
                gecmis: list = None) -> tuple:
     """Seçilen analiz türlerini tek istekte birleştirip çalıştırır. (metin|None, etiket|hata)"""
@@ -199,13 +241,20 @@ def analiz_yap(veri: bytes, dosya_adi: str, turler: list, not_metni: str = "", d
             bolumler.append(f"## {i}. {tum[t]['ad']}\n{tum[t]['talimat']}")
         talimat = ("Aşağıdaki analizleri SIRAYLA, her birini kendi başlığı altında yap:\n\n" + "\n\n".join(bolumler))
     else:
-        talimat = ("Bu medyayı kullanıcının sorusuna göre yanıtla. Soru yoksa kısa ve faydalı bir genel analiz yap.")
+        talimat = ("Bu medyayı kullanıcının sorusuna göre yanıtla. Görselde bir ders/sınav sorusu veya ödev varsa onu "
+                   "çöz (soruyu yaz, adım adım çöz, sonucu ve doğru şıkkı kalın yaz). Soru yoksa kısa ve faydalı bir "
+                   "genel analiz yap.")
     if not_metni.strip():
         talimat += f"\n\nKullanıcının notu / sorusu: {not_metni.strip()}"
     maks = 1800 + 900 * max(0, len(turler) - 1)
-    derin = any(t in DERIN_TURLER or t.startswith("video") for t in turler) or len(turler) > 2
-    return ai.medya_analiz_et(veri, dosya_adi, talimat, sistem=ETIK_SISTEM.format(dil=dil), gecmis=gecmis,
-                              maks_token=min(maks, 6000), derin=derin)
+    if not any(t.startswith("video") for t in turler):
+        talimat += SYMPY_KURALI
+    derin = any(t in DERIN_TURLER or t.startswith("video") for t in turler) or len(turler) > 2 or "ders" in turler
+    metin, etiket = ai.medya_analiz_et(veri, dosya_adi, talimat, sistem=ETIK_SISTEM.format(dil=dil), gecmis=gecmis,
+                                       maks_token=min(maks, 6000), derin=derin)
+    if metin:
+        metin = _matematik_dogrula(metin)
+    return metin, etiket
 
 
 DERIN_TURLER = {"duygu", "yuz_sekli", "beden", "catisma"}

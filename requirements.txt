@@ -10,3 +10,5 @@ googletrans==4.0.2
 pytesseract==0.3.13
 youtube-transcript-api==1.2.5
 Pillow==11.3.0
+sympy==1.13.3
+anthropic==0.125.0

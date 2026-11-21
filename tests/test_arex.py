@@ -773,5 +773,105 @@ class SohbetYonlendirme(unittest.TestCase):
         self.assertIn("Program", self._etiket("bana haftalık çalışma programı hazırla"))
 
 
+class IleriMatematik(unittest.TestCase):
+    """v15 — SymPy ileri matematik motoru (internetsiz, kesin)."""
+
+    @classmethod
+    def setUpClass(cls):
+        import modul_29_ileri_matematik as m29
+        cls.m = m29
+
+    def _c(self, metin):
+        return (self.m.ileri_matematik_coz(metin)[0] or "")
+
+    def test_turev_integral_limit(self):
+        self.assertIn("3 x^{2}", self._c("türev x^3"))
+        self.assertIn("x \\cos", self._c("sin(x)*x^2 nin türevi"))
+        self.assertIn("\\frac{8}{3}", self._c("0'dan 2'ye integral x^2"))
+        self.assertIn("e", self._c("lim x→∞ (1+1/x)^x").split("Sonuç")[1])
+
+    def test_denklem_sistem_esitsizlik(self):
+        self.assertIn("1, 2, 3", self._c("x^3 - 6x^2 + 11x - 6 = 0 çöz"))
+        self.assertIn("x = 3, y = 2", self._c("x+2y=7 ve 3x-y=7 denklem sistemini çöz"))
+        self.assertIn("\\left(4, \\infty\\right)", self._c("2x - 3 > 5"))
+
+    def test_diger(self):
+        self.assertIn("120", self._c("C(10,3)"))
+        self.assertIn("6", self._c("obeb 12 18 24"))
+        self.assertIn("2", self._c("17 mod 5"))
+        self.assertIn("-2", self._c("det [[1,2],[3,4]]"))
+
+    def test_yanlis_tetikleme_yok(self):
+        for metin in ("a=b mi sence bu iş olur mu acaba", "bence film > dizi", "bugün ortalama bir gün",
+                      "y = x^2 - 4 grafiğini çiz", "x^2 = 9"):
+            self.assertEqual(self._c(metin), "", metin)
+
+
+class MantikMotoruV15(unittest.TestCase):
+    """v15 — takip sorusu, yaratıcı istek, Wikipedia alakası, sınav stratejisti, test hapsi."""
+
+    @classmethod
+    def setUpClass(cls):
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            import modul_8_zeka_ve_hibrit_ai as m8
+        cls.m8 = m8
+
+    def test_takip_sorusu(self):
+        for metin in ("bunun formülü ne", "peki nerede doğdu", "nüfusu kaç", "başkenti neresi", "kaç yılında öldü",
+                      "peki yemekleri", "orada kar yağar mı", "kahramanın adı neydi", "yarın nasıl olacak"):
+            self.assertTrue(self.m8._takip_sorusu_mu(metin), metin)
+        for metin in ("Atatürk kimdir", "İstanbul hava durumu", "saat kaç", "dolar kaç tl", "fotosentez nedir",
+                      "x^2+1=0", "menemen tarifi", "türev nedir", "bugün günlerden ne"):
+            self.assertFalse(self.m8._takip_sorusu_mu(metin), metin)
+
+    def test_yaratici_istek(self):
+        self.assertTrue(self.m8._yaratici_istek_mi("bana bir uzay hikayesi anlat"))
+        self.assertTrue(self.m8._yaratici_istek_mi("bir şiir yaz"))
+        self.assertFalse(self.m8._yaratici_istek_mi("uzay yarışı nedir"))
+
+    def test_wikipedia_alakasi(self):
+        self.assertFalse(self.m8._wiki_alakali_mi("Newton'un 2. yasası nedir", "Newton'un evrensel kütleçekim yasası"))
+        self.assertFalse(self.m8._wiki_alakali_mi("bunun formülü ne", "Bun B"))
+        self.assertTrue(self.m8._wiki_alakali_mi("fotosentez nedir", "Fotosentez"))
+        self.assertTrue(self.m8._wiki_alakali_mi("DNA nedir", "DNA"))
+
+    def test_sinav_stratejisti(self):
+        for metin in ("sınavda en önemli soru nasıl gelir", "matematikte en önemli konu hangisi",
+                      "9. sınıf fizik 1. dönem 2. yazılıda ne çıkar", "türevden sınavda nasıl soru gelir"):
+            self.assertTrue(self.m8._SINAV_STRATEJI_RE.search(metin), metin)
+        for metin in ("sınava nasıl çalışmalıyım", "hatırla: sınavım 5 aralıkta"):
+            self.assertFalse(self.m8._SINAV_STRATEJI_RE.search(metin), metin)
+
+
+class TestHapsiYok(unittest.TestCase):
+    """Sohbet içi test sürerken alakasız mesajlar cevap sayılmamalı (v15 düzeltmesi)."""
+
+    def setUp(self):
+        self.klasor = tempfile.mkdtemp()
+        for ad in ("TAKIP_DOSYASI", "AYAR_DOSYASI", "HATIRLATICI_DOSYASI", "YANLIS_DOSYASI"):
+            setattr(m18, ad, os.path.join(self.klasor, ad + ".json"))
+        self.oturum = {}
+
+    def test_alakasiz_mesaj_test_cevabi_sayilmaz(self):
+        random.seed(3)
+        m18.calisma_kocu_yanitla("bana 3 matematik sorusu sor", self.oturum)
+        for metin in ("türev nedir", "x^2 - 5x + 6 = 0", "125 in karekökü", "3/4 + 5/6", "17 asal mı",
+                      "hatırla: sınavım 5 aralıkta", "ortalama 70 80 90"):
+            sonuc = m18.calisma_kocu_yanitla(metin, self.oturum)
+            self.assertFalse(sonuc and "Yanlış" in (sonuc[0] or ""), metin)
+        self.assertEqual(self.oturum["arex_test"]["sira"], 0)
+        cevap = m18.calisma_kocu_yanitla("12", self.oturum)[0]
+        self.assertTrue("Doğru" in cevap or "Yanlış" in cevap)
+
+
+class FotoMatematikDogrulama(unittest.TestCase):
+    def test_sympy_satiri_dogrulanir(self):
+        import modul_27_gorsel_analiz as m27
+        cikti = m27._matematik_dogrula("Çözüm: **x = 5**\n\n### Doğrulama Satırları\nSYMPY: x^3-6x^2+11x-6=0")
+        self.assertNotIn("SYMPY:", cikti)
+        self.assertNotIn("Doğrulama Satırları", cikti)
+        self.assertIn("1, 2, 3", cikti)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

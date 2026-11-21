@@ -5000,6 +5000,118 @@ def _konu_degisimi_sorgusu(kullanici_girdisi: str, aktif_konu: str):
     return f"{ozne} {kalip_metni}", ozne
 
 
+
+
+_WIKI_DURAK = {"nedir", "kimdir", "ne", "nasil", "nasıl", "hakkinda", "hakkında", "bilgi", "ver", "anlat", "mi", "mı", "mu", "mü",
+               "bir", "bu", "su", "şu", "o", "ve", "ile", "icin", "için", "neresi", "nerede", "hangi", "hangisi", "kac", "kaç",
+               "nedir?", "demek", "denir", "olan", "olarak", "en", "da", "de", "ki", "peki", "detayli", "detaylı", "kisaca", "kısaca"}
+_SIRA_SAYI = {"1": "birinci", "2": "ikinci", "3": "üçüncü", "4": "dördüncü", "5": "beşinci"}
+
+
+def _wiki_alakali_mi(sorgu: str, baslik: str) -> bool:
+    """Wikipedia'nın döndürdüğü başlık sorulan şeyle örtüşüyor mu? (ör. 'Newton'un 2. yasası' → 'kütleçekim yasası' DEĞİL)"""
+    q = metni_normallestir(sorgu)
+    b = metni_normallestir(baslik)
+    for sayi, kelime in _SIRA_SAYI.items():  # sıra sayısı sorulduysa başlıkta da olmalı
+        if re.search(rf"\b{sayi}\s*\.", sorgu) and sayi not in b and metni_normallestir(kelime) not in b:
+            return False
+    anlamli = [w for w in re.findall(r"[a-z0-9çğıöşü]+", q) if w not in _WIKI_DURAK and len(w) >= 3]
+    if not anlamli:
+        return True
+    b_kelimeler = re.findall(r"[a-z0-9çğıöşü]+", b)
+    eslesen = sum(1 for w in anlamli if any(bk[:4] == w[:4] for bk in b_kelimeler if len(bk) >= 3))
+    return eslesen / len(anlamli) >= 0.5
+
+
+
+_SINAV_STRATEJI_RE = re.compile(
+    r"(?:sınav|sinav|yazılı|yazili|lgs|yks|tyt|ayt|ortak sınav|deneme|quiz)\w*.{0,40}?(?:ne çıkar|ne cikar|ne gelir|nasıl soru|nasil soru|"
+    r"nasıl gelir|nasil gelir|hangi konu|en önemli|en onemli|çok çıkar|cok cikar|en çok|en cok|sorulur|çıkabilir|cikabilir|hangi soru)"
+    r"|(?:en önemli|en onemli)\s+(?:konu|soru)|(?:hangi konu|nasıl soru|nasil soru)\w*.{0,30}(?:gelir|çıkar|cikar|sorulur)", re.IGNORECASE)
+
+_MUFREDAT_9 = (
+    "9. SINIF DERS KONULARI (genel çerçeve; 2024'ten itibaren Türkiye Yüzyılı Maarif Modeli ile ünite adları/sıraları "
+    "değişmiş olabilir — kesin liste için okulun yıllık planı ve MEB'in ortak yazılı sınavlar için yayımladığı "
+    "'Konu-Soru Dağılım Tablosu' esas alınmalı): "
+    "MATEMATİK: mantık/önermeler, kümeler, sayılar (sayı kümeleri, bölünebilme, üslü-köklü ifadeler), denklemler ve "
+    "eşitsizlikler (1. derece, mutlak değer), oran-orantı ve problemler, üçgenler (açılar, eşlik-benzerlik, dik üçgen, "
+    "alan), veri/istatistik. FİZİK: fizik bilimine giriş ve birimler, madde ve özellikleri (kütle, hacim, özkütle, "
+    "dayanıklılık, adezyon-kohezyon), hareket ve kuvvet (konum, hız, ivme, Newton yasaları), enerji (iş, güç, verim, "
+    "enerji dönüşümleri), ısı ve sıcaklık, elektrostatik. KİMYA: kimya bilimi ve laboratuvar güvenliği, atom ve periyodik "
+    "sistem, kimyasal türler arası etkileşimler (bağlar), maddenin halleri, doğa ve kimya. BİYOLOJİ: canlıların ortak "
+    "özellikleri ve temel bileşenleri (su, mineral, karbonhidrat, lipit, protein, enzim, nükleik asit, ATP), hücre ve "
+    "organeller, canlıların sınıflandırılması. TARİH/COĞRAFYA/EDEBİYAT: ilgili 9. sınıf üniteleri."
+)
+
+
+def _sinav_stratejisti_baglami() -> str:
+    """Kullanıcının sınav takvimi + yanlış defteri + müfredat → kişisel sınav stratejisi bağlamı."""
+    parca = [_MUFREDAT_9]
+    try:
+        import json as _js, os as _os
+        _kok = _os.path.dirname(_os.path.abspath(__file__))
+        _sinav = _os.path.join(_kok, "arex_sinavlar.json")
+        if _os.path.exists(_sinav):
+            liste = _js.load(open(_sinav, encoding="utf-8"))
+            if liste:
+                parca.append("KULLANICININ YAKLAŞAN SINAVLARI: " + "; ".join(f"{x.get('ad', 'Sınav')} — {x.get('tarih', '')}" for x in liste[-6:]))
+        _yd = _os.path.join(_kok, "arex_yanlis_defteri.json")
+        if _os.path.exists(_yd):
+            from collections import Counter as _C
+            sayac = _C(f"{x.get('ders', '')}: {x.get('konu', '')}" for x in _js.load(open(_yd, encoding="utf-8")))
+            if sayac:
+                parca.append("YANLIŞ DEFTERİNDEKİ ZAYIF KONULAR (en çok yanlış): " + ", ".join(f"{k} ({v})" for k, v in sayac.most_common(6)))
+    except Exception:
+        pass
+    parca.append(
+        "CEVAP BİÇİMİ: 1) Kısa ve dürüst giriş: kesin soruları kimse bilemez ama müfredat, soru dağılım tabloları ve geçmiş "
+        "sınav eğilimlerinden olasılık çıkarılabilir. 2) '🎯 En olası konular' tablosu (konu | olasılık: yüksek/orta/düşük | "
+        "neden). 3) '🧩 Soru kalıpları': her önemli konu için tipik soru tipi ve 1 kısa örnek soru (cevabıyla). "
+        "4) '⚠️ Sık yapılan hatalar/tuzaklar'. 5) '🗓️ Çalışma planı': sınav tarihi biliniyorsa kalan güne göre, yoksa 7 "
+        "günlük; zayıf konulara öncelik ver. 6) Son satırda 'İstersen bu konulardan deneme sorusu sorayım' teklifi. "
+        "Okulun kendi soru dağılım tablosunu öğretmenden/MEB sitesinden kontrol etmesini öner.")
+    return "\n".join(parca)
+
+
+def _takip_sorusu_mu(girdi: str) -> bool:
+    """v15 — önceki konuya bağlı kısa/eksiltili takip sorusu mu? (Wikipedia başlık aramasına GİTMEMELİ)
+    Ör: 'bunun formülü ne', 'peki nerede doğdu', 'nüfusu kaç', 'başkenti neresi', 'kaç yılında öldü',
+    'peki yemekleri', 'orada kar yağar mı', 'kahramanın adı neydi', 'sonu mutlu bitsin'."""
+    t = (girdi or "").replace("İ", "i").replace("I", "ı").lower().replace("\u0307", "").strip(" ?!.")
+    kelimeler = t.split()
+    if not kelimeler or len(kelimeler) > 8 or re.search(r"\d\s*[+\-*/^=]|=", t):
+        return False
+    if re.search(r"\b(bunun|onun|bunu|onu|bunlar\w*|onlar\w*|bunda|onda|bundan|ondan|buna|ona|orada|oranın|oranin|orası|orasi|"
+                 r"oraya|oradaki|burada|burası|burasi|şunun|sunun|kendisi\w*|o\s+zaman|bu\s+konu\w*|aynı\s+şekilde)\b", t):
+        return True
+    if kelimeler[0] in ("peki", "ya", "ayrıca", "ayrica", "sonra", "ve", "hani") and len(kelimeler) <= 6:
+        return True
+    # zaman kaydırma: "yarın nasıl olacak", "hafta sonu ne olur", "akşam yağar mı" (önceki konunun devamı)
+    if len(kelimeler) <= 5 and kelimeler[0] in ("yarın", "yarin", "bugün", "bugun", "akşam", "aksam", "sabah", "haftaya",
+                                               "hafta", "öğlen", "oglen", "gece", "şimdi", "simdi") \
+            and re.search(r"(nasıl|nasil|ne|olacak|olur|mı|mi|mu|mü|yağar|yagar)", t) and not re.search(r"hava durumu|günlerden|saat", t):
+        return True
+    soru_kelimesi = r"(kaç|kac|ne|neresi|nerede|nedir|kim|kimdi|hangisi|nasıl|nasil|ne zaman|ne kadar|neydi|mı|mi|mu|mü|mıydı|miydi)$"
+    iyelik = r"^\w+(?:sı|si|su|sü|ları|leri|ı|i|u|ü)$"
+    if len(kelimeler) <= 4 and re.search(iyelik, kelimeler[0]) and (re.search(soru_kelimesi, t) or len(kelimeler) == 1):
+        return True
+    # öznesiz geçmiş/geniş zaman fiili: "nerede doğdu", "kaç yılında öldü", "ne zaman kuruldu"
+    if len(kelimeler) <= 5 and re.search(r"(dı|di|du|dü|tı|ti|tu|tü|mış|miş|muş|müş|ıyor|iyor|uyor|üyor)$", kelimeler[-1]) \
+            and re.search(r"^(nerede|ne zaman|kaç|kac|neden|niye|nasıl|nasil|kim|hangi)", t):
+        return True
+    # hikâye/oyun içi takip: "kahramanın adı neydi", "sonu mutlu bitsin", "biraz daha uzat"
+    if re.search(r"\b(kahraman\w*|karakter\w*|hikaye\w*|hikâye\w*|masal\w*|sonu|devamı|devami|başı|basi)\b", t) and len(kelimeler) <= 6:
+        return True
+    return False
+
+
+def _yaratici_istek_mi(girdi: str) -> bool:
+    t = (girdi or "").lower()
+    return bool(re.search(r"(hikaye|hikâye|masal|öykü|oyku|şiir|siir|fıkra|fikra|senaryo|tekerleme|mektup|kompozisyon|deneme|"
+                          r"story|poem|tale)\w*\s+(?:\w+\s+){0,3}(anlat|yaz|uydur|oku|tell|write)|"
+                          r"(anlat|yaz|uydur|tell|write)\w*\s+(?:\w+\s+){0,4}(hikaye|hikâye|masal|öykü|şiir|story|poem)", t))
+
+
 def _aktif_konu_baglami_uygula(kullanici_girdisi: str, guncelle: bool = True) -> tuple:
     """
     v9.1 GERÇEK ÇOK TURLU KONU DEVAMLILIĞI (100+ Soru Boyunca Bağlam Kopmaz!):
@@ -5336,6 +5448,16 @@ def akilli_yanit_uret(kullanici_girdisi: str, hedef_dil: str = "tr"):
             _oa_yanit, _oa_etiket = None, None
         if _oa_yanit:
             return _oa_yanit, hedef_dil, _oa_etiket
+    # 0-A3b. İleri matematik (SymPy): türev, integral, limit, sistem, eşitsizlik, matris, istatistik…
+    if not ozel_ai_saglayici:
+        try:
+            import modul_29_ileri_matematik as _m29
+            _im_y, _im_e = _m29.ileri_matematik_coz(
+                kullanici_girdisi, aciklama=bool(re.search(r"(?i)adım adım|adim adim|nasıl|açıkla|acikla|anlat|neden", kullanici_girdisi)))
+            if _im_y:
+                return _im_y, hedef_dil, _im_e
+        except Exception:
+            pass
     if _plan_ve_formul_yanitla is not None and not ozel_ai_saglayici:
         try:
             _pf_yanit, _pf_etiket = _plan_ve_formul_yanitla(kullanici_girdisi)
@@ -5368,6 +5490,25 @@ def akilli_yanit_uret(kullanici_girdisi: str, hedef_dil: str = "tr"):
 
     # 0-B. GERÇEK BAĞLAM / KONU DEVAMLILIĞI & ÖNCEKİ KONU İZOLASYONU
     _onceki_aktif_konu = st.session_state.get("aktif_konu", "").strip()
+    _orijinal_girdi = kullanici_girdisi
+    _onceki_user_var = any(m.get("role") == "user" for m in (st.session_state.get("messages") or [])[-12:])
+    # v15: Sınav stratejisti — "sınavda ne çıkar / en önemli konu / nasıl soru gelir"
+    if not ozel_ai_saglayici and _SINAV_STRATEJI_RE.search(_orijinal_girdi):
+        _s_y, _s_e = hibrit_ai_yanit_uret(_orijinal_girdi, ek_baglam=_sinav_stratejisti_baglami(), gecmis_kullan=True)
+        if _s_y:
+            return _s_y, hedef_dil, f"🎯 Sınav Stratejisti ({_s_e})"
+    # v15: Takip sorusu & yaratıcı istek → Wikipedia başlık avına çıkmadan, konu + geçmişle yapay zekâya
+    if not ozel_ai_saglayici and (_yaratici_istek_mi(_orijinal_girdi) or (_onceki_user_var and _takip_sorusu_mu(_orijinal_girdi))):
+        _yaratici = _yaratici_istek_mi(_orijinal_girdi)
+        _soru = _orijinal_girdi
+        if _yaratici:
+            _soru += "\n\n(Not: Bu bir yaratıcı yazım isteği — ansiklopedi bilgisi değil, özgün ve sürükleyici bir metin yaz.)"
+        elif _onceki_aktif_konu and metni_normallestir(_onceki_aktif_konu) not in metni_normallestir(_orijinal_girdi):
+            _soru = f"(Konuşmanın konusu: {_onceki_aktif_konu}) {_orijinal_girdi}"
+        _t_y, _t_e = hibrit_ai_yanit_uret(_soru, gecmis_kullan=True)
+        if _t_y:
+            st.session_state["aktif_konu"] = _onceki_aktif_konu  # takip sorusu konuyu BOZMAZ
+            return _t_y, hedef_dil, f"🧠 {'Yaratıcı Yazım' if _yaratici else 'Konu Devamı'} ({_t_e})"
     kullanici_girdisi, baglam_eklendi_mi = _aktif_konu_baglami_uygula(kullanici_girdisi)
     raw_text = kullanici_girdisi.replace("İ", "i").replace("I", "ı").lower().replace("\u0307", "").strip()
     norm_text = metni_normallestir(kullanici_girdisi)
@@ -5384,6 +5525,28 @@ def akilli_yanit_uret(kullanici_girdisi: str, hedef_dil: str = "tr"):
     if not ozel_ai_saglayici and analiz["selam_turu"] and not analiz["kalan_soru"]:
         return analiz["tek_selam_yaniti"], hedef_dil, f"💬 Selamlaşma ({analiz['selam_turu']})"
 
+    # 1-0. Bağlam & dil koruması (mantık motoru v15):
+    #  • Çeviri isteği ("Bengalce teşekkür ederim nasıl denir") → hazır Türkçe kalıplara düşmesin
+    #  • Kısa onay/devam ("evet", "tamam", "devam et") → konu bağlamıyla yapay zekâya (Wikipedia'da "Bay Evet" değil)
+    #  • Türkçe dışı mesaj ("how are you today", "Привет") → Wikipedia/TR kalıplarını atla, kendi dilinde yanıt
+    _ceviri_istegi = bool(re.search(
+        r"nasıl denir|nasil denir|nasıl söylenir|nasil soylenir|nasıl yazılır|nasil yazilir|dilinde|diline|\bçevir|\bcevir|"
+        r"translate|tercüme|tercume|ne demek", raw_text))
+    _kisa_devam = bool(re.fullmatch(
+        r"(?:evet|hayır|hayir|tamam|olur|aynen|peki|yok|tabii|tabi|anladım|anladim|devam|devam et|devam edelim|başka|baska|"
+        r"daha fazla|biraz daha|sonra|ve\??|neden\??|niye\??|nasıl yani\??|mesela\??|örnek ver|ornek ver|açıkla|acikla|"
+        r"detaylandır|detaylandir|kısalt|kisalt|daha kısa|daha basit anlat|basitleştir)[.!?]*", raw_text.strip()))
+    try:
+        import modul_25_ai_cekirdek as _m25d
+        _yabanci = _m25d.yazidan_dil_tahmin(kullanici_girdisi) not in ("", "tr")
+    except Exception:
+        _yabanci = False
+    _onceki_var = len([m for m in (st.session_state.get("messages") or []) if m.get("role") == "user"]) >= 1
+    if not ozel_ai_saglayici and ((_kisa_devam and _onceki_var) or _yabanci):
+        _b_y, _b_e = hibrit_ai_yanit_uret(kullanici_girdisi, gecmis_kullan=True)
+        if _b_y:
+            return _b_y, hedef_dil, f"🧠 Bağlamlı Sohbet ({_b_e})"
+
     candan_kaliplar = [
         (["sohbet edelim", "biraz sohbet edelim", "konusalim", "canim sikkin", "moralim bozuk", "cok yorgunum", "yoruldum"],
          "💙 **Gel biraz sohbet edelim canım kardeşim!** Bazen dersler ve projeler üst üste binince yorulmak çok normal. "
@@ -5394,15 +5557,15 @@ def akilli_yanit_uret(kullanici_girdisi: str, hedef_dil: str = "tr"):
          "💬 Candan Sohbet"),
     ]
     for k_list, c_yanit, c_etiket in candan_kaliplar:
-        if any(k == aktif_soru_norm or k in norm_text for k in k_list):
+        if not _ceviri_istegi and any(k == aktif_soru_norm or k in norm_text for k in k_list):
             return (selam_oneki + c_yanit if selam_oneki else c_yanit), hedef_dil, c_etiket
 
     for s_kod, s_veri in DOGRUDAN_5N1K_SORU_TABANI.items():
-        if aktif_soru_norm in s_veri["tetikleyiciler"] or norm_text in s_veri["tetikleyiciler"]:
+        if not _ceviri_istegi and (aktif_soru_norm in s_veri["tetikleyiciler"] or norm_text in s_veri["tetikleyiciler"]):
             return (selam_oneki + s_veri["yanit"] if selam_oneki else s_veri["yanit"]), hedef_dil, s_veri["etiket"]
 
     for kural in DOGAL_SOHBET_VE_REHBER_KURALLARI:
-        if any(k == aktif_soru_norm or k == norm_text or (len(k) >= 12 and k in aktif_soru_norm) for k in kural["kaliplar"]):
+        if not _ceviri_istegi and any(k == aktif_soru_norm or k == norm_text or (len(k) >= 12 and k in aktif_soru_norm) for k in kural["kaliplar"]):
             return (selam_oneki + kural["yanit"] if selam_oneki else kural["yanit"]), hedef_dil, kural["etiket"]
 
     guncel_json_veri = json_oku()
@@ -5633,7 +5796,7 @@ def akilli_yanit_uret(kullanici_girdisi: str, hedef_dil: str = "tr"):
                 st.session_state["aktif_konu"] = mekan_s["yer"]
             else:
                 w_sonuc = wikipedia_madde_getir(wikipedia_konu_ayikla(bio_parcasi) or bio_parcasi, dil="tr", detay_karakter=(580 if _uzunluk_modu_belirle(kullanici_girdisi, norm_text) == "kisa" else (7500 if _uzunluk_modu_belirle(kullanici_girdisi, norm_text) == "derin" else 3200))) if st.session_state.get("wikipedia_aktif", True) else {"basarili": False}
-                if w_sonuc.get("basarili"):
+                if w_sonuc.get("basarili") and _wiki_alakali_mi(bio_parcasi, w_sonuc.get("baslik", "")):
                     toplanan_parcalar.append(wikipedia_sonucunu_metne_formatla(w_sonuc))
                     kullanilan_kaynaklar.append(f"Wikipedia ({w_sonuc['baslik']})")
                     st.session_state["aktif_konu"] = re.sub(r"\s*\([^)]*\)", "", w_sonuc["baslik"]).strip()
@@ -5671,7 +5834,7 @@ def akilli_yanit_uret(kullanici_girdisi: str, hedef_dil: str = "tr"):
         elif len(raw_text.split()) <= 5 and not re.search(r"\b(ben|sen|biz|siz|mi|mı|mu|mü|lütfen|lutfen|merhaba|selam)\b", raw_text):
             try:
                 _pw = wikipedia_madde_getir(wikipedia_konu_ayikla(kullanici_girdisi) or kullanici_girdisi, dil="tr", detay_karakter=2800)
-                if _pw.get("basarili"):
+                if _pw.get("basarili") and _wiki_alakali_mi(kullanici_girdisi, _pw.get("baslik", "")):
                     toplanan_parcalar.append(wikipedia_sonucunu_metne_formatla(_pw))
                     kullanilan_kaynaklar.append(f"Wikipedia ({_pw['baslik']})")
                     st.session_state["aktif_konu"] = re.sub(r"\s*\([^)]*\)", "", _pw["baslik"]).strip()

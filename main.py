@@ -32,7 +32,7 @@ import streamlit as st
 PROJE_KOK_DIZINI = os.path.dirname(os.path.abspath(__file__))
 for _ana in [PROJE_KOK_DIZINI]:
     for _kok, _altlar, _ in os.walk(_ana):
-        _altlar[:] = [d for d in _altlar if not d.startswith(".") and d not in ("__pycache__", "venv", ".venv")]
+        _altlar[:] = [d for d in _altlar if not d.startswith(".") and d not in ("__pycache__", "venv", ".venv", "node_modules", "mobil", "masaustu", "static", "tests", "ar_acil_yedekler")]
         if _kok not in sys.path:
             sys.path.append(_kok)
 if PROJE_KOK_DIZINI in sys.path:

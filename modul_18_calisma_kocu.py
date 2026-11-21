@@ -528,8 +528,18 @@ def _test_cevapla(metin: str, oturum):
             ilk = f"Konu: {q['konu']}. Önce verilenleri sadeleştir, sonra adım adım ilerle."
         return f"💡 **İpucu:** {ilk}\n\nŞimdi cevabını yaz 🙂", "📝 Sohbet İçi Test"
     gec = bool(re.search(r"^(?:geç|gec|pas|bilmiyorum|boş|bos)$", t))
-    # Sohbetle ilgili belirgin başka bir soru → testi bozmadan normal akışa bırak
-    if not gec and len(t.split()) > 6 and not re.search(r"\d|√|kök", t):
+    # Yalnızca CEVABA BENZEYEN mesajlar test cevabı sayılır; başka soru/sohbet → testi bozmadan normal akışa bırak
+    # (önceden "türev nedir", "x^2-5x+6=0" gibi mesajlar da yanlış cevap olarak sayılıp testi ilerletiyordu)
+    _tt = t.strip(" .!")
+    cevap_benzeri = bool(
+        re.fullmatch(r"\(?[a-e]\)?", _tt)                                                   # şık: a, b), (c)
+        or re.fullmatch(r"[-+]?\s*\d+(?:[.,]\d+)?(?:\s*/\s*\d+)?\s*(?:[a-zçğıöşü%°²³]{0,6})", _tt)  # 12, -3, 2,5, 3/4, 25 cm
+        or re.fullmatch(r"[-+]?\d*\s*(?:√|kök)\s*\d+", _tt)                                 # 7√3
+        or re.fullmatch(r"[a-z]\s*=\s*[-+]?\d+(?:[.,/]\d+)?", _tt)                          # x = 5
+        or re.fullmatch(r"(?:cevap|cevabım|cevabim|sonuç|sonuc)\s*[:=]?\s*\S+", _tt)
+        or _cevap_dogru_mu(metin, q["cevap"])
+    )
+    if not gec and not cevap_benzeri:
         return None
     if gec:
         d["bos"] += 1

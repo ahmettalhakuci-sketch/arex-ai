@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AREX Yerel Analiz</title>
+<style>
+:root{--bg1:#050816;--bg2:#0b1030;--acc:#7c5cff;--acc2:#22d3ee;--txt:#eef2ff;--mut:#9aa3c7;--card:rgba(255,255,255,.06);--brd:rgba(255,255,255,.12);--ok:#2ee59d;--warn:#ffc145;--bad:#ff4d6d}
+*{box-sizing:border-box}
+html,body{margin:0;background:radial-gradient(120% 70% at 50% 0%,#1a1550 0%,var(--bg2) 45%,var(--bg1) 100%);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans",sans-serif;min-height:100%}
+.kap{max-width:980px;margin:0 auto;padding:14px 14px 40px}
+h1{font-size:20px;margin:4px 0 2px}h1 span{background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.alt{color:var(--mut);font-size:13px;margin:0 0 12px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.btn{border:1px solid var(--brd);background:var(--card);color:var(--txt);padding:10px 14px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer}
+.btn.ana{background:linear-gradient(135deg,var(--acc),var(--acc2));border:none}
+.btn.on{background:#ff4d6d;border:none}
+.izgara{display:grid;grid-template-columns:1.1fr 1fr;gap:12px}
+@media(max-width:760px){.izgara{grid-template-columns:1fr}}
+.kart{background:var(--card);border:1px solid var(--brd);border-radius:20px;padding:14px}
+.kart h3{margin:0 0 10px;font-size:15px}
+.sahne{position:relative;border-radius:16px;overflow:hidden;background:#000;aspect-ratio:4/3}
+.sahne video,.sahne img,.sahne canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.sahne .ayna{transform:scaleX(-1)}
+.bos{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--mut);padding:20px;font-size:14px}
+.satir{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13.5px}
+.satir .ad{width:150px;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.satir .cubuk{flex:1;height:10px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.satir .dol{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--acc),var(--acc2));transition:width .25s}
+.satir .yuz{width:44px;text-align:right;color:var(--mut);font-variant-numeric:tabular-nums}
+.olcer{display:flex;align-items:center;gap:14px}
+.olcer .daire{width:92px;height:92px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;flex:none}
+.etk{display:inline-block;padding:3px 9px;border-radius:99px;font-size:12px;margin:2px 4px 2px 0;border:1px solid var(--brd)}
+.etk.var{background:rgba(255,77,109,.18);border-color:#ff4d6d66}.etk.yok{opacity:.55}
+table{width:100%;border-collapse:collapse;font-size:13px}td{padding:5px 4px;border-bottom:1px solid rgba(255,255,255,.06)}td:last-child{text-align:right;color:var(--mut)}
+textarea{width:100%;min-height:70px;background:var(--card);border:1px solid var(--brd);border-radius:12px;color:var(--txt);padding:10px;font-size:15px;font-family:inherit}
+.rapor{white-space:pre-wrap;line-height:1.6;font-size:14.5px}
+.not{color:var(--mut);font-size:12px;margin-top:8px}
+#grafik{width:100%;height:110px;display:block}
+.durum{color:var(--mut);font-size:13px;margin:6px 0}
+</style>
+</head>
+<body>
+<div class="kap">
+  <h1>🧠 AREX <span>Yerel Analiz</span></h1>
+  <p class="alt">Dış yapay zekâya gitmeden, cihazın içinde: 478 yüz noktası + 52 kas hareketi + beden ve el iskeleti. Görüntü hiçbir yere gönderilmez.</p>
+  <div class="bar">
+    <button class="btn ana" id="kameraBtn">📷 Canlı kamera</button>
+    <button class="btn" id="cevirBtn">🔄 Kamerayı çevir</button>
+    <label class="btn" for="dosya">🖼️ Fotoğraf seç</label><input id="dosya" type="file" accept="image/*" hidden>
+    <button class="btn" id="raporBtn">📋 Raporu kopyala</button>
+    <button class="btn" id="gonderBtn">💬 Sohbete gönder</button>
+  </div>
+  <div class="durum" id="durum">Model hazırlanıyor… (ilk açılışta ~10 MB indirilir, sonra önbellekten açılır)</div>
+  <div class="izgara">
+    <div>
+      <div class="kart"><div class="sahne" id="sahne"><video id="video" playsinline muted></video><img id="foto" alt="" hidden><canvas id="tuval"></canvas><div class="bos" id="bos">📷 Canlı kamerayı başlat ya da 🖼️ fotoğraf seç.<br>Yüz, beden ve eller cihazında analiz edilir.</div></div></div>
+      <div class="kart"><h3>📈 Zaman içinde (son 60 sn)</h3><canvas id="grafik"></canvas><div class="not">Mor: görünen gerginlik • Turkuaz: olumlu ifade</div></div>
+      <div class="kart"><h3>✍️ Metin bağlamı (isteğe bağlı)</h3><textarea id="metin" placeholder="Nasıl hissettiğini ya da durumu yaz… (yerel duygu motoru analiz eder)"></textarea><div id="metinSonuc" class="not"></div></div>
+    </div>
+    <div>
+      <div class="kart"><h3>🙂 Görünen duygu</h3><div id="duygular"></div></div>
+      <div class="kart"><h3>😬 Görünen gerginlik / tedirginlik</h3>
+        <div class="olcer"><div class="daire" id="gerginDaire">–</div><div><div id="gerginEtiket" style="font-weight:700">Bekleniyor</div><div id="gerginIsaret" style="margin-top:6px"></div></div></div></div>
+      <div class="kart"><h3>📐 Yüz şekli & oranlar</h3><div id="yuzSekli">–</div><table id="oranlar"></table></div>
+      <div class="kart"><h3>🧍 Davranış & beden dili</h3><table id="davranis"></table></div>
+      <div class="kart"><h3>⚠️ Durumsal çatışma riski</h3><div class="olcer"><div class="daire" id="riskDaire">–</div><div><div id="riskEtiket" style="font-weight:700">Bekleniyor</div><div id="riskIsaret" style="margin-top:6px"></div></div></div></div>
+    </div>
+  </div>
+  <div class="kart"><h3>🧩 Birleşik değerlendirme (çok bağlamlı)</h3><div class="rapor" id="rapor">Analiz başlayınca burada yüz, zaman, davranış, beden ve metin bağlamları birleştirilerek rapor oluşur.</div>
+  <div class="not">Bu analiz istatistiksel bir tahmindir; kişinin gerçek iç durumunu veya niyetini kesin göstermez. Işık, açı, kültür ve anlık hareketler sonucu etkiler. Kimlik tanıma yapılmaz.</div></div>
+</div>
+<script type="module">
+const SURUM = "1.1.1";
+const $ = id => document.getElementById(id);
+let vision, yuzM, pozM, elM, akis = null, yuzOn = "user", dongu = null;
+const gecmis = []; // {t, gergin, olumlu, yaw, pitch, goz, bakis}
+let kirpmaSayisi = 0, kirpmaAcik = false, baslangic = 0, sonRapor = "";
+
+// ---------- Model yükleme ----------
+async function yukle() {
+  const m = await import(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${SURUM}/vision_bundle.mjs`);
+  vision = m;
+  const fs = await m.FilesetResolver.forVisionTasks(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${SURUM}/wasm`);
+  const temel = p => ({ modelAssetPath: p, delegate: "GPU" });
+  yuzM = await m.FaceLandmarker.createFromOptions(fs, { baseOptions: temel("https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"),
+    runningMode: "IMAGE", numFaces: 4, outputFaceBlendshapes: true, outputFacialTransformationMatrixes: true });
+  $("durum").textContent = "Yüz modeli hazır. Beden ve el modelleri yükleniyor…";
+  [pozM, elM] = await Promise.all([
+    m.PoseLandmarker.createFromOptions(fs, { baseOptions: temel("https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task"), runningMode: "IMAGE", numPoses: 4 }).catch(() => null),
+    m.HandLandmarker.createFromOptions(fs, { baseOptions: temel("https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"), runningMode: "IMAGE", numHands: 4 }).catch(() => null),
+  ]);
+  $("durum").textContent = "✅ Hazır — tüm analiz bu cihazda yapılıyor.";
+}
+const hazir = yukle().catch(e => { $("durum").textContent = "Model yüklenemedi (internet gerekli ilk açılışta): " + e.message; });
+
+// ---------- Yardımcılar ----------
+const bs = (k, ad) => { const c = k.find(x => x.categoryName === ad); return c ? c.score : 0; };
+const ort = (k, a) => (bs(k, a + "Left") + bs(k, a + "Right")) / 2;
+const kis = v => Math.max(0, Math.min(1, v));
+const mesafe = (a, b, W, H) => Math.hypot((a.x - b.x) * W, (a.y - b.y) * H);
+
+// 25 duygu — 52 kas hareketi (blendshape), sağ/sol asimetri, bakış ve baş yönünden kural tabanlı tahmin
+const GRUPLAR = {
+  "💚 Olumlu": ["😊 Mutluluk", "😂 Kahkaha / Neşe", "🙂 Kibar gülümseme", "🤩 Heyecan", "😍 Hayranlık", "🧐 Merak / İlgi", "😌 Sakinlik / Huzur"],
+  "💔 Olumsuz": ["😢 Üzüntü", "😞 Hayal kırıklığı", "😠 Öfke", "😤 Rahatsızlık / Sinirlilik", "😨 Korku", "😰 Kaygı / Tedirginlik", "🤢 İğrenme", "😒 Küçümseme", "😳 Utanç / Mahcubiyet", "😣 Acı / Ağrı"],
+  "🧠 Bilişsel": ["😮 Şaşkınlık", "🤨 Şüphe", "😕 Kafa karışıklığı", "🎯 Odaklanma", "🤔 Düşünceli", "💪 Kararlılık"],
+  "🔋 Enerji": ["😴 Yorgunluk / Uykululuk", "🥱 Can sıkıntısı"],
+  "🎭 Karışık": ["🥲 Hüzünlü gülümseme", "😏 Alaycılık"],
+};
+let sonDurum = { degerlik: 0, uyarilma: 0, grup: {} };
+function duygular(k, aci) {
+  const L = a => bs(k, a + "Left"), Rg = a => bs(k, a + "Right");
+  const g = ort(k, "mouthSmile"), cheek = ort(k, "cheekSquint"), bIn = bs(k, "browInnerUp"), bDown = ort(k, "browDown"), bOut = ort(k, "browOuterUp");
+  const eW = ort(k, "eyeWide"), eSq = ort(k, "eyeSquint"), eBl = ort(k, "eyeBlink"), jaw = bs(k, "jawOpen"), press = ort(k, "mouthPress");
+  const frown = ort(k, "mouthFrown"), stretch = ort(k, "mouthStretch"), sneer = ort(k, "noseSneer"), upUp = ort(k, "mouthUpperUp");
+  const roll = (bs(k, "mouthRollLower") + bs(k, "mouthRollUpper")) / 2, shrug = bs(k, "mouthShrugLower"), pucker = bs(k, "mouthPucker");
+  const lookDown = ort(k, "eyeLookDown"), lookUp = ort(k, "eyeLookUp"), lookSide = Math.max(ort(k, "eyeLookOut"), ort(k, "eyeLookIn"));
+  const asym = Math.abs(L("mouthSmile") - Rg("mouthSmile")) + Math.abs(L("mouthDimple") - Rg("mouthDimple")) * 0.8;
+  const kasAsym = Math.abs(L("browOuterUp") - Rg("browOuterUp")) + Math.abs(L("browDown") - Rg("browDown"));
+  const yanBakis = Math.max(lookSide, aci ? Math.min(1, Math.abs(aci.yaw) / 30) : 0);
+  const basAsagi = aci ? kis((aci.pitch - 8) / 25) : 0;
+  const aktivite = k.filter(c => !/eyeLook|eyeBlink|_neutral/.test(c.categoryName)).reduce((a, c) => a + c.score, 0) / 40;
+  const yariKapali = eBl > 0.25 && eBl < 0.8 ? eBl : 0;
+  const ham = {
+    "😊 Mutluluk": kis(g * 0.7 + cheek * 0.5),
+    "😂 Kahkaha / Neşe": kis(g * 0.5 + jaw * 0.45 + cheek * 0.3 - 0.3),
+    "🙂 Kibar gülümseme": kis(g * 0.9 - cheek * 0.9 - 0.05),
+    "🤩 Heyecan": kis(g * 0.4 + eW * 0.4 + bOut * 0.3 + jaw * 0.2 - 0.18),
+    "😍 Hayranlık": kis(bIn * 0.3 + bOut * 0.3 + jaw * 0.2 + g * 0.25 - 0.2),
+    "🧐 Merak / İlgi": kis(bOut * 0.35 + eW * 0.3 + bIn * 0.15 - bDown * 0.3 - yanBakis * 0.2 - 0.06),
+    "😌 Sakinlik / Huzur": kis(0.42 - aktivite * 2.2 + g * 0.2 - yariKapali * 0.2),
+    "😢 Üzüntü": kis(bIn * 0.45 + frown * 0.6 + shrug * 0.25 - g * 0.6),
+    "😞 Hayal kırıklığı": kis(frown * 0.45 + press * 0.25 + lookDown * 0.2 + bIn * 0.15 - g * 0.5 - 0.06),
+    "😠 Öfke": kis(bDown * 0.75 + sneer * 0.3 + press * 0.3 + eSq * 0.15 - g * 0.6),
+    "😤 Rahatsızlık / Sinirlilik": kis(bDown * 0.4 + press * 0.25 + eSq * 0.2 + roll * 0.2 - g * 0.4 - 0.06),
+    "😨 Korku": kis(eW * 0.5 + bIn * 0.35 + stretch * 0.5 - g * 0.5),
+    "😰 Kaygı / Tedirginlik": kis(bIn * 0.35 + press * 0.2 + roll * 0.25 + stretch * 0.25 + yanBakis * 0.2 - g * 0.4 - 0.05),
+    "🤢 İğrenme": kis(sneer * 0.65 + upUp * 0.5 - g * 0.3),
+    "😒 Küçümseme": kis(asym * 1.4 + Math.abs(L("noseSneer") - Rg("noseSneer")) * 0.6 - 0.1),
+    "😳 Utanç / Mahcubiyet": kis(lookDown * 0.45 + basAsagi * 0.3 + g * 0.2 + roll * 0.2 - eW * 0.3 - 0.12),
+    "😣 Acı / Ağrı": kis(bDown * 0.35 + eSq * 0.5 + upUp * 0.3 + stretch * 0.2 - g * 0.4 - 0.12),
+    "😮 Şaşkınlık": kis(bIn * 0.3 + bOut * 0.4 + eW * 0.4 + jaw * 0.4 - g * 0.3 - 0.1),
+    "🤨 Şüphe": kis(kasAsym * 1.2 + eSq * 0.3 + press * 0.15 - g * 0.2 - 0.06),
+    "😕 Kafa karışıklığı": kis(bDown * 0.35 + bIn * 0.3 + kasAsym * 0.4 + pucker * 0.15 - g * 0.3 - 0.1),
+    "🎯 Odaklanma": kis(bDown * 0.3 + eSq * 0.35 + press * 0.1 - g * 0.3 - jaw * 0.3 - yanBakis * 0.3 - 0.02),
+    "🤔 Düşünceli": kis(lookUp * 0.35 + lookSide * 0.2 + pucker * 0.2 + press * 0.1 - g * 0.2 - 0.06),
+    "💪 Kararlılık": kis(press * 0.4 + bDown * 0.2 + bs(k, "jawForward") * 0.2 + (1 - yanBakis) * 0.1 - g * 0.3 - 0.08),
+    "😴 Yorgunluk / Uykululuk": kis(yariKapali * 0.6 + (jaw > 0.5 && eBl > 0.4 ? 0.5 : 0) + lookDown * 0.15 - eW * 0.3 - 0.08),
+    "🥱 Can sıkıntısı": kis(yariKapali * 0.3 + (0.15 - aktivite) * 1.5 + yanBakis * 0.15 + frown * 0.1 - g * 0.3 - 0.05),
+    "🥲 Hüzünlü gülümseme": kis(g * 0.4 + bIn * 0.45 - cheek * 0.2 - 0.12),
+    "😏 Alaycılık": kis(asym * 1.0 + lookUp * 0.3 + g * 0.2 - 0.12),
+  };
+  const enYuksek = Math.max(...Object.values(ham));
+  ham["😐 Nötr"] = kis(0.42 - enYuksek * 0.9);
+  const top = Object.values(ham).reduce((a, b) => a + b, 0) || 1;
+  const yuzde = Object.fromEntries(Object.entries(ham).map(([a, v]) => [a, v / top]));
+  const grup = Object.fromEntries(Object.entries(GRUPLAR).map(([gAd, l]) => [gAd, l.reduce((a, d) => a + (yuzde[d] || 0), 0)]));
+  sonDurum = { degerlik: grup["💚 Olumlu"] - grup["💔 Olumsuz"], uyarilma: kis(aktivite * 3 + eW * 0.3 + jaw * 0.3 - yariKapali * 0.4), grup };
+  return yuzde;
+}
+
+function gerginlik(k, ek) {
+  const isaret = {
+    "Kaş çatma": ort(k, "browDown") > 0.35, "Kaş iç uçları kalkık": bs(k, "browInnerUp") > 0.4,
+    "Dudak sıkma": ort(k, "mouthPress") > 0.35 || (bs(k, "mouthRollLower") + bs(k, "mouthRollUpper")) / 2 > 0.3,
+    "Göz kısma": ort(k, "eyeSquint") > 0.45, "Ağız germe": ort(k, "mouthStretch") > 0.3, "Çene ileri": bs(k, "jawForward") > 0.25,
+  };
+  let p = ort(k, "browDown") * 22 + bs(k, "browInnerUp") * 14 + ort(k, "mouthPress") * 22 + (bs(k, "mouthRollLower") + bs(k, "mouthRollUpper")) * 8
+    + ort(k, "eyeSquint") * 8 + ort(k, "mouthStretch") * 12 + bs(k, "jawForward") * 8 - ort(k, "mouthSmile") * 18;
+  if (ek) {
+    if (ek.kirpmaDk > 30) { p += 12; isaret["Sık göz kırpma"] = true; } else isaret["Sık göz kırpma"] = false;
+    if (ek.bakisKacirma > 0.35) { p += 10; isaret["Bakış kaçırma"] = true; } else isaret["Bakış kaçırma"] = false;
+    if (ek.basHareket > 6) { p += 8; isaret["Huzursuz baş hareketi"] = true; } else isaret["Huzursuz baş hareketi"] = false;
+    if (ek.yuzeDokunma) { p += 10; isaret["Yüze/ağza dokunma"] = true; }
+    if (ek.kolKavusturma) { p += 6; isaret["Kol kavuşturma"] = true; }
+  }
+  return { puan: Math.round(Math.max(0, Math.min(100, p * 1.6))), isaret };
+}
+
+function yuzSekli(n, W, H) {
+  const d = (a, b) => mesafe(n[a], n[b], W, H);
+  const alin = d(103, 332), elmacik = d(234, 454), cene = d(172, 397), boy = d(10, 152), ceneUcu = d(148, 377);
+  const LW = boy / elmacik, ceneE = cene / elmacik, alinE = alin / elmacik, ceneAlin = cene / alin;
+  let sinif, neden;
+  if (LW > 1.55 && Math.abs(ceneE - alinE) < 0.12) { sinif = "Dikdörtgen / uzun"; neden = "yüz boyu genişliğine göre belirgin uzun, alın-çene genişlikleri benzer"; }
+  else if (ceneAlin < 0.78 && alinE > 0.82) { sinif = "Kalp"; neden = "alın geniş, çene hattı belirgin daralıyor"; }
+  else if (alinE < 0.8 && ceneE < 0.78) { sinif = "Elmas"; neden = "elmacık kemikleri en geniş bölge, alın ve çene dar"; }
+  else if (ceneAlin > 1.08) { sinif = "Üçgen (armut)"; neden = "çene hattı alından geniş"; }
+  else if (LW < 1.3 && ceneE > 0.86) { sinif = "Kare"; neden = "yüz boyu ve genişliği yakın, çene hattı geniş ve belirgin"; }
+  else if (LW < 1.3) { sinif = "Yuvarlak"; neden = "yüz boyu ve genişliği yakın, çene yumuşak"; }
+  else { sinif = "Oval"; neden = "yüz genişliğinden biraz uzun, alın çeneden hafif geniş, yumuşak geçişler"; }
+  // simetri: orta hatta (burun köprüsü 168 – çene 152) göre eş noktalar
+  const orta = (n[168].x + n[152].x) / 2;
+  const ciftler = [[33, 263], [61, 291], [234, 454], [70, 300], [172, 397]];
+  const sapma = ciftler.map(([a, b]) => Math.abs(Math.abs(n[a].x - orta) - Math.abs(n[b].x - orta)) / Math.max(1e-6, Math.abs(n[a].x - n[b].x)));
+  const simetri = Math.round(100 - Math.min(40, (sapma.reduce((x, y) => x + y, 0) / sapma.length) * 220));
+  const oneri = {
+    "Oval": "Çoğu saç kesimi ve çerçeve uyar; dikdörtgen/kedi göz çerçeveler dengeli durur.",
+    "Yuvarlak": "Üstte hacimli, yanları kısa kesimler; köşeli/dikdörtgen çerçeveler yüzü uzatır.",
+    "Kare": "Yumuşak katlı kesimler; yuvarlak/oval çerçeveler köşeleri yumuşatır.",
+    "Kalp": "Çene hizasında hacim veren kesimler; alt kısmı geniş, hafif çerçeveler.",
+    "Elmas": "Alın ve çeneye hacim veren kesimler; oval/kaşsız (rimless) çerçeveler.",
+    "Üçgen (armut)": "Üst kısımda hacim; üstü vurgulu (browline) çerçeveler.",
+    "Dikdörtgen / uzun": "Yanlarda hacim, kâkül; büyük, derin çerçeveler yüzü dengeler.",
+  }[sinif];
+  return { sinif, neden, oneri, simetri, oranlar: { "Boy / genişlik": LW.toFixed(2), "Çene / elmacık": ceneE.toFixed(2), "Alın / elmacık": alinE.toFixed(2), "Çene / alın": ceneAlin.toFixed(2), "Çene ucu / elmacık": (ceneUcu / elmacik).toFixed(2) } };
+}
+
+function basAcisi(n) {
+  const genis = Math.abs(n[454].x - n[234].x) || 1e-6;
+  const yaw = ((n[1].x - (n[234].x + n[454].x) / 2) / genis) * 90;
+  const pitch = ((n[1].y - (n[10].y + n[152].y) / 2) / Math.abs(n[152].y - n[10].y || 1e-6)) * 90;
+  return { yaw, pitch };
+}
+
+function beden(pozlar, eller, yuzler, W, H) {
+  const s = { kisi: pozlar.length, kolKavusturma: false, yuzeDokunma: false, elKaldirma: false, oneEgilme: false, yumruk: 0, yakinlik: false, yakinlikOran: null };
+  for (const p of pozlar) {
+    const omuz = mesafe(p[11], p[12], W, H) || 1;
+    if (mesafe(p[15], p[14], W, H) < omuz * 0.55 && mesafe(p[16], p[13], W, H) < omuz * 0.55) s.kolKavusturma = true;
+    if (Math.min(mesafe(p[15], p[0], W, H), mesafe(p[16], p[0], W, H)) < omuz * 0.45) s.yuzeDokunma = true;
+    if (p[15].y < p[11].y - 0.03 || p[16].y < p[12].y - 0.03) s.elKaldirma = true;
+    if (((p[11].z + p[12].z) / 2) < ((p[23]?.z ?? 0) + (p[24]?.z ?? 0)) / 2 - 0.25) s.oneEgilme = true;
+  }
+  if (pozlar.length >= 2) {
+    const merkez = p => ({ x: (p[11].x + p[12].x) / 2, y: (p[11].y + p[12].y) / 2 });
+    let enAz = Infinity;
+    for (let i = 0; i < pozlar.length; i++) for (let j = i + 1; j < pozlar.length; j++) {
+      const om = (mesafe(pozlar[i][11], pozlar[i][12], W, H) + mesafe(pozlar[j][11], pozlar[j][12], W, H)) / 2 || 1;
+      enAz = Math.min(enAz, mesafe(merkez(pozlar[i]), merkez(pozlar[j]), W, H) / om);
+    }
+    s.yakinlikOran = enAz; s.yakinlik = enAz < 1.6;
+  }
+  for (const e of eller) {
+    const avuc = mesafe(e[0], e[9], W, H) || 1;
+    const uc = [8, 12, 16, 20].map(i => mesafe(e[i], e[0], W, H) / avuc);
+    if (uc.reduce((a, b) => a + b, 0) / 4 < 1.05) s.yumruk++;
+  }
+  return s;
+}
+
+function catismaRiski(b, yuzDuygu) {
+  const isaret = [];
+  let p = 4;
+  const ofke = Math.max(0, ...yuzDuygu.map(d => d["😠 Öfke"] || 0));
+  if (ofke > 0.3) { p += 22 * ofke / 0.5; isaret.push("öfkeli görünen ifade"); }
+  if (b.yumruk) { p += 14 * Math.min(2, b.yumruk); isaret.push(`${b.yumruk} sıkılı yumruk`); }
+  if (b.elKaldirma) { p += 12; isaret.push("el/kol kaldırma"); }
+  if (b.oneEgilme) { p += 8; isaret.push("öne eğilme"); }
+  if (b.kisi >= 2) { p += 6; if (b.yakinlik) { p += 18; isaret.push("kişiler çok yakın"); } }
+  if (b.kisi < 2) p *= 0.5; // tek kişide etkileşimsel risk düşük
+  if (b.kolKavusturma) isaret.push("kapalı duruş (kol kavuşturma)");
+  p = Math.round(Math.max(0, Math.min(95, p)));
+  return { p, isaret, seviye: p >= 60 ? "Yüksek" : p >= 25 ? "Orta" : "Düşük" };
+}
+
+// ---------- Yerel metin duygu motoru ----------
+const SOZLUK = {
+  "😊 Mutluluk": ["mutlu", "sevin", "harika", "güzel", "süper", "mükemmel", "keyif", "iyi hissed", "bayıl", "sevdim", "çok iyi", "happy", "great", "awesome", "😊", "😄", "🥰", "☺️"],
+  "😂 Neşe / Eğlence": ["haha", "hahaha", "kahkaha", "güldüm", "komik", "eğlen", "şaka", "lol", "😂", "🤣", "😆"],
+  "🤩 Heyecan": ["heyecan", "sabırsızlan", "can atıyorum", "müthiş", "inanılmaz", "yaşasın", "excited", "🤩", "🎉", "🥳"],
+  "🙏 Minnettarlık": ["teşekkür", "sağ ol", "minnettar", "çok naziksin", "eline sağlık", "thanks", "thank you", "🙏"],
+  "❤️ Sevgi / Şefkat": ["seviyorum", "aşk", "özledim", "canım", "tatlım", "kıymetli", "sarıl", "love", "❤️", "😍", "💕"],
+  "😌 Sakinlik / Huzur": ["huzur", "sakin", "rahat", "dingin", "rahatladım", "ferah", "calm", "relaxed", "😌"],
+  "💪 Gurur / Özgüven": ["gurur", "başardım", "kazandım", "yaptım", "kendime güven", "proud", "💪", "🏆"],
+  "🧐 Merak / İlgi": ["merak", "acaba", "nasıl oluyor", "ilginç", "öğrenmek ist", "curious", "interesting", "🧐"],
+  "😢 Üzüntü": ["üzgün", "üzül", "ağla", "mutsuz", "kederli", "moral", "içim burkul", "sad", "cry", "😢", "😭", "💔", "😞"],
+  "😞 Hayal kırıklığı": ["hayal kırıklığı", "beklemiyordum", "olmadı yine", "boşuna", "yazık", "disappointed", "😔"],
+  "🥺 Yalnızlık": ["yalnız", "kimse yok", "dışlan", "anlamıyor kimse", "tek başıma", "lonely", "🥺"],
+  "😠 Öfke": ["sinir", "kız", "öfke", "nefret", "rezalet", "deli oldum", "çıldıracağım", "angry", "hate", "😠", "😡", "🤬"],
+  "😤 Rahatsızlık / Bıkkınlık": ["bıktım", "usandım", "yeter artık", "saçma", "uğraştırıyor", "rahatsız", "annoyed", "😤", "🙄"],
+  "😨 Korku": ["kork", "ürkütücü", "dehşet", "panik", "afraid", "scared", "😨", "😱"],
+  "😰 Kaygı / Tedirginlik": ["endişe", "kaygı", "tedirgin", "stres", "gergin", "ya olmazsa", "yetişemeyeceğim", "sınav", "anxious", "worried", "nervous", "😰", "😟"],
+  "😳 Utanç / Mahcubiyet": ["utan", "mahcup", "rezil oldum", "yüzüm kızardı", "embarrass", "😳"],
+  "😔 Suçluluk / Pişmanlık": ["pişman", "suçlu", "keşke", "özür dilerim", "hata yaptım", "sorry", "regret"],
+  "😒 Kıskançlık": ["kıskan", "haset", "neden o", "jealous"],
+  "🤢 İğrenme": ["iğrenç", "tiksindim", "midem bulandı", "disgusting", "🤢", "🤮"],
+  "😮 Şaşkınlık": ["şaşırdım", "inanamıyorum", "vay", "oha", "nasıl yani", "wow", "omg", "😮", "😲", "🤯"],
+  "😕 Kafa karışıklığı": ["anlamadım", "kafam karıştı", "karışık", "ne demek", "confused", "😕", "🤔"],
+  "😴 Yorgunluk": ["yorgun", "uykusuz", "bitkin", "tükendim", "enerjim yok", "tired", "exhausted", "😴", "🥱"],
+  "🌫️ Umutsuzluk": ["umutsuz", "hiçbir şey düzelmeyecek", "anlamı yok", "vazgeçtim", "hopeless"],
+  "🌱 Umut / İyimserlik": ["umarım", "inşallah", "olacak", "düzelecek", "iyimser", "hope", "🌈", "🌱"],
+};
+const PEKISTIR = ["çok", "aşırı", "fazla", "resmen", "gerçekten", "cidden", "so", "very", "really"];
+const OLUMSUZ = ["değil", "değilim", "hiç", "yok", "not", "never"];
+function metinDuygu(t) {
+  const k = (t || "").toLocaleLowerCase("tr").replace(/[.,!?;:()]/g, " ");
+  const kelimeler = k.split(/\s+/).filter(Boolean);
+  const skor = {};
+  for (const [duygu, liste] of Object.entries(SOZLUK)) {
+    let s = 0;
+    for (const w of liste) {
+      let i = k.indexOf(w);
+      while (i >= 0) {
+        const once = k.slice(Math.max(0, i - 25), i).split(/\s+/).slice(-3);
+        const sonra = k.slice(i, i + 30).split(/\s+/).slice(0, 3);
+        let v = 1;
+        if (once.some(x => PEKISTIR.includes(x))) v *= 1.6;
+        if (sonra.concat(once).some(x => OLUMSUZ.includes(x))) v *= -0.6;
+        s += v; i = k.indexOf(w, i + w.length);
+      }
+    }
+    if (s) skor[duygu] = s;
+  }
+  const unlem = (t.match(/!/g) || []).length, buyuk = (t.match(/\b[A-ZÇĞİÖŞÜ]{3,}\b/g) || []).length;
+  const yogunluk = Math.min(1, (Object.values(skor).reduce((a, b) => a + Math.abs(b), 0) + unlem * 0.3 + buyuk * 0.4) / Math.max(3, kelimeler.length / 4));
+  const sirali = Object.entries(skor).sort((a, b) => b[1] - a[1]);
+  return { baskin: sirali[0]?.[1] > 0 ? sirali[0][0] : "😐 Nötr", skor, yogunluk };
+}
+$("metin").addEventListener("input", () => {
+  const r = metinDuygu($("metin").value);
+  $("metinSonuc").textContent = $("metin").value.trim() ? `Yerel motor: baskın duygu ${r.baskin}, yoğunluk %${Math.round(r.yogunluk * 100)}` : "";
+  if (sonVeri) raporla(sonVeri);
+});
+
+// ---------- Çizim & arayüz ----------
+const BAG = [[33,133],[362,263],[61,291],[10,152],[234,454]];
+function ciz(sonuc, W, H, ayna) {
+  const c = $("tuval"); c.width = W; c.height = H; const x = c.getContext("2d"); x.clearRect(0, 0, W, H);
+  x.save(); if (ayna) { x.translate(W, 0); x.scale(-1, 1); }
+  for (const n of sonuc.yuz.faceLandmarks || []) {
+    x.fillStyle = "rgba(34,211,238,.75)"; for (let i = 0; i < n.length; i += 3) { x.fillRect(n[i].x * W - 1, n[i].y * H - 1, 2, 2); }
+    x.strokeStyle = "rgba(124,92,255,.9)"; x.lineWidth = 2; for (const [a, b] of BAG) { x.beginPath(); x.moveTo(n[a].x * W, n[a].y * H); x.lineTo(n[b].x * W, n[b].y * H); x.stroke(); }
+  }
+  for (const p of sonuc.poz?.landmarks || []) {
+    x.strokeStyle = "rgba(46,229,157,.85)"; x.lineWidth = 3;
+    for (const [a, b] of [[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24]]) { if (!p[a] || !p[b]) continue; x.beginPath(); x.moveTo(p[a].x * W, p[a].y * H); x.lineTo(p[b].x * W, p[b].y * H); x.stroke(); }
+  }
+  for (const e of sonuc.el?.landmarks || []) { x.fillStyle = "rgba(255,193,69,.9)"; for (const q of e) x.fillRect(q.x * W - 2, q.y * H - 2, 4, 4); }
+  x.restore();
+}
+const cubuk = (a, v, olcek = 1) => `<div class="satir"><span class="ad">${a}</span><div class="cubuk"><div class="dol" style="width:${Math.min(100, v * 100 * olcek).toFixed(0)}%"></div></div><span class="yuz">%${(v * 100).toFixed(0)}</span></div>`;
+function cubuklar(d) {
+  const sirali = Object.entries(d).sort((a, b) => b[1] - a[1]);
+  const deg = sonDurum.degerlik, uy = sonDurum.uyarilma;
+  $("duygular").innerHTML =
+    `<div class="not" style="margin:0 0 6px">Duygu durumu: <b>${deg > 0.08 ? "olumlu" : deg < -0.08 ? "olumsuz" : "nötr"}</b> (${(deg * 100).toFixed(0)}) • enerji: <b>${uy > 0.55 ? "yüksek/uyarılmış" : uy > 0.25 ? "orta" : "düşük/sakin"}</b></div>` +
+    Object.entries(sonDurum.grup).map(([g, v]) => cubuk(g, v)).join("") +
+    `<div class="not" style="margin:10px 0 4px">En belirgin duygular</div>` +
+    sirali.slice(0, 10).map(([a, v]) => cubuk(a, v, 2)).join("") +
+    `<details style="margin-top:6px"><summary class="not" style="cursor:pointer">Tüm ${sirali.length} duyguyu göster</summary>${sirali.slice(10).map(([a, v]) => cubuk(a, v, 2)).join("")}</details>`;
+}
+function daire(el, p, ters) { const renk = p >= 60 ? "var(--bad)" : p >= 30 ? "var(--warn)" : "var(--ok)"; el.textContent = p; el.style.background = `conic-gradient(${renk} ${p * 3.6}deg, rgba(255,255,255,.08) 0)`; }
+function tablo(id, nesne) { $(id).innerHTML = Object.entries(nesne).map(([a, v]) => `<tr><td>${a}</td><td>${v}</td></tr>`).join(""); }
+function grafik() {
+  const c = $("grafik"); const W = c.clientWidth * devicePixelRatio, H = 110 * devicePixelRatio; c.width = W; c.height = H; const x = c.getContext("2d");
+  const simdi = performance.now(), veri = gecmis.filter(g => simdi - g.t < 60000); if (veri.length < 2) return;
+  for (const [alan, renk] of [["gergin", "#7c5cff"], ["olumlu", "#22d3ee"]]) {
+    x.strokeStyle = renk; x.lineWidth = 2.5 * devicePixelRatio; x.beginPath();
+    veri.forEach((g, i) => { const px = W - ((simdi - g.t) / 60000) * W, py = H - (g[alan] / 100) * (H - 6) - 3; i ? x.lineTo(px, py) : x.moveTo(px, py); }); x.stroke();
+  }
+}
+
+// ---------- Analiz çekirdeği ----------
+let sonVeri = null;
+function analiz(kaynak, W, H, zaman, canli) {
+  if (!yuzM) return;
+  const yuz = canli ? yuzM.detectForVideo(kaynak, zaman) : yuzM.detect(kaynak);
+  const poz = pozM ? (canli ? pozM.detectForVideo(kaynak, zaman) : pozM.detect(kaynak)) : null;
+  const el = elM ? (canli ? elM.detectForVideo(kaynak, zaman) : elM.detect(kaynak)) : null;
+  ciz({ yuz, poz, el }, W, H, canli && yuzOn === "user");
+  const yuzler = yuz.faceLandmarks || [];
+  if (!yuzler.length && !(poz?.landmarks || []).length) { $("bos").hidden = false; $("bos").textContent = "Yüz/beden algılanamadı — ışığı artır, yüzünü kadraja al."; return; }
+  $("bos").hidden = true;
+  const ks = (yuz.faceBlendshapes || []).map(b => b.categories);
+  const aci0 = yuzler[0] ? basAcisi(yuzler[0]) : null;
+  const yuzDuygu = ks.map((k, i) => duygular(k, i === 0 ? aci0 : (yuzler[i] ? basAcisi(yuzler[i]) : null)));
+  const b = beden(poz?.landmarks || [], el?.landmarks || [], yuzler, W, H);
+  // zamansal: göz kırpma, bakış, baş hareketi (ilk yüz)
+  let ek = { kirpmaDk: 0, bakisKacirma: 0, basHareket: 0, yuzeDokunma: b.yuzeDokunma, kolKavusturma: b.kolKavusturma };
+  if (ks[0] && canli) {
+    const goz = ort(ks[0], "eyeBlink");
+    if (goz > 0.5 && !kirpmaAcik) { kirpmaSayisi++; kirpmaAcik = true; } else if (goz < 0.3) kirpmaAcik = false;
+    const { yaw, pitch } = basAcisi(yuzler[0]);
+    const bakis = Math.max(ort(ks[0], "eyeLookOut"), ort(ks[0], "eyeLookIn"), ort(ks[0], "eyeLookDown"), ort(ks[0], "eyeLookUp")) > 0.55 || Math.abs(yaw) > 22;
+    const sure = (performance.now() - baslangic) / 60000;
+    const son = gecmis.filter(g => zaman - g.t < 8000);
+    const sd = a => { const m = son.reduce((s, g) => s + g[a], 0) / (son.length || 1); return Math.sqrt(son.reduce((s, g) => s + (g[a] - m) ** 2, 0) / (son.length || 1)); };
+    ek = { ...ek, kirpmaDk: sure > 0.15 ? kirpmaSayisi / sure : 0, bakisKacirma: son.length ? son.filter(g => g.bakis).length / son.length : 0, basHareket: son.length > 5 ? (sd("yaw") + sd("pitch")) / 2 : 0 };
+    var anlik = { yaw, pitch, bakis };
+  }
+  const g = ks[0] ? gerginlik(ks[0], canli ? ek : { yuzeDokunma: b.yuzeDokunma, kolKavusturma: b.kolKavusturma }) : { puan: 0, isaret: {} };
+  const ana = yuzDuygu[0] || { "😐 Nötr": 1 };
+  if (canli && anlik) gecmis.push({ t: zaman, gergin: g.puan, olumlu: Math.round((ana["😊 Mutluluk"] || 0) * 100), ...anlik });
+  while (gecmis.length && zaman - gecmis[0].t > 90000) gecmis.shift();
+  const sekil = yuzler[0] ? yuzSekli(yuzler[0], W, H) : null;
+  const risk = catismaRiski(b, yuzDuygu);
+  sonVeri = { ana, yuzSayisi: yuzler.length, g, sekil, b, ek, risk, canli, aci: anlik || (yuzler[0] ? basAcisi(yuzler[0]) : null) };
+  cubuklar(ana);
+  daire($("gerginDaire"), g.puan);
+  $("gerginEtiket").textContent = g.puan >= 60 ? "Yüksek görünen gerginlik" : g.puan >= 30 ? "Orta düzey gerginlik işaretleri" : "Rahat / düşük gerginlik";
+  $("gerginIsaret").innerHTML = Object.entries(g.isaret).map(([a, v]) => `<span class="etk ${v ? "var" : "yok"}">${v ? "●" : "○"} ${a}</span>`).join("");
+  if (sekil) { $("yuzSekli").innerHTML = `<b>${sekil.sinif}</b> — ${sekil.neden}.<div class="not">💇 ${sekil.oneri}</div>`; tablo("oranlar", { ...sekil.oranlar, "Simetri (yaklaşık)": "%" + sekil.simetri }); }
+  tablo("davranis", {
+    "Algılanan kişi": b.kisi || yuzler.length, "Göz kırpma / dk": canli ? ek.kirpmaDk.toFixed(0) + (ek.kirpmaDk > 30 ? " ⚠️" : "") : "canlı modda",
+    "Bakış kaçırma": canli ? "%" + Math.round(ek.bakisKacirma * 100) : "canlı modda", "Baş hareketi (huzursuzluk)": canli ? ek.basHareket.toFixed(1) + "°" : "canlı modda",
+    "Yüze/ağza dokunma": b.yuzeDokunma ? "var" : "yok", "Kol kavuşturma": b.kolKavusturma ? "var" : "yok", "El kaldırma": b.elKaldirma ? "var" : "yok",
+    "Sıkılı yumruk": b.yumruk || "yok", "Öne eğilme": b.oneEgilme ? "var" : "yok", "Kişiler arası yakınlık": b.yakinlikOran == null ? "–" : b.yakinlikOran.toFixed(1) + " omuz genişliği",
+  });
+  daire($("riskDaire"), risk.p);
+  $("riskEtiket").textContent = `${risk.seviye} risk (~%${risk.p})`;
+  $("riskIsaret").innerHTML = (risk.isaret.length ? risk.isaret : ["belirgin işaret yok"]).map(a => `<span class="etk ${risk.isaret.length ? "var" : "yok"}">${a}</span>`).join("");
+  raporla(sonVeri);
+  if (canli) grafik();
+}
+
+function raporla(v) {
+  const sirali = Object.entries(v.ana).sort((a, b) => b[1] - a[1]);
+  const [d1, p1] = sirali[0], [d2, p2] = sirali[1] || ["", 0];
+  const m = metinDuygu($("metin").value);
+  const guven = v.aci && Math.abs(v.aci.yaw) > 20 ? "düşük (yüz yandan)" : v.canli && gecmis.length > 40 ? "orta-yüksek (zaman içinde ölçüldü)" : "orta (tek kare)";
+  const sat = [];
+  sat.push(`📌 Genel: ${v.yuzSayisi || 0} yüz, ${v.b.kisi} beden algılandı. Güven düzeyi: ${guven}.`);
+  sat.push(`🙂 Görünen ifade: baskın ${d1} (%${Math.round(p1 * 100)})${p2 > 0.15 ? `, ardından ${d2} (%${Math.round(p2 * 100)})` : ""}.`);
+  const aktif = Object.entries(v.g.isaret).filter(([, x]) => x).map(([a]) => a.toLowerCase());
+  sat.push(`😬 Görünen gerginlik: ${v.g.puan}/100 — ${aktif.length ? "gözlenen işaretler: " + aktif.join(", ") : "belirgin gerginlik işareti yok"}.`);
+  if (v.canli && gecmis.length > 20) {
+    const ilk = gecmis.slice(0, Math.floor(gecmis.length / 2)), son = gecmis.slice(Math.floor(gecmis.length / 2));
+    const o = a => a.reduce((s, g) => s + g.gergin, 0) / (a.length || 1);
+    const fark = o(son) - o(ilk);
+    sat.push(`📈 Zaman içinde: gerginlik ${Math.abs(fark) < 5 ? "durağan" : fark > 0 ? "artıyor (+" + fark.toFixed(0) + ")" : "azalıyor (" + fark.toFixed(0) + ")"}; göz kırpma ${v.ek.kirpmaDk.toFixed(0)}/dk (normal ~15-20), bakış kaçırma %${Math.round(v.ek.bakisKacirma * 100)}.`);
+  }
+  if (v.sekil) sat.push(`📐 Yüz şekli: ${v.sekil.sinif} (${v.sekil.neden}); simetri ~%${v.sekil.simetri}. ${v.sekil.oneri}`);
+  const beden = [v.b.kolKavusturma && "kol kavuşturma (kapalı duruş)", v.b.yuzeDokunma && "yüze dokunma (kendini yatıştırma işareti olabilir)", v.b.elKaldirma && "el kaldırma", v.b.yumruk && "sıkılı yumruk", v.b.oneEgilme && "öne eğilme"].filter(Boolean);
+  sat.push(`🧍 Beden dili: ${beden.length ? beden.join(", ") : "açık/nötr duruş"}.`);
+  sat.push(`⚠️ Durumsal çatışma riski: ${v.risk.seviye} (~%${v.risk.p})${v.risk.isaret.length ? " — " + v.risk.isaret.join(", ") : ""}. ${v.b.kisi < 2 ? "Tek kişi olduğundan etkileşimsel risk sınırlı değerlendirildi." : ""}`);
+  if ($("metin").value.trim()) sat.push(`✍️ Metin bağlamı: ${m.baskin} (yoğunluk %${Math.round(m.yogunluk * 100)}).`);
+  // çok bağlamlı sentez
+  const olumsuzMetin = /Üzüntü|Öfke|Korku|Yorgunluk/.test(m.baskin);
+  const yuzOlumsuz = /Üzüntü|Öfke|Korku|İğrenme/.test(d1) && p1 > 0.3;
+  let sentez;
+  if (v.g.puan >= 55 && (olumsuzMetin || yuzOlumsuz)) sentez = "Birden çok bağlam (ifade" + (olumsuzMetin ? ", yazılan metin" : "") + (beden.length ? ", beden dili" : "") + ") birlikte gerginlik/stres yönünü gösteriyor. Sakin bir ortam, derin nefes ve güvenilen biriyle konuşmak iyi gelebilir.";
+  else if (v.g.puan >= 55) sentez = "Yüzde gerginlik işaretleri var ama diğer bağlamlar bunu desteklemiyor; konsantrasyon, ışık veya anlık hareket de olabilir.";
+  else if (/Mutluluk/.test(d1) && !olumsuzMetin) sentez = "Bağlamlar genel olarak olumlu ve rahat bir duruma işaret ediyor.";
+  else if (olumsuzMetin && v.g.puan < 30) sentez = "Yazılanlar olumsuz bir duyguya işaret ediyor ama yüz rahat görünüyor; duygular her zaman yüze yansımaz, sözlü ifade önemsenmeli.";
+  else sentez = "Bağlamlar belirgin bir olumsuz duruma işaret etmiyor; ifade büyük ölçüde nötr.";
+  sat.push(`🧩 Birleşik değerlendirme: ${sentez}`);
+  sat.push("ℹ️ Not: Bu yerel analiz görünen işaretlere dayalı bir tahmindir; teşhis, kimlik tanıma veya niyet okuma değildir.");
+  sonRapor = "🧠 AREX Yerel Analiz Raporu\n\n" + sat.join("\n\n");
+  $("rapor").textContent = sat.join("\n\n");
+}
+
+// ---------- Kaynaklar ----------
+async function kameraBaslat() {
+  await hazir; if (!yuzM) return;
+  if (akis) return kameraDurdur();
+  try { akis = await navigator.mediaDevices.getUserMedia({ video: { facingMode: yuzOn, width: { ideal: 960 }, height: { ideal: 720 } } }); }
+  catch (e) { $("durum").textContent = "Kameraya izin verilmedi."; return; }
+  const v = $("video"); v.srcObject = akis; await v.play(); v.classList.toggle("ayna", yuzOn === "user"); $("foto").hidden = true;
+  for (const m of [yuzM, pozM, elM]) if (m) await m.setOptions({ runningMode: "VIDEO" });
+  gecmis.length = 0; kirpmaSayisi = 0; baslangic = performance.now();
+  $("kameraBtn").textContent = "⏹ Durdur"; $("kameraBtn").classList.add("on");
+  let son = 0;
+  const kare = () => {
+    if (!akis) return;
+    const t = performance.now();
+    if (t - son > 90 && v.videoWidth) { son = t; try { analiz(v, v.videoWidth, v.videoHeight, t, true); } catch (e) {} }
+    dongu = requestAnimationFrame(kare);
+  };
+  kare();
+}
+function kameraDurdur() {
+  cancelAnimationFrame(dongu); akis && akis.getTracks().forEach(t => t.stop()); akis = null;
+  $("kameraBtn").textContent = "📷 Canlı kamera"; $("kameraBtn").classList.remove("on");
+}
+$("kameraBtn").onclick = kameraBaslat;
+$("cevirBtn").onclick = async () => { yuzOn = yuzOn === "user" ? "environment" : "user"; if (akis) { kameraDurdur(); await kameraBaslat(); } };
+$("dosya").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return; await hazir; if (!yuzM) return; kameraDurdur();
+  const img = $("foto"); img.src = URL.createObjectURL(f); img.hidden = false; await img.decode();
+  for (const m of [yuzM, pozM, elM]) if (m) await m.setOptions({ runningMode: "IMAGE" });
+  analiz(img, img.naturalWidth, img.naturalHeight, 0, false);
+};
+$("raporBtn").onclick = async () => { try { await navigator.clipboard.writeText(sonRapor); $("durum").textContent = "📋 Rapor kopyalandı."; } catch (e) { $("durum").textContent = "Kopyalanamadı."; } };
+$("gonderBtn").onclick = () => {
+  if (!sonRapor) return;
+  const msj = JSON.stringify({ tur: "arex_yerel_rapor", rapor: sonRapor });
+  if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(msj); else if (window.parent !== window) window.parent.postMessage(msj, "*");
+  $("durum").textContent = "💬 Rapor sohbete gönderildi.";
+};
+if (/Android|iPhone|iPad/i.test(navigator.userAgent) === false && !navigator.mediaDevices) $("kameraBtn").hidden = true;
+</script>
+</body>
+</html>

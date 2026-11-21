@@ -26,6 +26,7 @@ ANAHTAR_ADLARI = {
     "GROQ_API_KEY": "⚡ Groq",
     "GEMINI_API_KEY": "💎 Google Gemini",
     "OPENROUTER_API_KEY": "🔀 OpenRouter",
+    "ANTHROPIC_API_KEY": "🟣 Claude (ücretli, isteğe bağlı)",
 }
 _UA = "Mozilla/5.0 (AREX-AI-Studio)"
 
@@ -237,16 +238,50 @@ def sohbet_tamamla(mesajlar: list, sistem: str = "", sicaklik: float = 0.7, maks
                 return t, f"OpenRouter {m.split('/')[-1].replace(':free', '')}"
         return None, None
 
+    def claude():
+        """Anthropic resmî SDK'sı (ücretli; yalnızca geçerli anahtar varsa, ücretsizlerden sonra)."""
+        k = anahtar("ANTHROPIC_API_KEY")
+        if not k or _KOTA.get("claude", 0) > time.time():
+            return None, None
+        try:
+            import anthropic
+        except Exception:
+            return None, None
+        try:
+            istemci = anthropic.Anthropic(api_key=k, timeout=60.0, max_retries=1)
+            gecmis = [{"role": m["role"], "content": str(m["content"])} for m in tam if m["role"] in ("user", "assistant")]
+            yanit = istemci.messages.create(
+                model="claude-opus-5-5", max_tokens=16000, system=sistem or anthropic.NOT_GIVEN,
+                output_config={"effort": "low"}, messages=gecmis)
+            if yanit.stop_reason == "refusal":
+                SON_HATALAR["claude"] = "refusal"
+                return None, None
+            metin = _temizle("".join(b.text for b in yanit.content if b.type == "text"))
+            return (metin, "Claude Opus 5.5") if metin else (None, None)
+        except anthropic.AuthenticationError:
+            SON_HATALAR["claude"] = "geçersiz anahtar"
+            _KOTA["claude"] = time.time() + 3600
+        except anthropic.RateLimitError:
+            SON_HATALAR["claude"] = "kota (429)"
+            _KOTA["claude"] = time.time() + 60
+        except anthropic.APIStatusError as e:
+            SON_HATALAR["claude"] = f"HTTP {e.status_code}"
+        except anthropic.APIConnectionError:
+            SON_HATALAR["claude"] = "bağlantı"
+        return None, None
+
     def pollinations():
         t = _openai_uyumlu("pollinations", "https://text.pollinations.ai/openai", "anon", "openai-fast", tam,
                            sicaklik, maks_token, 40)
         return (t, "Pollinations") if t else (None, None)
 
-    sira = [groq, gemini, openrouter, pollinations]
+    sira = [groq, gemini, openrouter, claude, pollinations]
     if tercih == "gemini":
-        sira = [gemini, groq, openrouter, pollinations]
+        sira = [gemini, groq, openrouter, claude, pollinations]
     elif tercih == "openrouter":
-        sira = [openrouter, groq, gemini, pollinations]
+        sira = [openrouter, groq, gemini, claude, pollinations]
+    elif tercih == "claude":
+        sira = [claude, groq, gemini, openrouter, pollinations]
     for fn in sira:
         metin, etiket = fn()
         if metin:
