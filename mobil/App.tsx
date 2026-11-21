@@ -1,4 +1,5 @@
 // AREX AI — mobil & masaüstü uygulaması (React Native / Expo)
+import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
@@ -19,9 +20,10 @@ import { R } from "./src/tema";
 import { Arkaplan, titret } from "./src/ui";
 
 type Sekme = "sohbet" | "canli" | "kuran" | "cocuk" | "analiz" | "araclar" | "ayarlar";
+// Vektör simgeler (Ionicons): her cihazda keskin ve tutarlı; seçiliyken dolu, değilken çizgi
 const SEKMELER: [Sekme, string, string][] = [
-  ["sohbet", "💬", "Sohbet"], ["canli", "🎙️", "Canlı"], ["kuran", "🕌", "Kur'an"], ["cocuk", "🧸", "Çocuk"],
-  ["analiz", "🔬", "Analiz"], ["araclar", "🧭", "Araçlar"], ["ayarlar", "⚙️", "Ayarlar"],
+  ["sohbet", "chatbubbles", "Sohbet"], ["canli", "radio", "Canlı"], ["kuran", "book", "Kur'an"], ["cocuk", "happy", "Çocuk"],
+  ["analiz", "scan", "Analiz"], ["araclar", "compass", "Araçlar"], ["ayarlar", "settings", "Ayarlar"],
 ];
 
 function Uygulama() {
@@ -61,13 +63,35 @@ function Uygulama() {
           const secili = sekme === k;
           return (
             <Pressable key={k} style={st.sekme} onPress={() => { titret(); setSekme(k); }}>
-              <View style={[st.ikonKap, secili && { backgroundColor: R.hap }]}><Text style={{ fontSize: 20 }}>{ikon}</Text></View>
+              <View style={[st.ikonKap, secili && { backgroundColor: R.hap }]}>
+                <Ionicons name={(secili ? ikon : ikon + "-outline") as any} size={22} color={secili ? "#fff" : k === "canli" ? "#ff8a9b" : R.soluk} />
+              </View>
               <Text style={[st.sekmeYazi, secili && { color: "#fff", fontWeight: "800" }]}>{ad}</Text>
+              {k === "canli" ? <CanliIsareti /> : null}
             </Pressable>
           );
         })}
       </View>
     </Arkaplan>
+  );
+}
+
+/** Sekme çubuğunda "Canlı"nın altında yanıp sönen kırmızı CANLI işareti (yerel sürücüyle, performansı etkilemez) */
+function CanliIsareti() {
+  const nabiz = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const dongu = Animated.loop(Animated.sequence([
+      Animated.timing(nabiz, { toValue: 0.35, duration: 700, useNativeDriver: true }),
+      Animated.timing(nabiz, { toValue: 1, duration: 700, useNativeDriver: true }),
+    ]));
+    dongu.start();
+    return () => dongu.stop();
+  }, []);
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 3, marginTop: 1 }}>
+      <Animated.View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#ff3b5c", opacity: nabiz }} />
+      <Text style={{ color: "#ff6b81", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.8 }}>CANLI</Text>
+    </View>
   );
 }
 
@@ -110,6 +134,15 @@ export default function App() {
       const st = document.createElement("style");
       st.textContent = "input,textarea{outline:none!important;caret-color:#22d3ee}::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:8px}::-webkit-scrollbar-track{background:transparent}body{background:#050816}";
       document.head.appendChild(st);
+      // Masaüstü (Electron): macOS kum havuzu sistem emoji fontunu engelliyor → açık kaynak Noto Color Emoji web fontu,
+      // yalnızca emoji karakter aralıklarına ("Segoe UI" adıyla, yığındaki yerine) uygulanır; yazı ve simgeler etkilenmez
+      if (/Electron/.test(navigator.userAgent)) {
+        fetch("https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap").then((r) => r.text()).then((css) => {
+          const ef = document.createElement("style");
+          ef.textContent = css + css.replace(/font-family: 'Noto Color Emoji'/g, "font-family: 'Segoe UI'");
+          document.head.appendChild(ef);
+        }).catch(() => {});
+      }
     }
     SystemUI.setBackgroundColorAsync(R.bg1).catch(() => {});
     Promise.all([anahtarlariYukle(), kilitAcikMi().then(setKilitli)]).finally(() => setHazir(true));

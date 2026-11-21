@@ -84,6 +84,7 @@ footer{padding:8px 16px calc(16px + env(safe-area-inset-bottom));display:flex;fl
 .secim select option{background:#0b1030}
 #notlar{max-height:150px;overflow:auto;font-size:13px;color:var(--mut);margin-top:12px;line-height:1.5}
 </style>
+<script>/* Masaüstü (Electron): sistem emoji fontu kum havuzunda çizilemiyor → açık kaynak Noto Color Emoji web fontu */(function(){try{if(!/Electron/.test(navigator.userAgent))return;fetch("https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap").then(function(r){return r.text()}).then(function(css){var s=document.createElement("style");s.textContent=css+css.replace(/font-family: 'Noto Color Emoji'/g,"font-family: 'Segoe UI'");document.head.appendChild(s)}).catch(function(){})}catch(e){}})();</script>
 </head>
 <body>
 <div id="app">
