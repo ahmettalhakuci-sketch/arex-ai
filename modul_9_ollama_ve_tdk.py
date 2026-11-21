@@ -61,6 +61,10 @@ def _kisisel_sistem_eki() -> str:
     _mod = "kisisel"
     try:
         _mod = st.session_state.get("kullanim_modu", "kisisel")
+        import modul_31_kuran_hadis as _m31t
+        _tarz = _m31t.SOHBET_TARZLARI.get(st.session_state.get("sohbet_tarzi", "dengeli"), ("", ""))[1]
+        if _tarz:
+            ek += " " + _tarz
     except Exception:
         pass
     if _mod == "kisisel":

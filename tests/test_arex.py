@@ -873,5 +873,56 @@ class FotoMatematikDogrulama(unittest.TestCase):
         self.assertIn("1, 2, 3", cikti)
 
 
+class KuranHadisTarz(unittest.TestCase):
+    """v15.3 — sohbet tarzı komutları, bağlantı komutları, sure adı çözümü, Türkçe kökler, not komutları (internetsiz)."""
+
+    @classmethod
+    def setUpClass(cls):
+        import modul_31_kuran_hadis as m31
+        cls.m = m31
+
+    def test_tarz_komutlari(self):
+        self.assertEqual(self.m.tarz_komutu("mizah modu aç")[0], "mizah")
+        self.assertEqual(self.m.tarz_komutu("mizah modunu kapat")[0], "dengeli")
+        self.assertEqual(self.m.tarz_komutu("içten sohbet modu")[0], "icten")
+        self.assertEqual(self.m.tarz_komutu("mümin modu aç")[0], "mumin")
+        self.assertIsNone(self.m.tarz_komutu("bugün hava nasıl")[0])
+
+    def test_baglanti_komutlari(self):
+        self.assertIn("youtube.com/results?search_query=yasin", self.m.baglanti_komutu("youtube'da yasin tilaveti ara")[0])
+        self.assertIn("youtube.com", self.m.baglanti_komutu("youtube a geç")[0])
+        self.assertIn("google.com/search", self.m.baglanti_komutu("google'da hava durumu ara")[0])
+        self.assertIsNone(self.m.baglanti_komutu("youtube nedir")[0])
+
+    def test_sure_ve_kok(self):
+        self.assertEqual(self.m.sure_bul("Bakara"), 2)
+        self.assertEqual(self.m.sure_bul("yasin"), 36)
+        self.assertEqual(self.m.sure_bul("67"), 67)
+        self.assertEqual(self.m.sure_bul("ihlas"), 112)
+        self.assertEqual(self.m._kokler("sabir"), {"sabi", "sabr"})
+
+    def test_internetsiz_din_cevabi_uydurmaz(self):
+        cevap, _ = self.m.din_sorusu_cevapla("Bakara 255")  # ağ kapalı → dürüst hata, uydurma yok
+        self.assertIn("ulaşılamadı", cevap)
+        self.assertEqual(self.m.din_sorusu_cevapla("bugün hava nasıl"), (None, None))
+
+
+class NotKomutlari(unittest.TestCase):
+    def setUp(self):
+        import modul_30_notlarim as m30
+        self.m = m30
+        m30.NOT_DOSYASI = os.path.join(tempfile.mkdtemp(), "notlar.json")
+
+    def test_kaydet_listele_sil(self):
+        self.assertIn("kaydettim (#1)", self.m.notlarim_yanitla("notlarıma kaydet: cuma fizik sınavı")[0])
+        self.assertIn("kaydettim (#2)", self.m.notlarim_yanitla("yarın 10'da toplantı diye not al")[0])
+        oturum = {"messages": [{"role": "assistant", "content": "Fotosentez kloroplastta olur."}]}
+        self.assertIn("kaydettim (#3)", self.m.notlarim_yanitla("bunu not al", oturum)[0])
+        self.assertIn("Fotosentez", self.m.notlari_oku()[-1]["metin"])
+        self.assertIn("cuma fizik", self.m.notlarim_yanitla("notlarım")[0])
+        self.assertIn("sildim", self.m.notlarim_yanitla("2. notu sil")[0])
+        self.assertEqual(self.m.notlarim_yanitla("bugün hava nasıl"), (None, None))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

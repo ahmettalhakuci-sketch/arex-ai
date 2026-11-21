@@ -5413,6 +5413,22 @@ def akilli_yanit_uret(kullanici_girdisi: str, hedef_dil: str = "tr"):
     except Exception:
         pass
 
+    # 0-K. 🎭 Sohbet tarzı komutları + 📖 Kur'an/hadis/esma (açık kaynak; uydurma yok) + 🔗 bağlantı komutları
+    try:
+        import modul_31_kuran_hadis as _m31
+        _tz, _tz_cevap = _m31.tarz_komutu(kullanici_girdisi)
+        if _tz:
+            st.session_state["sohbet_tarzi"] = _tz
+            return _tz_cevap, hedef_dil, "🎭 Mod"
+        _d_y, _d_e = _m31.din_sorusu_cevapla(kullanici_girdisi)
+        if _d_y:
+            return _d_y, hedef_dil, _d_e
+        _b_y, _b_e = _m31.baglanti_komutu(kullanici_girdisi)
+        if _b_y:
+            return _b_y, hedef_dil, _b_e
+    except Exception:
+        pass
+
     # 0-A. Doğrudan Sohbetten Öğretme Komutu ("öğret: soru = cevap")
     ogret_eslesme = re.match(r"^(?:bana\s+)?(?:öğret|ogret)\s*[:\-]?\s*(.+?)\s*[=:]\s*(.+)$", kullanici_girdisi.strip(), flags=re.IGNORECASE)
     if ogret_eslesme:

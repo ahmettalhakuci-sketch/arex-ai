@@ -175,7 +175,14 @@ function bildir(v) { const m = JSON.stringify(v); if (window.ReactNativeWebView)
 function notKaydet(metin) {
   const l = notlariOku(); const kayit = { metin, tarih: new Date().toLocaleString("tr-TR") }; l.push(kayit);
   try { localStorage.setItem(notKey, JSON.stringify(l.slice(-200))); } catch (e) {}
-  bildir({ tur: "arex_not", metin }); notlariGoster(); return l.length;
+  bildir({ tur: "arex_not", metin }); notlariGoster();
+  // Streamlit'te açıldıysa: notu Python tarafındaki Notlarım'a da kaydet (oturuma özel jetonlu köprü)
+  if (!window.ReactNativeWebView && CFG.notKopruJeton) {
+    let host = "127.0.0.1"; try { host = window.parent.location.hostname || host; } catch (e) {}
+    fetch(`http://${host}:${CFG.notKopruPort}/not`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jeton: CFG.notKopruJeton, metin }) })
+      .then(r => log("not köprüsü", r.status)).catch(e => log("not köprüsü hatası", e.message));
+  }
+  return l.length;
 }
 function notlariGoster() {
   const l = [...(CFG.notlar || []).map(m => ({ metin: m })), ...notlariOku()];

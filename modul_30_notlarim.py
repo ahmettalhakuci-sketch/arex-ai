@@ -144,3 +144,59 @@ def notlarim_paneli():
     if notlari_oku():
         st.download_button("📥 Notları indir (.md)", "\n\n".join(f"## {n['no']}. ({n.get('tarih', '')})\n{n['metin']}" for n in notlari_oku()),
                            file_name="arex_notlarim.md", use_container_width=True, key="m30_indir")
+
+
+# ------------------------------------------------------------------------------
+# Canlı sohbet → Notlarım köprüsü (Streamlit'teki Canlı iframe'inden not kaydı)
+# Oturuma özel rastgele jeton; yalnızca POST /not kabul edilir.
+# ------------------------------------------------------------------------------
+KOPRU_PORT = 8599
+_KOPRU = {"jeton": None, "calisiyor": False}
+
+
+def kopru_baslat() -> dict:
+    """Arka planda bir kez başlar; {'port', 'jeton'} döner (başlatılamazsa jeton None)."""
+    if _KOPRU["calisiyor"]:
+        return {"port": KOPRU_PORT, "jeton": _KOPRU["jeton"]}
+    import secrets
+    import threading
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    jeton = secrets.token_urlsafe(24)
+
+    class Isleyici(BaseHTTPRequestHandler):
+        def _basliklar(self, kod=200):
+            self.send_response(kod)
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+
+        def do_OPTIONS(self):
+            self._basliklar(204)
+
+        def do_POST(self):
+            try:
+                uzunluk = min(int(self.headers.get("Content-Length", "0")), 8000)
+                veri = json.loads(self.rfile.read(uzunluk).decode("utf-8"))
+                if self.path != "/not" or veri.get("jeton") != jeton or not str(veri.get("metin", "")).strip():
+                    self._basliklar(403)
+                    self.wfile.write(b'{"durum":"reddedildi"}')
+                    return
+                kayit = not_ekle(str(veri["metin"])[:4000], "canlı")
+                self._basliklar(200)
+                self.wfile.write(json.dumps({"durum": "kaydedildi", "no": kayit["no"]}).encode("utf-8"))
+            except Exception:
+                self._basliklar(400)
+
+        def log_message(self, *_a):
+            pass
+
+    try:
+        sunucu = ThreadingHTTPServer(("0.0.0.0", KOPRU_PORT), Isleyici)
+    except OSError:
+        return {"port": KOPRU_PORT, "jeton": None}
+    threading.Thread(target=sunucu.serve_forever, daemon=True).start()
+    _KOPRU.update(jeton=jeton, calisiyor=True)
+    return {"port": KOPRU_PORT, "jeton": jeton}

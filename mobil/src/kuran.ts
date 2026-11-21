@@ -58,27 +58,32 @@ export async function gununAyeti(): Promise<Ayet> {
 
 let kategoriler: any[] | null = null;
 const KURAN_KATEGORILERI = [31, 12, 39, 272, 1];  // hafızlık adabı, Kur'an'ın faziletleri…
-export async function hadisGetir(konu = "", sabitSecim?: number, katId?: number): Promise<Hadis> {
+const KONU_KATEGORI: Record<string, number[]> = { sabi: [282, 646], sabr: [282, 646], nama: [134], oruc: [137], anne: [273], baba: [273], ebev: [273],
+  kura: [31, 12, 39, 272], hafi: [31], dua: [268], zikr: [268, 301], ahla: [282, 266], ilim: [31, 12], suku: [282], sukr: [282], tevb: [282], merh: [282, 646] };
+/** Türkçe ünlü düşmesine dayanıklı kökler: sabır→{sabi, sabr} */
+const kokler = (q: string) => (q.length < 3 ? [] : q.length >= 5 ? [q.slice(0, 4), q.slice(0, 3) + q[4]] : [q.slice(0, 4)]);
+const kokluMu = (metin: string, k: string[]) => k.length > 0 && sadele(metin).split(/\s+/).some((w) => k.some((x) => w.startsWith(x)));
+
+export async function hadisGetir(konu = "", sabitSecim?: number, katId?: number): Promise<Hadis & { tamEslesme: boolean }> {
   if (!kategoriler) kategoriler = await json("https://hadeethenc.com/api/v1/categories/list/?language=tr");
-  const q = sadele(konu).replace(/\b(ile|ilgili|hakkinda|konulu|bir|hadis\w*)\b/g, "").trim();
+  const q = sadele(konu).replace(/\b(ile|ilgili|hakkinda|konulu|bir|hadis\S*)\b/g, "").trim();
   const rnd = (n: number) => (sabitSecim !== undefined ? sabitSecim % n : Math.floor(Math.random() * n));
-  let kat: { id: number | string } | null = katId ? { id: katId } : null;
-  if (!kat && q) {
-    const kok = q.length <= 5 ? q.slice(0, 3) : q.slice(0, q.length - 2);  // "sabır"→"sab" ("sabrın" da eşleşir)
-    const uygun = kategoriler!.filter((c) => sadele(String(c.title)).includes(kok));
-    if (uygun.length) kat = uygun[rnd(uygun.length)];
+  const k = q ? kokler(q.split(/\s+/)[0]) : [];
+  let adaylar: number[] = katId ? [katId] : [];
+  for (const x of k) adaylar.push(...(KONU_KATEGORI[x] || []));
+  adaylar.push(...kategoriler!.filter((c) => kokluMu(String(c.title), k)).map((c) => Number(c.id)));
+  if (!adaylar.length) adaylar = [Number(kategoriler![rnd(kategoriler!.length)].id)];
+  let eslesen: any[] = [], yedek: any[] = [];
+  for (const id of Array.from(new Set(adaylar)).slice(0, 5)) {
+    const liste = (await json(`https://hadeethenc.com/api/v1/hadeeths/list/?language=tr&category_id=${id}&page=1&per_page=60`)).data || [];
+    if (!yedek.length) yedek = liste;
+    eslesen = liste.filter((h: any) => kokluMu(h.title, k));
+    if (eslesen.length) break;
   }
-  if (!kat) kat = kategoriler![rnd(kategoriler!.length)] as { id: number | string };
-  let liste = (await json(`https://hadeethenc.com/api/v1/hadeeths/list/?language=tr&category_id=${kat!.id}&page=1&per_page=50`)).data || [];
-  if (q) {
-    const kok = q.length <= 5 ? q.slice(0, 3) : q.slice(0, q.length - 2);
-    const b = liste.filter((h: any) => sadele(h.title).includes(kok));
-    if (b.length) liste = b;
-  }
-  if (!liste.length) liste = (await json(`https://hadeethenc.com/api/v1/hadeeths/list/?language=tr&category_id=31&page=1&per_page=50`)).data;
-  const sec = liste[rnd(liste.length)];
+  const havuz = eslesen.length ? eslesen : yedek.length ? yedek : (await json(`https://hadeethenc.com/api/v1/hadeeths/list/?language=tr&category_id=31&page=1&per_page=50`)).data;
+  const sec = havuz[rnd(havuz.length)];
   const h = await json(`https://hadeethenc.com/api/v1/hadeeths/one/?language=tr&id=${sec.id}`);
-  return { baslik: h.title, metin: h.hadeeth, kaynak: h.attribution, derece: h.grade, aciklama: String(h.explanation || "") };
+  return { baslik: h.title, metin: h.hadeeth, kaynak: h.attribution, derece: h.grade, aciklama: String(h.explanation || ""), tamEslesme: eslesen.length > 0 || !q };
 }
 
 export async function gununHadisi(): Promise<Hadis> {
@@ -113,7 +118,8 @@ export async function dinSorusuCevapla(metin: string): Promise<string | null> {
     let m = tl.match(/(.{2,40}?)\s+(?:ile|hakkında|ilgili|konulu)\s+(?:bir\s+)?hadis/) || tl.match(/hadis\w*\s+(?:söyle|oku|ver|anlat)?\s*[:\-]?\s*(.{3,30})?$/);
     if (/\bhadis/.test(tl) && /söyle|oku|ver|anlat|getir|paylaş|bir hadis|hadis-i şerif/.test(tl)) {
       const konu = (m && m[1] && !/bir|bana|söyle|oku/.test(m[1]) ? m[1] : "").replace(/\b(bana|bir|lütfen)\b/g, "").trim();
-      return hadisMd(await hadisGetir(konu));
+      const h = await hadisGetir(konu);
+      return (h.tamEslesme ? "" : `_ℹ️ Kaynakta "${konu}" başlığıyla birebir hadis bulamadım; ilgili bir hadis paylaşıyorum._\n\n`) + hadisMd(h);
     }
     if (/esma|esmaül|esmaul|esmâ|allah'ın isimleri/.test(tl)) {
       const no = Number((tl.match(/\b(\d{1,2})\b/) || [])[1]) || undefined;

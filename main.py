@@ -405,18 +405,20 @@ def _canli_bolumu_goster():
         except Exception:
             pass
         _kmod = st.session_state.get("kullanim_modu", "kisisel")
-        _notlar = []
+        _notlar, _kopru = [], {}
         if _kmod == "kisisel":
             try:
                 import modul_30_notlarim as _m30c
                 _notlar = [n["metin"][:200] for n in _m30c.notlari_oku()[-20:]]
+                _kopru = _m30c.kopru_baslat()
             except Exception:
                 pass
         else:
             _profil, _ad = "", ""
         st.session_state["canli_html"] = m25_ai.canli_sayfa_html(
             mod=_mod, dil=_dil, yas=st.session_state.get("cocuk_yas_grubu", "7-9"), profil=_profil, ad=_ad,
-            kmod=_kmod, goz=bool(st.session_state.get("goz_koruma")), notlar=_notlar)
+            kmod=_kmod, goz=bool(st.session_state.get("goz_koruma")), notlar=_notlar,
+            notKopruPort=_kopru.get("port"), notKopruJeton=_kopru.get("jeton"))
         st.session_state["canli_html_ayar"] = (_mod, _dil, st.session_state.get("kullanim_modu"), st.session_state.get("goz_koruma"))
     _bilesen.html(st.session_state["canli_html"], height=760, scrolling=False)
     st.caption("🔐 Tarayıcıya yalnızca 30 dakikalık geçici bir anahtar gönderilir. Telefonda mikrofon için https "
@@ -633,6 +635,15 @@ def sistemi_baslat():
             help="Misafir modunda kişisel bilgilerin, notların ve hafızan gizlenir — başkalarına tanıtmak için.")
         if st.session_state["kullanim_modu"] == "cocuk":
             st.session_state.cocuk_dostu_mod = True
+        try:
+            import modul_31_kuran_hadis as _m31s
+            _tarzlar = list(_m31s.SOHBET_TARZLARI)
+            st.session_state["sohbet_tarzi"] = st.selectbox(
+                "Sohbet tarzı", _tarzlar, format_func=lambda k: _m31s.SOHBET_TARZLARI[k][0],
+                index=_tarzlar.index(st.session_state.get("sohbet_tarzi", "dengeli")),
+                help="Sohbette 'mizah modu aç', 'içten sohbet modu', 'mümin modu', 'normal moda dön' diyerek de değiştirebilirsin.")
+        except Exception:
+            pass
         st.session_state["goz_koruma"] = st.toggle("👁️ Göz koruma (sıcak, yumuşak renkler)",
                                                    value=st.session_state.get("goz_koruma", False))
         st.caption("v14 • Mobil Premium • Mantık Motoru • 23 Modül")
