@@ -19,6 +19,7 @@ module.exports = {
   expo: {
     name: "AREX AI",
     slug: "arex-ai",
+    scheme: "arex",
     version: "15.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
@@ -40,6 +41,8 @@ module.exports = {
       ["expo-camera", { cameraPermission: "Canlı görüntülü sohbet için kamera kullanılır.", microphonePermission: "Canlı sohbet için mikrofon kullanılır." }],
       ["expo-image-picker", { photosPermission: "Fotoğraf ve video analizi için galeri kullanılır.", cameraPermission: "Fotoğraf çekmek için kamera kullanılır." }],
       "expo-secure-store",
+      "expo-local-authentication",
+      "./plugins/asistan.js",
       ["expo-build-properties", { android: { usesCleartextTraffic: false } }],
     ],
     extra: { anahtarlar: kasaOku() },

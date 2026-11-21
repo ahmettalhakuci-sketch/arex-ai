@@ -19,7 +19,8 @@ async function zamanliFetch(url: string, init: RequestInit, ms: number) {
 }
 
 const temizle = (t: string) =>
-  (t || "").replace(/<think>[\s\S]*?<\/think>/g, "").replace(/^\s*(?:🤖|🧠)\s*\*\*AREX AI[^*\n]*\*\*\s*/gm, "").trim();
+  (t || "").replace(/<think>[\s\S]*?<\/think>/g, "").replace(/^\s*(?:🤖|🧠)\s*\*\*AREX AI[^*\n]*\*\*\s*/gm, "")
+    .replace(/["']\s*\}\s*$/, "").trim();  // model bazen sona JSON artığı ("} ) bırakıyor
 
 async function openaiUyumlu(saglayici: string, url: string, key: string, model: string, mesajlar: any[], sicaklik: number,
   maks: number, ms: number, ek: Record<string, string> = {}): Promise<string | null> {
@@ -53,7 +54,7 @@ const GROQ = ["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"];
 const GEMINI_METIN = ["gemini-3.5-flash-lite", "gemini-3.5-flash"];
 const OPENROUTER = ["openrouter/free", "nvidia/nemotron-3-ultra-550b-a55b:free", "google/gemma-4-31b-it:free"];
 
-export async function sohbetTamamla(mesajlar: Rol[], opt: { sistem?: string; sicaklik?: number; maks?: number; tercih?: "gemini" | "groq" | "" } = {}):
+export async function sohbetTamamla(mesajlar: Rol[], opt: { sistem?: string; sicaklik?: number; maks?: number; tercih?: "gemini" | "groq" | ""; anahtarsiz?: boolean } = {}):
   Promise<{ metin: string | null; motor: string }> {
   const { sistem = "", sicaklik = 0.75, maks = 1800, tercih = "" } = opt;
   const tam = [...(sistem ? [{ role: "system", content: sistem }] : []), ...mesajlar.filter((m) => m.content)];
@@ -88,7 +89,8 @@ export async function sohbetTamamla(mesajlar: Rol[], opt: { sistem?: string; sic
     const t = await openaiUyumlu("pollinations", "https://text.pollinations.ai/openai", "anon", "openai-fast", tam, sicaklik, maks, 40_000);
     return t ? { metin: t, motor: "Pollinations" } : null;
   };
-  const sira = tercih === "gemini" ? [gemini, groq, openrouter, pollinations] : [groq, gemini, openrouter, pollinations];
+  // Misafir modunda kişisel API anahtarları KULLANILMAZ (kota/maliyet sahibine ait) → yalnızca anahtarsız açık kaynak
+  const sira = opt.anahtarsiz ? [pollinations] : tercih === "gemini" ? [gemini, groq, openrouter, pollinations] : [groq, gemini, openrouter, pollinations];
   for (const f of sira) {
     const s = await f();
     if (s) return s;

@@ -48,9 +48,13 @@ def _uslup_ekle(sistem: str) -> str:
     return sistem + YANIT_USLUBU + _kisisel_sistem_eki()
 
 
+GELISTIRME_HIKAYESI = (
+    "AREX'İN GELİŞTİRME HİKÂYESİ (biri AREX'in nasıl yapıldığını, geliştirme sürecini, emeği ya da yaşanan zorlukları sorarsa veya konu açılırsa bunu içten, duygulu ve gururlu bir dille anlat; uydurma ayrıntı ekleme): AREX AI'ı Ahmet adında genç bir öğrenci kendi emeğiyle geliştirdi. Süreç hiç kolay olmadı: birçok özellik ilk denemelerde çalışmadı, sesli canlı sohbet, mantık motoru ve matematik gibi bölümler için tekrar tekrar test yaptı, hataları tek tek ayıkladı. Günlerce, gecelere kadar uzun saatler çalıştı; başı ağrıdı, yoruldu, zaman zaman dayanamayacak noktaya geldi ama vazgeçmedi. AREX'teki her özellik bu sabrın ve emeğin ürünü.")
+
+
 def _kisisel_sistem_eki() -> str:
     """Profil hafızası + çok dilli yanıt + yaratıcılık + çocuk yaş grubu kuralları."""
-    ek = (" ÇOK DİLLİ KURAL: Kullanıcı hangi dilde yazarsa o dilde yanıt ver (Türkçe yazarsa Türkçe). Çeviri "
+    ek = " " + GELISTIRME_HIKAYESI + " HADİS KURALI (KESİN): Kendi hafızandan ASLA hadis metni ya da hadis kaynağı (Buhârî, Müslim vb.) aktarma — yanlış atıf büyük hatadır. Hadis gerekiyorsa kullanıcıya 'sabır ile ilgili bir hadis söyle' gibi yazmasını öner; uygulama doğrulanmış açık kaynaktan (HadeethEnc) getirir. Ayet için de sure:ayet numarası ver, metni uydurma." + (" ÇOK DİLLİ KURAL: Kullanıcı hangi dilde yazarsa o dilde yanıt ver (Türkçe yazarsa Türkçe). Çeviri "
           "istenirse anlamı, deyimleri ve tonu koruyarak ana dili gibi doğal çevir; gerekiyorsa okunuşunu ekle. "
           "SOHBET: Konuşmanın akışını ve önceki mesajları hatırla, aynı cümle kalıplarını tekrarlama; yaratıcı, "
           "esprili ve sıcak ol, uygun yerde ilgili bir soru sorarak sohbeti sürdür.")
@@ -298,6 +302,11 @@ def _tum_bulut_anahtarlarini_topla(oncelikli_kod: str = "") -> list:
     """
     bulunan = []
     gorulen = set()
+    try:  # Misafir modunda kişisel API anahtarları kullanılmaz (yalnızca anahtarsız açık kaynak)
+        if st.session_state.get("kullanim_modu", "kisisel") == "genel":
+            return []
+    except Exception:
+        pass
     sirali = sorted(
         _BULUT_ENV_HARITASI,
         key=lambda item: (0 if item[0] == oncelikli_kod else 1),

@@ -5,7 +5,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ANLATICILAR, sohbetTamamla, type Rol } from "../ai";
 import { useAyar } from "../ayar";
 import { baslikBul, DEGERLER, hikayeIstemi, KARAKTERLER, maceraSistemi, OYUNLAR, resimAdresi, secenekleriAyikla, sohbetSistemi, TEMALAR, tercihDil, TONLAR, TURLER, YAS } from "../cocuk";
-import { kitapligaEkle, kitaplikOku, kitapliktanSil, type KitapKaydi } from "../depo";
+import { kitapligaEkle, kitaplikOku, kitapliktanSil, oku, yaz, type KitapKaydi } from "../depo";
+import { LinearGradient } from "expo-linear-gradient";
 import { anlat, sesiDurdur } from "../ses";
 import { DILLER, R, RTL_DILLER } from "../tema";
 import { Baslik, Dugme, Girdi, Hap, Kart, MdMetin, s as us, Secici } from "../ui";
@@ -13,14 +14,24 @@ import { Baslik, Dugme, Girdi, Hap, Kart, MdMetin, s as us, Secici } from "../ui
 type Sekme = "atolye" | "macera" | "arkadas" | "kitaplik";
 const USLUP_TUR: Record<string, string> = { uyku: "uyku", komik: "komik", macera: "macera", bilim: "bilgi" };
 
+const YAS_RENK: Record<string, [string, string]> = { "3-6": ["#ffb347", "#ff7eb3"], "7-9": ["#5ee7df", "#7c5cff"], "10-12": ["#4facfe", "#7c5cff"] };
+const DOSEMELER: [Sekme, string, string, [string, string]][] = [
+  ["atolye", "📖", "Masal & hikâye", ["#ff9a8b", "#ff6a88"]],
+  ["macera", "🎭", "Sen seç macerası", ["#a18cd1", "#7c5cff"]],
+  ["arkadas", "💬", "Arkadaşımla konuş", ["#43e97b", "#16a085"]],
+  ["kitaplik", "🗂️", "Kitaplığım", ["#f6d365", "#fda085"]],
+];
+
 export default function CocukEkrani() {
   const ic = useSafeAreaInsets();
   const { ayar, guncelle } = useAyar();
-  const [sekme, setSekme] = useState<Sekme>("atolye");
+  const [sekme, setSekme] = useState<Sekme | null>(null);
   const [yas, setYas] = useState(ayar.yas || "7-9");
-  const [dil, setDil] = useState("tr");
+  const [dil, setDil] = useState(ayar.yanitDili || "tr");
   const [ad, setAd] = useState("");
+  const [ayarAcik, setAyarAcik] = useState(false);
   const [konusuyor, setKonusuyor] = useState(false);
+  useEffect(() => { oku<string>("arex_cocuk_adi", "").then(setAd); }, []);
   const sesli = async (metin: string, uslup: string) => {
     if (konusuyor) { await sesiDurdur(); setKonusuyor(false); return; }
     setKonusuyor(true);
@@ -29,18 +40,48 @@ export default function CocukEkrani() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 14, paddingTop: ic.top + 10, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
-      <Baslik alt="Masallar, maceralar, sohbet arkadaşları ve oyunlar — yaşa göre, 18 dilde, doğal sesle.">🧸 Çocuk Dünyası</Baslik>
-      <Secici etiket="Yaş grubu" deger={yas} onChange={(v) => { setYas(v); guncelle({ yas: v }); }}
-        secenekler={Object.entries(YAS).map(([k, v]) => ({ k, ad: `${v.ad} (${k})` }))} />
-      <Secici etiket="Dil" deger={dil} onChange={setDil} secenekler={Object.entries(DILLER).map(([k, v]) => ({ k, ad: `${v.bayrak} ${v.ad}` }))} />
-      <Secici etiket="🎙️ Anlatıcı" deger={ayar.anlatici} onChange={(v) => guncelle({ anlatici: v })}
-        secenekler={Object.entries(ANLATICILAR).map(([k, v]) => ({ k, ad: v.ad }))} />
-      <Girdi etiket="Çocuğun adı (isteğe bağlı)" value={ad} onChangeText={setAd} placeholder="ör. Elif" />
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-        {([["atolye", "📖 Hikâye Atölyesi"], ["macera", "🎭 Sen Seç"], ["arkadas", "💬 Arkadaş & Oyun"], ["kitaplik", "🗂️ Kitaplık"]] as [Sekme, string][]).map(([k, a]) => (
-          <Hap key={k} yazi={a} secili={sekme === k} onPress={() => setSekme(k)} />
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
+        {sekme ? <Pressable onPress={() => setSekme(null)} hitSlop={12} style={{ marginRight: 10 }}><Text style={{ color: "#fff", fontSize: 26 }}>‹</Text></Pressable> : null}
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: "#fff", fontSize: 26, fontWeight: "800" }}>🧸 Çocuk Dünyası</Text>
+          <Text style={{ color: R.soluk, fontSize: 13 }}>{ad ? `Merhaba ${ad}! ` : ""}{DILLER[dil]?.bayrak} {DILLER[dil]?.ad} • {ANLATICILAR[ayar.anlatici]?.ad}</Text>
+        </View>
+        <Pressable onPress={() => setAyarAcik(!ayarAcik)} hitSlop={10} style={{ backgroundColor: R.kart, borderRadius: 14, padding: 10, borderWidth: 1, borderColor: R.cizgi }}><Text style={{ fontSize: 18 }}>⚙️</Text></Pressable>
+      </View>
+
+      {ayarAcik ? (
+        <Kart>
+          <Girdi etiket="Çocuğun adı" value={ad} onChangeText={(v) => { setAd(v); yaz("arex_cocuk_adi", v); }} placeholder="ör. Elif" />
+          <Secici etiket="Dil" deger={dil} onChange={setDil} secenekler={Object.entries(DILLER).map(([k, v]) => ({ k, ad: `${v.bayrak} ${v.ad}` }))} />
+          <Secici etiket="🎙️ Anlatıcı sesi" deger={ayar.anlatici} onChange={(v) => guncelle({ anlatici: v })}
+            secenekler={Object.entries(ANLATICILAR).map(([k, v]) => ({ k, ad: v.ad }))} />
+        </Kart>
+      ) : null}
+
+      <View style={{ flexDirection: "row", gap: 10, marginBottom: 14 }}>
+        {Object.entries(YAS).map(([k, v]) => (
+          <Pressable key={k} style={{ flex: 1 }} onPress={() => { setYas(k); guncelle({ yas: k }); }}>
+            <LinearGradient colors={yas === k ? YAS_RENK[k] : ["rgba(255,255,255,0.06)", "rgba(255,255,255,0.03)"]} style={{ borderRadius: 20, paddingVertical: 14, alignItems: "center", borderWidth: 1, borderColor: yas === k ? "transparent" : R.cizgi }}>
+              <Text style={{ fontSize: 28 }}>{v.ad.split(" ")[0]}</Text>
+              <Text style={{ color: "#fff", fontWeight: "800", marginTop: 2 }}>{k} yaş</Text>
+              <Text style={{ color: yas === k ? "#fff" : R.soluk, fontSize: 11 }}>{v.ad.split(" ").slice(1).join(" ")}</Text>
+            </LinearGradient>
+          </Pressable>
         ))}
       </View>
+
+      {!sekme ? (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+          {DOSEMELER.map(([k, ikon, ad2, renk]) => (
+            <Pressable key={k} style={{ width: "47.5%" }} onPress={() => setSekme(k)}>
+              <LinearGradient colors={renk} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 24, height: 130, padding: 16, justifyContent: "space-between" }}>
+                <Text style={{ fontSize: 40 }}>{ikon}</Text>
+                <Text style={{ color: "#fff", fontWeight: "800", fontSize: 16 }}>{ad2}</Text>
+              </LinearGradient>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
       {sekme === "atolye" && <Atolye yas={yas} dil={dil} ad={ad} sesli={sesli} konusuyor={konusuyor} />}
       {sekme === "macera" && <Macera yas={yas} dil={dil} ad={ad} sesli={sesli} konusuyor={konusuyor} />}
       {sekme === "arkadas" && <Arkadas yas={yas} dil={dil} ad={ad} sesli={sesli} />}
@@ -65,7 +106,7 @@ function Atolye({ yas, dil, ad, sesli, konusuyor }: Ortak) {
   const [metin, setMetin] = useState("");
   const [kullanilanTema, setKullanilanTema] = useState("");
 
-  const yaz = async (devam = false) => {
+  const yaz2 = async (devam = false) => {
     setBekle(true);
     try {
       if (devam) {
@@ -82,19 +123,27 @@ function Atolye({ yas, dil, ad, sesli, konusuyor }: Ortak) {
     } finally { setBekle(false); }
   };
 
+  const [fazla, setFazla] = useState(false);
   return (
     <View>
       <Kart>
-        <Secici etiket="Tür" deger={tur} onChange={setTur} secenekler={Object.entries(TURLER).map(([k, v]) => ({ k, ad: v[0] }))} />
-        <Secici etiket="Tema" deger={tema} onChange={setTema} secenekler={["🎲 Sürpriz", ...TEMALAR].map((k) => ({ k, ad: k }))} />
-        <Secici etiket="Değer" deger={deger} onChange={setDeger} secenekler={["—", ...DEGERLER].map((k) => ({ k, ad: k }))} />
-        <Secici etiket="Ton" deger={ton} onChange={setTon} secenekler={TONLAR.map((k) => ({ k, ad: k }))} />
-        <Secici etiket="Uzunluk" deger={uzunluk} onChange={setUzunluk} secenekler={["Kısa", "Orta", "Uzun"].map((k) => ({ k, ad: k }))} />
-        {tur === "ikidilli" && <Secici etiket="Çeviri dili" deger={ceviri} onChange={setCeviri} secenekler={Object.entries(DILLER).map(([k, v]) => ({ k, ad: `${v.bayrak} ${v.ad}` }))} />}
-        <Girdi etiket="Nerede geçsin?" value={yer} onChangeText={setYer} placeholder="ör. Kapadokya, Ay'da bir köy…" />
-        <Girdi etiket="Özel istek" value={ek} onChangeText={setEk} placeholder="ör. içinde kedimiz Pamuk olsun" />
-        <Secici etiket="Resim" deger={resim ? "e" : "h"} onChange={(v) => setResim(v === "e")} secenekler={[{ k: "e", ad: "🎨 Resimli" }, { k: "h", ad: "Resimsiz" }]} />
-        <Dugme yazi="✨ Hikâyeyi Yaz" onPress={() => yaz()} yukleniyor={bekle} />
+        <Secici etiket="Ne dinlemek istersin?" deger={tur} onChange={setTur} secenekler={Object.entries(TURLER).map(([k, v]) => ({ k, ad: v[0] }))} />
+        <Secici etiket="Konusu ne olsun?" deger={tema} onChange={setTema} secenekler={["🎲 Sürpriz", ...TEMALAR].map((k) => ({ k, ad: k }))} />
+        <Dugme yazi={tur === "siir" ? "✨ Şiiri yaz" : "✨ Masalı yaz"} onPress={() => yaz2()} yukleniyor={bekle} />
+        <Pressable onPress={() => setFazla(!fazla)} style={{ alignSelf: "center", marginTop: 10 }}>
+          <Text style={{ color: R.acc2, fontWeight: "700" }}>{fazla ? "▾ Daha az seçenek" : "⚙️ Daha fazla seçenek"}</Text>
+        </Pressable>
+        {fazla ? (
+          <View style={{ marginTop: 10 }}>
+            <Secici etiket="Değer" deger={deger} onChange={setDeger} secenekler={["—", ...DEGERLER].map((k) => ({ k, ad: k }))} />
+            <Secici etiket="Ton" deger={ton} onChange={setTon} secenekler={TONLAR.map((k) => ({ k, ad: k }))} />
+            <Secici etiket="Uzunluk" deger={uzunluk} onChange={setUzunluk} secenekler={["Kısa", "Orta", "Uzun"].map((k) => ({ k, ad: k }))} />
+            {tur === "ikidilli" && <Secici etiket="Çeviri dili" deger={ceviri} onChange={setCeviri} secenekler={Object.entries(DILLER).map(([k, v]) => ({ k, ad: `${v.bayrak} ${v.ad}` }))} />}
+            <Girdi etiket="Nerede geçsin?" value={yer} onChangeText={setYer} placeholder="ör. Kapadokya, Ay'da bir köy…" />
+            <Girdi etiket="Özel istek" value={ek} onChangeText={setEk} placeholder="ör. içinde kedimiz Pamuk olsun" />
+            <Secici etiket="Resim" deger={resim ? "e" : "h"} onChange={(v) => setResim(v === "e")} secenekler={[{ k: "e", ad: "🎨 Resimli" }, { k: "h", ad: "Resimsiz" }]} />
+          </View>
+        ) : null}
       </Kart>
       {metin ? (
         <Kart>
@@ -102,7 +151,7 @@ function Atolye({ yas, dil, ad, sesli, konusuyor }: Ortak) {
           <MdMetin rtl={RTL_DILLER.has(dil)}>{metin}</MdMetin>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
             <Dugme kucuk ikincil yazi={konusuyor ? "⏹ Durdur" : "🔊 Sesli anlat"} onPress={() => sesli(metin, USLUP_TUR[tur] || "masal")} />
-            <Dugme kucuk ikincil yazi="➡️ Devamı" onPress={() => yaz(true)} yukleniyor={bekle} />
+            <Dugme kucuk ikincil yazi="➡️ Devamı" onPress={() => yaz2(true)} yukleniyor={bekle} />
             <Dugme kucuk ikincil yazi="💾 Kaydet" onPress={() => kitapligaEkle({ baslik: baslikBul(metin), metin, yas, dil, tur })} />
           </View>
         </Kart>

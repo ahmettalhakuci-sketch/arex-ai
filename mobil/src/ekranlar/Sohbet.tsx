@@ -8,9 +8,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { medyaAnaliz, sesiYaziyaDok, type Rol } from "../ai";
 import { analizTalimati, ETIK, turTahmin } from "../analiz";
 import { useAyar } from "../ayar";
-import { cevapUret, KULLANIM_MODLARI } from "../beyin";
+import { cevapUret, KULLANIM_MODLARI, SOHBET_TARZLARI } from "../beyin";
 import { notKomutu, sohbetKaydet, sohbetleriOku, sohbettenOgren, yeniId, type Mesaj, type Sohbet } from "../depo";
 import GecmisPaneli from "../GecmisPaneli";
+import { telefonKomutu } from "../telefon";
 import { SYMPY_KURALI, yanitiDogrula } from "../matematik";
 import { medyaSec, type Ek } from "../medya";
 import { anlat, sesiDurdur } from "../ses";
@@ -69,6 +70,30 @@ export default function SohbetEkrani({ disaridanMesaj, temizle, canliyaGit }: { 
     setBekliyor(true);
     try {
       const kisisel = (ayar.kullanimModu || "kisisel") === "kisisel";
+      // 📱 Telefon komutları: "YouTube aç", "YouTube'da X ara", "WhatsApp aç", "haritada X göster", "05xx ara"
+      if (!ekSimdi) {
+        const tel = await telefonKomutu(metin);
+        if (tel) { ekle([{ id: yeniId(), rol: "assistant", metin: tel, etiket: "📱 Telefon", zaman: Date.now() }]); return; }
+      }
+      // 🎭 Sohbet tarzı / mod komutları: "mizah modu aç", "içten sohbet modu", "mümin modu", "normal moda dön", "genç modu"
+      if (!ekSimdi) {
+        const tl = metin.toLocaleLowerCase("tr");
+        const kapat = /(kapat|kapa|bitir|normal moda|dengeli moda)/.test(tl);
+        let tarz: string | null = null, kmod: string | null = null;
+        if (/mizah mod/.test(tl)) tarz = kapat ? "dengeli" : "mizah";
+        else if (/içten (sohbet )?mod|icten (sohbet )?mod/.test(tl)) tarz = kapat ? "dengeli" : "icten";
+        else if (/m[üu]min mod|m[üu]'?min mod/.test(tl)) tarz = kapat ? "dengeli" : "mumin";
+        else if (/normal moda d[öo]n|dengeli moda/.test(tl)) tarz = "dengeli";
+        if (/^(?:genç|genc) mod/.test(tl)) kmod = "genc"; else if (/^yetişkin mod/.test(tl)) kmod = "yetiskin";
+        else if (/^(?:misafir|genel) mod/.test(tl)) kmod = "genel"; else if (/^kişisel mod|^kisisel mod/.test(tl)) kmod = "kisisel";
+        if (tarz || kmod) {
+          guncelle({ ...(tarz ? { sohbetTarzi: tarz } : {}), ...(kmod ? { kullanimModu: kmod } : {}) });
+          const ad = tarz ? SOHBET_TARZLARI[tarz].ad : KULLANIM_MODLARI[kmod!];
+          const selam: Record<string, string> = { mizah: "😄 Mizah modu açıldı! Hazırlan, iltifat yağmuru başlıyor 🎉", icten: "💞 İçten sohbet modu açık. Acele yok; seni dinliyorum…", mumin: "🕌 Mümin modu açık. Hoş geldin, Allah razı olsun.", dengeli: "🎯 Normal (dengeli) moda döndüm." };
+          ekle([{ id: yeniId(), rol: "assistant", metin: tarz ? selam[tarz] : `✅ ${ad} açıldı.`, etiket: "🎭 Mod", zaman: Date.now() }]);
+          return;
+        }
+      }
       // 📝 Not komutları (yazılı veya sesli): "notlarıma kaydet: …", "bunu not al", "notlarım", "3. notu sil"
       if (!ekSimdi) {
         const sonCevap = [...onceki].reverse().find((m) => m.rol === "assistant")?.metin || "";
@@ -80,7 +105,9 @@ export default function SohbetEkrani({ disaridanMesaj, temizle, canliyaGit }: { 
       }
       const ogrenilen = kisisel ? await sohbettenOgren(metin) : "";
       let cevap: string, motor: string;
-      if (ekSimdi) {
+      if (ekSimdi && (ayar.kullanimModu || "kisisel") === "genel") {
+        cevap = "🔒 Fotoğraf/video analizi misafir modunda kapalı (kişisel API kullanılmaz). 👤 Kişisel moda geçince açılır."; motor = "🔒 Misafir";
+      } else if (ekSimdi) {
         const turler = turTahmin(metin, ekSimdi.video);
         const { talimat: t0, derin, maks } = analizTalimati(turler.length || metin ? turler : [], metin);
         const talimat = turler.length ? t0 : t0 + " Görselde bir ders/sınav sorusu veya ödev varsa onu çöz (soruyu yaz, adım adım çöz, sonucu ve doğru şıkkı kalın yaz).";
@@ -105,7 +132,7 @@ export default function SohbetEkrani({ disaridanMesaj, temizle, canliyaGit }: { 
     if (konusan === m.id) { await sesiDurdur(); setKonusan(null); return; }
     setKonusan(m.id);
     const dil = yazidanDilTahmin(m.metin) || ayar.yanitDili;
-    await anlat(m.metin, dil, "sohbet", ayar.anlatici, ayar.dogalSes);
+    await anlat(m.metin, dil, "sohbet", ayar.anlatici, ayar.dogalSes && (ayar.kullanimModu || "kisisel") !== "genel");
   };
 
   const mikrofon = async () => {
@@ -166,7 +193,7 @@ export default function SohbetEkrani({ disaridanMesaj, temizle, canliyaGit }: { 
         <Pressable onPress={() => setGecmisAcik(true)} hitSlop={10}><Text style={st.ustIkon}>☰</Text></Pressable>
         <View style={{ alignItems: "center" }}>
           <Text style={st.marka}>⚡ AREX <Text style={{ color: R.acc2 }}>AI</Text></Text>
-          <Text style={st.durum}>{KULLANIM_MODLARI[ayar.kullanimModu || "kisisel"]} • {DILLER[ayar.yanitDili]?.bayrak} çok dilli</Text>
+          <Text style={st.durum}>{KULLANIM_MODLARI[ayar.kullanimModu || "kisisel"]}{ayar.sohbetTarzi && ayar.sohbetTarzi !== "dengeli" ? " • " + SOHBET_TARZLARI[ayar.sohbetTarzi].ad : ""}</Text>
         </View>
         <View style={{ flexDirection: "row", gap: 6 }}>
           <Pressable onPress={() => guncelle({ gozKoruma: !ayar.gozKoruma })} hitSlop={10}><Text style={[st.ustIkon, { opacity: ayar.gozKoruma ? 1 : 0.55 }]}>👁️</Text></Pressable>

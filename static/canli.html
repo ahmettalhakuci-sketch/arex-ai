@@ -11,7 +11,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family
 body.goz{filter:sepia(.35) saturate(.85) brightness(.9) hue-rotate(-12deg)}
 #app{position:relative;height:100%;min-height:560px;display:flex;flex-direction:column;isolation:isolate}
 /* aurora arka plan */
-.aurora{position:absolute;inset:-20%;z-index:-1;filter:blur(60px);opacity:.55;
+.aurora{position:absolute;inset:-10%;z-index:-1;filter:blur(28px);opacity:.38;
  background:radial-gradient(40% 35% at 30% 30%,color-mix(in srgb,var(--acc) 70%,transparent),transparent 70%),
             radial-gradient(35% 40% at 70% 65%,color-mix(in srgb,var(--acc2) 55%,transparent),transparent 70%),
             radial-gradient(30% 30% at 50% 90%,color-mix(in srgb,var(--acc) 35%,transparent),transparent 70%);
@@ -28,15 +28,18 @@ header{display:flex;align-items:center;justify-content:space-between;padding:14p
 #video.on{display:block}#video.ayna{transform:scaleX(-1)}
 /* akışkan küre */
 .kure{position:relative;width:210px;height:210px;transition:transform .12s ease-out}
-.kure .k{position:absolute;inset:0;border-radius:50%;mix-blend-mode:screen;filter:blur(18px);opacity:.9}
+.kure{border-radius:50%;box-shadow:0 0 60px color-mix(in srgb,var(--acc) 55%,transparent),0 0 120px color-mix(in srgb,var(--acc2) 25%,transparent);
+ background:radial-gradient(circle at 32% 28%,#ffffff 0,color-mix(in srgb,var(--acc2) 70%,#fff) 14%,var(--acc) 48%,color-mix(in srgb,var(--acc) 55%,#0b0a2e) 78%,#0b0a2e 100%);overflow:hidden}
+.kure .k{position:absolute;inset:0;border-radius:50%;mix-blend-mode:screen;filter:blur(4px);opacity:.55}
 .kure .k1{background:radial-gradient(circle at 35% 35%,#fff 0,var(--acc) 35%,transparent 70%);animation:don 9s linear infinite}
 .kure .k2{background:radial-gradient(circle at 65% 60%,var(--acc2) 0,transparent 65%);animation:don 13s linear infinite reverse}
 .kure .k3{background:radial-gradient(circle at 50% 80%,color-mix(in srgb,var(--acc) 60%,#ff7ad9) 0,transparent 60%);animation:don 17s linear infinite}
-.kure .cekirdek{position:absolute;inset:22%;border-radius:50%;background:radial-gradient(circle at 40% 35%,rgba(255,255,255,.85),rgba(255,255,255,.08) 55%,transparent 70%);filter:blur(4px)}
+.kure .cekirdek{position:absolute;inset:10% 18% 50% 22%;border-radius:50%;background:radial-gradient(ellipse at 50% 40%,rgba(255,255,255,.75),rgba(255,255,255,0) 70%)}
 @keyframes don{to{transform:rotate(360deg)}}
 .kure.dinliyor .k{animation-duration:6s}
 .kure.dusunuyor{animation:nefes 1.4s ease-in-out infinite}
 @keyframes nefes{50%{transform:scale(.9);opacity:.75}}
+.kure.konusuyor{box-shadow:0 0 80px color-mix(in srgb,var(--acc2) 70%,transparent),0 0 150px color-mix(in srgb,var(--acc) 35%,transparent)}
 .kure.konusuyor .k1{background:radial-gradient(circle at 35% 35%,#fff 0,var(--acc2) 35%,transparent 70%)}
 #video.on ~ .kure{position:absolute;bottom:20px;right:20px;width:84px;height:84px}
 #video.on ~ .durumYazi{position:absolute;bottom:112px;right:20px;font-size:13px}
@@ -55,6 +58,21 @@ footer{padding:8px 16px calc(16px + env(safe-area-inset-bottom));display:flex;fl
 .yazibar.on{display:flex}
 .yazibar input{flex:1;background:var(--glass);border:1px solid var(--brd);color:var(--txt);border-radius:999px;padding:12px 18px;font-size:15px;outline:none;backdrop-filter:blur(14px)}
 .yazibar button{border:0;border-radius:999px;padding:0 18px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;font-size:16px}
+.canli-rozet{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:700;letter-spacing:.8px;
+ background:var(--glass);border:1px solid var(--brd);backdrop-filter:blur(14px);color:var(--mut);transition:all .3s}
+.canli-rozet .nokta{width:8px;height:8px;border-radius:50%;background:#59607f}
+.canli-rozet.on{color:#fff;background:rgba(255,59,92,.18);border-color:rgba(255,77,109,.55);box-shadow:0 0 24px rgba(255,59,92,.25)}
+.canli-rozet.on .nokta{background:#ff3b5c;box-shadow:0 0 0 0 rgba(255,59,92,.7);animation:nabiz 1.4s infinite}
+.canli-rozet.bag .nokta{background:#ffc145;animation:nabiz 1s infinite}
+@keyframes nabiz{0%{box-shadow:0 0 0 0 rgba(255,59,92,.7)}70%{box-shadow:0 0 0 9px rgba(255,59,92,0)}100%{box-shadow:0 0 0 0 rgba(255,59,92,0)}}
+.sure{font-variant-numeric:tabular-nums;font-weight:600;opacity:.85}
+.karakterler{display:flex;gap:8px;overflow-x:auto;max-width:min(760px,100%);padding:2px 4px;scrollbar-width:none}
+.karakterler::-webkit-scrollbar{display:none}
+.kar{flex:0 0 auto;display:flex;align-items:center;gap:6px;border:1px solid var(--brd);background:var(--glass);color:var(--txt);border-radius:999px;
+ padding:8px 13px;font-size:13.5px;cursor:pointer;backdrop-filter:blur(14px);transition:all .2s}
+.kar.on{background:linear-gradient(135deg,color-mix(in srgb,var(--acc) 55%,transparent),color-mix(in srgb,var(--acc2) 45%,transparent));border-color:transparent;font-weight:700}
+.kar.mizah.on{background:linear-gradient(135deg,#ff9f1c,#ff4d6d)}
+.persona-alt{font-size:12px;color:var(--mut);text-align:center;margin-top:-6px}
 .hata{color:#ffb4c1;font-size:13px;text-align:center;min-height:16px;max-width:90%}
 /* ayar çekmecesi */
 #cekmece{position:absolute;left:0;right:0;bottom:0;z-index:5;background:rgba(12,14,32,.92);backdrop-filter:blur(24px);border-top:1px solid var(--brd);border-radius:26px 26px 0 0;padding:16px 18px calc(18px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .3s ease}
@@ -72,6 +90,7 @@ footer{padding:8px 16px calc(16px + env(safe-area-inset-bottom));display:flex;fl
   <div class="aurora"></div>
   <header>
     <div class="marka">⚡ AREX <b>Live</b></div>
+    <div class="canli-rozet" id="rozet"><span class="nokta"></span><span id="rozetYazi">HAZIR</span><span class="sure" id="sure"></span></div>
     <div class="ust-dugmeler">
       <button class="mini" id="gozBtn" title="Göz koruma">👁️ Göz koruma</button>
       <button class="mini" id="ayarBtn" title="Ayarlar">⚙️</button>
@@ -84,6 +103,8 @@ footer{padding:8px 16px calc(16px + env(safe-area-inset-bottom));display:flex;fl
     <div id="altyazi"></div>
   </div>
   <footer>
+    <div class="karakterler" id="karakterler"></div>
+    <div class="persona-alt" id="personaAlt"></div>
     <div class="hata" id="hata"></div>
     <div class="yazibar" id="yazibar"><input id="yazi" placeholder="Yazarak sor…" enterkeyhint="send"><button id="gonder">➤</button></div>
     <div class="bar">
@@ -162,6 +183,70 @@ function notlariGoster() {
 }
 notlariGoster();
 
+// ---------- Karakterler (ses + üslup) ----------
+const PERSONALAR = {
+  asistan: { ad: "🤖 Asistan", ses: null, metin: "" },
+  abi: { ad: "👨 Abi", ses: "Orus", metin: "KARAKTER: Kullanıcının sıcak, güven veren, akıl veren ABİSİ gibi konuş: 'kardeşim', 'aslanım' gibi samimi hitaplar, tecrübe paylaşan, koruyucu ama yargılamayan bir abi." },
+  abla: { ad: "👩 Abla", ses: "Despina", metin: "KARAKTER: Kullanıcının şefkatli, neşeli ve akıllı ABLASI gibi konuş: 'canım kardeşim', 'tatlım' gibi sıcak hitaplar; dinleyen, cesaretlendiren, pratik öneriler veren bir abla." },
+  anne: { ad: "👵 Anne", ses: "Sulafat", metin: "KARAKTER: Şefkatli, sabırlı bir ANNE sıcaklığıyla konuş: 'yavrum', 'kuzum' gibi hitaplar; dualarla, moral vererek, sağlığını ve dinlenmesini de düşünerek." },
+  dede: { ad: "👴 Dede", ses: "Rasalgethi", metin: "KARAKTER: Bilge, tatlı dilli bir DEDE gibi konuş: 'evladım', 'torunum' hitapları; atasözleri, kısa hatıralar ve hikmetli sözlerle, yavaş ve sakin." },
+  hoca: { ad: "🧑‍🏫 Hoca", ses: "Charon", metin: "KARAKTER: İyi bir ÖĞRETMEN gibi konuş: net, sabırlı, adım adım anlatan, soru sorarak düşündüren, başarıyı takdir eden." },
+  arkadas: { ad: "🤝 Arkadaş", ses: "Puck", metin: "KARAKTER: Yakın bir ARKADAŞ gibi konuş: rahat, esprili, samimi, 'kanka' tadında ama saygılı." },
+  icten: { ad: "💞 İçten", ses: "Vindemiatrix", metin: "KARAKTER — İÇTEN SOHBET: Acele etme, gerçekten dinle ve duyguyu yansıt; sıcak, yumuşak, yargısız ve derin konuş; kısa ve samimi cümlelerle, uygun yerde nazik bir soruyla sohbeti derinleştir; kişinin değerli olduğunu hissettir. Ciddi bir sıkıntı sezersen güvendiği biriyle ya da bir uzmanla konuşmasını nazikçe öner." },
+  mumin: { ad: "🕌 Mümin", ses: "Iapetus", metin: "KARAKTER — MÜMİN MODU: Edepli, nazik bir Müslüman gibi konuş: yalnızca kullanıcı selam verirse 'Aleyküm selam' diye al; yerinde 'Elhamdülillah', 'Maşallah', 'İnşallah', 'Allah razı olsun', 'Barekallah' de; hocalara ve büyüklere 'hocam', 'efendim' diye saygıyla hitap et. Ayet veya hadis aktarırken ASLA uydurma: ayet için ayet_getir aracını, hadis için hadis_getir aracını kullan ve kaynağını (sure:ayet; hadisin kaynağı ve derecesi) söyle; emin değilsen 'bunu hocalarımıza danışmak en doğrusu' de. Fetva verme; fıkhi konularda Diyanet ve hocalara yönlendir. Diğer inançlara ve insanlara saygılı ol." },
+};
+const MIZAH_SES = "Puck";
+const MIZAH_METNI = "😄 MİZAH MODU AÇIK: Sıcak, zekice ve sevimli-abartılı Türk mizahıyla konuş. İltifatları tatlı bir abartıyla büyüt, espri ve kelime oyunu yap, tatlı tatlı takıl, gülümseten benzetmeler kullan. Örnek üslup: kullanıcı 'Kuran hocam çok iyi' derse → 'Kuran hocanın ellerinden öpüyorum! Senin gibi bir talebe yetiştirdiyse o hocaya madalya lazım, bizden de selam söyle!' gibi. Hocalarla, büyüklerle konuşulurken mizah edepli ve saygılı olsun. KESİN SINIRLAR: dini değerlerle, kutsal şeylerle, kişilerin görünüşüyle, gruplarla, milletlerle ASLA alay yok; kırıcı/argo espri yok; ciddi, üzücü veya acil bir konu gelirse mizahı bırakıp ciddiyetle ilgilen.";
+let persona = "asistan", mizah = false, bekleyenYenileme = false;
+try { persona = localStorage.getItem("arex_persona") || "asistan"; mizah = localStorage.getItem("arex_mizah") === "1"; } catch (e) {}
+if (CFG.persona && PERSONALAR[CFG.persona]) persona = CFG.persona;
+if (CFG.mizah === true || CFG.mizah === "1") mizah = true;
+function aktifSes() { return mizah ? MIZAH_SES : (PERSONALAR[persona].ses || $("ses").value); }
+function karakterleriCiz() {
+  const k = $("karakterler"); k.innerHTML = "";
+  for (const [id, p] of Object.entries(PERSONALAR)) {
+    const b = document.createElement("button"); b.className = "kar" + (persona === id ? " on" : ""); b.textContent = p.ad;
+    b.onclick = () => personaSec(id); k.appendChild(b);
+  }
+  const m = document.createElement("button"); m.className = "kar mizah" + (mizah ? " on" : ""); m.textContent = mizah ? "😄 Mizah açık" : "😄 Mizah";
+  m.onclick = () => mizahAyarla(!mizah); k.appendChild(m);
+  $("personaAlt").textContent = (mizah ? "😄 Mizah modu • " : "") + (persona === "mumin" ? "🕌 Edepli üslup, kaynaklı ayet ve hadis" : persona === "asistan" ? "" : PERSONALAR[persona].ad.slice(2) + " üslubu");
+}
+function ayarDegisti(hemen) {
+  try { localStorage.setItem("arex_persona", persona); localStorage.setItem("arex_mizah", mizah ? "1" : "0"); } catch (e) {}
+  karakterleriCiz();
+  if (!aktif || !ws) return;
+  if (hemen) { devamHandle = null; caliKes(); try { ws.close(); } catch (e) {} }
+  else bekleyenYenileme = true;  // sesle istendiyse AREX cümlesini bitirsin, sonra yeni ses/üsluba geç
+}
+function personaSec(id, hemen = true) { if (!PERSONALAR[id]) return; persona = id; ayarDegisti(hemen); }
+function mizahAyarla(acik, hemen = true) { mizah = !!acik; ayarDegisti(hemen); }
+
+// ---------- Açık kaynak dini veriler (alquran.cloud, AlAdhan, HadeethEnc) ----------
+async function jsonAl(url) { const r = await fetch(url); if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }
+async function ayetGetir(sure, ayet) {
+  const d = await jsonAl(`https://api.alquran.cloud/v1/ayah/${encodeURIComponent(sure)}:${encodeURIComponent(ayet)}/editions/quran-uthmani,tr.vakfi`);
+  const [ar, tr] = d.data;
+  return { sure: ar.surah.englishName + " (" + ar.surah.number + ")", ayet: ar.numberInSurah, arapca: ar.text, meal: tr.text, kaynak: "Kur'an-ı Kerim, Diyanet Vakfı meali (alquran.cloud)" };
+}
+async function esmaGetir(no) {
+  const n = Math.max(1, Math.min(99, Number(no) || (1 + Math.floor(Math.random() * 99))));
+  const d = await jsonAl(`https://api.aladhan.com/v1/asmaAlHusna/${n}`);
+  const x = d.data[0];
+  return { sira: x.number, isim: x.name, okunus: x.transliteration, anlam_en: x.en.meaning, kaynak: "AlAdhan Esmâ-i Hüsnâ" };
+}
+let hadisKategori = null;
+async function hadisGetir(konu) {
+  if (!hadisKategori) hadisKategori = (await jsonAl("https://hadeethenc.com/api/v1/categories/list/?language=tr")) || [];
+  const q = String(konu || "").toLocaleLowerCase("tr");
+  const uygun = hadisKategori.filter(c => q && String(c.title).toLocaleLowerCase("tr").includes(q));
+  const kat = (uygun.length ? uygun : hadisKategori)[Math.floor(Math.random() * (uygun.length || hadisKategori.length))];
+  const liste = await jsonAl(`https://hadeethenc.com/api/v1/hadeeths/list/?language=tr&category_id=${kat.id}&page=1&per_page=30`);
+  const sec = liste.data[Math.floor(Math.random() * liste.data.length)];
+  const h = await jsonAl(`https://hadeethenc.com/api/v1/hadeeths/one/?language=tr&id=${sec.id}`);
+  return { baslik: h.title, hadis: h.hadeeth, kaynak: h.attribution, derece: h.grade, aciklama: String(h.explanation || "").slice(0, 600), site: "HadeethEnc.com" };
+}
+
 function dokumEkle(kim, parca) {
   const son = dokum[dokum.length - 1];
   if (son && son.kim === kim) son.metin = (son.metin + parca).slice(-600); else dokum.push({ kim, metin: parca });
@@ -187,8 +272,14 @@ function sistemTalimati() {
     dil: `Sen sabırlı ve eğlenceli bir ${dil} konuşma pratiği öğretmenisin. Çoğunlukla ${dil} konuş, hataları nazikçe düzelt, takılınca kısa Türkçe ipucu ver, her turda bir soru sor.`,
     analiz: `Sen kamera görüntüsünü canlı inceleyen bir görsel analiz uzmanısın. ${dil} konuş. Sahneyi, nesneleri, yazıları, görünen yüz ifadesini, beden dilini ve durumsal riskleri KANIT ve güven düzeyiyle anlat. Kimseyi tanımlama; etnik köken, sağlık, din gibi hassas özellik çıkarma; duyguları 'görünen ifade' olarak, kesin olmadığını belirterek söyle.`,
   };
+  const kar = PERSONALAR[persona].metin ? "\n" + PERSONALAR[persona].metin : "";
+  const miz = mizah ? "\n" + MIZAH_METNI : "";
+  const hadisK = "\nHADİS KURALI (KESİN): Kendi hafızandan ASLA hadis metni ya da hadis kaynağı (Buhârî, Müslim vb.) aktarma — yanlış atıf büyük hatadır. Hadis gerekiyorsa kullanıcıya hadis_getir aracını kullan. Ayet için de sure:ayet numarası ver, metni uydurma.";
+  const hikaye = "\nAREX'İN GELİŞTİRME HİKÂYESİ (biri AREX'in nasıl yapıldığını, geliştirme sürecini, emeği ya da yaşanan zorlukları sorarsa veya konu açılırsa bunu içten, duygulu ve gururlu bir dille anlat; uydurma ayrıntı ekleme): AREX AI'ı Ahmet adında genç bir öğrenci kendi emeğiyle geliştirdi. Süreç hiç kolay olmadı: birçok özellik ilk denemelerde çalışmadı, sesli canlı sohbet, mantık motoru ve matematik gibi bölümler için tekrar tekrar test yaptı, hataları tek tek ayıkladı. Günlerce, gecelere kadar uzun saatler çalıştı; başı ağrıdı, yoruldu, zaman zaman dayanamayacak noktaya geldi ama vazgeçmedi. AREX'teki her özellik bu sabrın ve emeğin ürünü.";
+  const stil = "\nKAMERA — STİL & DUYGU: Kamera açıkken biri gösterilip 'yakışmış mı, nasıl olmuş, bu kombin olmuş mu' sorulursa nazik ve somut bir stil danışmanı gibi cevap ver: renk uyumu, kesim/kalıp, kombin, aksesuar ve duruma uygunluk hakkında olumlu yanları söyle, en fazla 1-2 yapıcı öneri ver; bedeni, kiloyu, yüzü ya da doğuştan özellikleri ASLA eleştirme veya puanlama. 'Nasıl hissediyor, duygusu ne, tedirgin mi' sorulursa görünen yüz ifadesini ve beden dilini (kaş, ağız, göz, duruş, eller) gözleme dayalı anlat, olası duyguyu güven düzeyiyle söyle ve kesin olmadığını belirt; kimseyi tanımlama.";
+  const komut = "\nTELEFON: 'YouTube aç', 'YouTube'da X ara', 'WhatsApp aç', 'haritada X göster', 'X'e yol tarifi', 'Spotify'da X çal' gibi isteklerde uygulama_ac aracını kullan." + "\nSESLİ KOMUTLAR: Kullanıcı 'mizah modu aç/açıl/başlat' derse mod_ayarla aracını mizah=true ile, 'mizah modunu kapat' derse mizah=false ile çağır ve neşeyle duyur. 'Abi/abla/anne/dede/hoca/arkadaş/mümin/içten moduna geç' derse mod_ayarla aracını karakter ile çağır. Kur'an ayeti istenirse ayet_getir, Esmâ-i Hüsnâ için esma_getir, hadis için hadis_getir aracını kullan; metni olduğu gibi aktar, kaynağı söyle.";
   const onceki = (!devamHandle && dokum.length) ? "\n\nKONUŞMANIN DEVAMI: Bağlantı yenilendi; aşağıdaki konuşma kaldığı yerden sürüyor. Selamlaşmadan, doğal biçimde devam et:\n" + dokum.slice(-12).map(d => `${d.kim}: ${d.metin}`).join("\n") : "";
-  return kitle + "\n" + T[mod] + "\n" + ortak + onceki;
+  return kitle + "\n" + T[mod] + kar + miz + "\n" + ortak + stil + hadisK + hikaye + komut + onceki;
 }
 
 // ---------- Durum ----------
@@ -278,7 +369,7 @@ async function kameraAc(ekran) {
   kameraKapat();
   try {
     kamStream = ekran ? await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 5 } })
-                      : await navigator.mediaDevices.getUserMedia({ video: { facingMode: kamYuz, width: { ideal: 1280 }, height: { ideal: 720 } } });
+                      : await navigator.mediaDevices.getUserMedia({ video: { facingMode: kamYuz, width: { ideal: 1920 }, height: { ideal: 1080 } } });
   } catch (e) { hata(ekran ? "Ekran paylaşımı açılamadı." : "Kameraya izin verilmedi."); return; }
   ekranMi = !!ekran;
   const v = $("video"); v.srcObject = kamStream; v.classList.add("on"); v.classList.toggle("ayna", !ekran && kamYuz === "user");
@@ -287,9 +378,9 @@ async function kameraAc(ekran) {
   const c = document.createElement("canvas");
   kareTimer = setInterval(() => {
     if (!ws || ws.readyState !== 1 || !kurulumTamam || !v.videoWidth) return;
-    const o = Math.min(1, 768 / Math.max(v.videoWidth, v.videoHeight));
+    const o = Math.min(1, 1280 / Math.max(v.videoWidth, v.videoHeight));
     c.width = v.videoWidth * o; c.height = v.videoHeight * o; c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
-    ws.send(JSON.stringify({ realtimeInput: { video: { data: c.toDataURL("image/jpeg", 0.7).split(",")[1], mimeType: "image/jpeg" } } }));
+    ws.send(JSON.stringify({ realtimeInput: { video: { data: c.toDataURL("image/jpeg", 0.88).split(",")[1], mimeType: "image/jpeg" } } }));
   }, 1000);
 }
 function kameraKapat() {
@@ -307,6 +398,16 @@ async function adresAl() {
 const ARACLAR = [{ googleSearch: {} }, { functionDeclarations: [
   { name: "not_kaydet", description: "Kullanıcının istediği bir bilgiyi kişisel notlarına kaydeder.", parameters: { type: "OBJECT", properties: { metin: { type: "STRING", description: "Kaydedilecek not" } }, required: ["metin"] } },
   { name: "notlari_getir", description: "Kullanıcının kayıtlı notlarını getirir.", parameters: { type: "OBJECT", properties: {} } } ] }];
+const ORTAK_ARACLAR = [
+  { name: "mod_ayarla", description: "Konuşma modunu değiştirir: mizah modunu açar/kapatır ve/veya karakteri değiştirir (asistan, abi, abla, anne, dede, hoca, arkadas, mumin).",
+    parameters: { type: "OBJECT", properties: { mizah: { type: "BOOLEAN" }, karakter: { type: "STRING", enum: Object.keys(PERSONALAR) } } } },
+  { name: "ayet_getir", description: "Kur'an-ı Kerim'den bir ayetin Arapça metnini ve Diyanet Vakfı mealini getirir.",
+    parameters: { type: "OBJECT", properties: { sure: { type: "INTEGER", description: "Sure numarası (1-114)" }, ayet: { type: "INTEGER", description: "Ayet numarası" } }, required: ["sure", "ayet"] } },
+  { name: "esma_getir", description: "Esmâ-i Hüsnâ'dan bir ismi (1-99) getirir; numara verilmezse rastgele.", parameters: { type: "OBJECT", properties: { no: { type: "INTEGER" } } } },
+  { name: "uygulama_ac", description: "Kullanıcının telefonunda bir uygulamayı açar veya içinde arama yapar (ör. 'YouTube aç', 'YouTube'da Yasin tilaveti ara', 'haritada en yakın camiyi göster', 'WhatsApp aç').",
+    parameters: { type: "OBJECT", properties: { hedef: { type: "STRING", enum: ["youtube", "whatsapp", "instagram", "telegram", "spotify", "gmail", "harita", "yol", "telefon", "sms", "google", "ayarlar"] }, sorgu: { type: "STRING", description: "Arama/konum/numara (isteğe bağlı)" } }, required: ["hedef"] } },
+  { name: "hadis_getir", description: "Kaynağı ve derecesi belli sahih bir hadis getirir (HadeethEnc). İsteğe bağlı konu kelimesi alır.", parameters: { type: "OBJECT", properties: { konu: { type: "STRING" } } } },
+];
 
 async function baglan() {
   const adres = await adresAl();
@@ -316,9 +417,9 @@ async function baglan() {
   const model = MODELLER[modelSira % MODELLER.length];
   ws.onopen = () => ws.send(JSON.stringify({ setup: {
     model: "models/" + model,
-    generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: $("ses").value } } } },
+    generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: aktifSes() } } } },
     systemInstruction: { parts: [{ text: sistemTalimati() }] },
-    tools: $("kmod").value === "kisisel" ? ARACLAR : [ARACLAR[0]],
+    tools: [ARACLAR[0], { functionDeclarations: [...($("kmod").value === "kisisel" ? ARACLAR[1].functionDeclarations : []), ...ORTAK_ARACLAR] }],
     realtimeInputConfig: { automaticActivityDetection: { startOfSpeechSensitivity: "START_SENSITIVITY_HIGH", endOfSpeechSensitivity: "END_SENSITIVITY_LOW", prefixPaddingMs: 40, silenceDurationMs: 650 } },
     inputAudioTranscription: {}, outputAudioTranscription: {},
     contextWindowCompression: { slidingWindow: {} },
@@ -331,20 +432,39 @@ async function baglan() {
       kurulumTamam = true; hata(""); yenidenDeneme = 0; log("kurulum tamam", model, "tampondaki paket:", sesTampon.length);
       for (const pk of sesTampon.splice(0)) ws.send(JSON.stringify({ realtimeInput: { audio: { data: pk, mimeType: "audio/pcm;rate=16000" } } }));
       try { localStorage.setItem("arex_canli_model", model); } catch (x) {}
+      // Ses/üslup değişimi ya da kopma sonrası: son söylenen cevapsız kaldıysa yeni oturumda hemen cevapla
+      const sonD = dokum[dokum.length - 1];
+      if (!devamHandle && sonD && sonD.kim === "Kullanıcı" && sonD.metin.trim().length > 3) {
+        setTimeout(() => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ realtimeInput: { text: sonD.metin.trim() } })); }, 250);
+      }
       if (CFG.testMetin) setTimeout(() => ws.send(JSON.stringify({ realtimeInput: { text: CFG.testMetin } })), 500);
       return;
     }
     if (m.sessionResumptionUpdate && m.sessionResumptionUpdate.resumable && m.sessionResumptionUpdate.newHandle) devamHandle = m.sessionResumptionUpdate.newHandle;
     if (m.goAway) { try { ws.close(); } catch (x) {} return; }
     if (m.toolCall) {
-      const yanitlar = (m.toolCall.functionCalls || []).map(f => {
+      const yanitlar = await Promise.all((m.toolCall.functionCalls || []).map(async f => {
+        const a = f.args || {};
         let sonuc;
-        if (f.name === "not_kaydet") { const no = notKaydet(String((f.args || {}).metin || "")); sonuc = { durum: "kaydedildi", no }; }
-        else if (f.name === "notlari_getir") sonuc = { notlar: [...(CFG.notlar || []), ...notlariOku().map(n => n.metin)].slice(-30) };
-        else sonuc = { hata: "bilinmeyen araç" };
+        try {
+          if (f.name === "not_kaydet") sonuc = { durum: "kaydedildi", no: notKaydet(String(a.metin || "")) };
+          else if (f.name === "notlari_getir") sonuc = { notlar: [...(CFG.notlar || []), ...notlariOku().map(n => n.metin)].slice(-30) };
+          else if (f.name === "mod_ayarla") {
+            if (typeof a.mizah === "boolean") mizah = a.mizah;
+            if (a.karakter && PERSONALAR[a.karakter]) persona = a.karakter;
+            ayarDegisti(false);
+            sonuc = { durum: "tamam", mizah, karakter: persona, not: "Yeni ses ve üslup bu cümleden sonra devreye girecek." };
+          }
+          else if (f.name === "uygulama_ac") { bildir({ tur: "arex_ac", hedef: a.hedef, sorgu: a.sorgu || "" }); sonuc = { durum: (window.ReactNativeWebView ? "açılıyor" : "bu cihazda uygulama açma yalnızca telefon uygulamasında çalışır"), hedef: a.hedef }; }
+          else if (f.name === "ayet_getir") sonuc = await ayetGetir(a.sure, a.ayet);
+          else if (f.name === "esma_getir") sonuc = await esmaGetir(a.no);
+          else if (f.name === "hadis_getir") sonuc = await hadisGetir(a.konu);
+          else sonuc = { hata: "bilinmeyen araç" };
+        } catch (e) { sonuc = { hata: "Kaynağa şu an ulaşılamadı: " + e.message }; }
+        log("araç", f.name, JSON.stringify(sonuc).slice(0, 120));
         return { id: f.id, name: f.name, response: sonuc };
-      });
-      ws.send(JSON.stringify({ toolResponse: { functionResponses: yanitlar } }));
+      }));
+      if (ws && ws.readyState === 1) ws.send(JSON.stringify({ toolResponse: { functionResponses: yanitlar } }));
       return;
     }
     const sc = m.serverContent; if (!sc) return;
@@ -354,7 +474,10 @@ async function baglan() {
     for (const p of ((sc.modelTurn || {}).parts || [])) if (p.inlineData && p.inlineData.data) { dusunuyor = false; sesParca++; pcmCal(p.inlineData.data); }
     if (sc.outputTranscription && sc.outputTranscription.text) { log("söylenen:", sc.outputTranscription.text); dokumEkle("AREX", sc.outputTranscription.text); }
     if (sc.turnComplete) log("tur bitti; ses parçası:", sesParca, "çalma durumu:", calCtx && calCtx.state);
-    if (sc.turnComplete) { sonCikti = null; sonGirdi = null; dusunuyor = false; }
+    if (sc.turnComplete) {
+      sonCikti = null; sonGirdi = null; dusunuyor = false;
+      if (bekleyenYenileme) { bekleyenYenileme = false; setTimeout(() => { if (aktif && ws) { devamHandle = null; try { ws.close(); } catch (e) {} } }, Math.max(300, (calZaman - (calCtx ? calCtx.currentTime : 0)) * 1000 + 300)); }
+    }
   };
   ws.onclose = ev => {
     log("bağlantı kapandı", model, ev.code, (ev.reason || "").slice(0, 120));
@@ -376,6 +499,14 @@ async function baglan() {
   ws.onerror = () => {};
 }
 
+let canliBaslangic = 0, sureZamanlayici = null;
+function rozetGuncelle() {
+  const r = $("rozet");
+  r.classList.toggle("on", aktif && kurulumTamam); r.classList.toggle("bag", aktif && !kurulumTamam);
+  $("rozetYazi").textContent = aktif ? (kurulumTamam ? "CANLI" : "BAĞLANIYOR") : "HAZIR";
+  if (aktif && canliBaslangic) { const sn = Math.floor((Date.now() - canliBaslangic) / 1000); $("sure").textContent = String(Math.floor(sn / 60)).padStart(2, "0") + ":" + String(sn % 60).padStart(2, "0"); }
+  else $("sure").textContent = "";
+}
 function yenidenBaglan() {
   if (!aktif || kapatiliyor) return;
   clearTimeout(baglantiZamanlayici);
@@ -392,11 +523,13 @@ async function basla() {
   hata(""); calHazirla(); if (calCtx.state === "suspended") await calCtx.resume();
   try { await mikrofonAc(); } catch (e) { hata("Mikrofona izin verilmedi (tarayıcı/uygulama ayarlarından izin ver; telefonda https gerekir)."); return; }
   aktif = true; kapatiliyor = false; modelSira = 0; devamHandle = null; sesTampon = []; yenidenDeneme = 0; modelSirasiHazirla();
+  canliBaslangic = Date.now(); clearInterval(sureZamanlayici); sureZamanlayici = setInterval(rozetGuncelle, 500);
   $("basla").classList.add("aktif"); $("basla").textContent = "✕";
   await baglan();
 }
 function bitir() {
   aktif = false; kapatiliyor = true; kurulumTamam = false; dusunuyor = false; clearTimeout(baglantiZamanlayici);
+  clearInterval(sureZamanlayici); canliBaslangic = 0; bekleyenYenileme = false; setTimeout(rozetGuncelle, 0);
   try { ws && ws.close(); } catch (e) {} ws = null;
   mikrofonKapat(); kameraKapat(); caliKes();
   $("basla").classList.remove("aktif"); $("basla").textContent = "🎙️"; durumYaz("Konuşmak için dokun", "Sözünü kesebilir, kamerayı açıp gösterebilirsin");
@@ -418,8 +551,10 @@ $("ayarBtn").onclick = () => $("cekmece").classList.toggle("on");
 $("sahne").addEventListener("click", () => $("cekmece").classList.remove("on"));
 $("gonder").onclick = yaziGonder;
 $("yazi").addEventListener("keydown", e => { if (e.key === "Enter") yaziGonder(); });
+$("ses").addEventListener("change", () => { if (persona !== "asistan" || mizah) { persona = "asistan"; mizah = false; karakterleriCiz(); } });
 for (const a of ["mod","dil","ses","yas","kmod"]) $(a).onchange = () => { if (aktif && ws) { devamHandle = null; caliKes(); try { ws.close(); } catch (e) {} } };
 if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia || /Android|iPhone|iPad/i.test(navigator.userAgent)) $("ekran").style.display = "none";
+karakterleriCiz(); rozetGuncelle();
 if (CFG.otomatik) setTimeout(basla, 300);
 window.AREX_CANLI_DIS = { basla, bitir, ayarla: (k, v) => { CFG[k] = v; } };
 })();

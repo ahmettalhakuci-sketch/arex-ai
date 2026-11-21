@@ -6,7 +6,12 @@ import { Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ANLATICILAR, sohbetTamamla, sonHatalar } from "../ai";
 import { useAyar } from "../ayar";
-import { KULLANIM_MODLARI } from "../beyin";
+import { KULLANIM_MODLARI, SOHBET_TARZLARI } from "../beyin";
+import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from "expo-audio";
+import { Camera } from "expo-camera";
+import * as ImagePicker from "expo-image-picker";
+import { Linking, Platform } from "react-native";
+import { biyometrikVarMi, kilitAcikMi, pinAyarla } from "../Kilit";
 import { anahtar, ANAHTAR_ADLARI, anahtarKaydet, maskele, profilKaydet, profilOku, sohbetleriOku, type AnahtarAdi, type Profil } from "../depo";
 import { DILLER, R, TEMALAR } from "../tema";
 import { Baslik, Dugme, Girdi, Kart, s as us, Secici } from "../ui";
@@ -65,6 +70,14 @@ export default function AyarlarEkrani() {
           secenekler={Object.entries(KULLANIM_MODLARI).map(([k, v]) => ({ k, ad: v }))} />
         <Anahtar etiket="👁️ Göz koruma (sıcak, yumuşak ton)" deger={!!ayar.gozKoruma} onChange={(v) => guncelle({ gozKoruma: v })} />
       </Bolum>
+
+      <Bolum baslik="🎭 Sohbet tarzı">
+        <Text style={[us.alt, { marginBottom: 8 }]}>Sohbette "mizah modu aç", "içten sohbet modu", "mümin modu", "normal moda dön" diyerek de değiştirebilirsin.</Text>
+        <Secici deger={ayar.sohbetTarzi || "dengeli"} onChange={(v) => guncelle({ sohbetTarzi: v })}
+          secenekler={Object.entries(SOHBET_TARZLARI).map(([k, v]) => ({ k, ad: v.ad }))} />
+      </Bolum>
+
+      <GuvenlikBolumu Bolum={Bolum} Anahtar={Anahtar} />
 
       <Bolum baslik="🎨 Görünüm & tema" acik>
         <Text style={us.etiket}>Renk teması</Text>
@@ -146,5 +159,64 @@ export default function AyarlarEkrani() {
         <Text style={us.alt}>AREX AI v15 • Groq + Gemini + OpenRouter (ücretsiz katmanlar) • Gemini Live canlı ses • MediaPipe cihaz içi yüz analizi • mathjs cihaz içi matematik • Project Gutenberg klasik masallar • Open-Meteo, AlAdhan, USGS, CoinGecko açık verileri.</Text>
       </Bolum>
     </ScrollView>
+  );
+}
+
+
+function GuvenlikBolumu({ Bolum, Anahtar }: { Bolum: any; Anahtar: any }) {
+  const [izin, setIzin] = useState<Record<string, boolean | null>>({ mikrofon: null, kamera: null, galeri: null });
+  const [kilit, setKilit] = useState(false);
+  const [bio, setBio] = useState(false);
+  const [yeniPin, setYeniPin] = useState("");
+  const [mesaj, setMesaj] = useState("");
+  const yenile = async () => {
+    if (Platform.OS === "web") { setIzin({ mikrofon: true, kamera: true, galeri: true }); }
+    else {
+      const [m, k, g] = await Promise.all([getRecordingPermissionsAsync(), Camera.getCameraPermissionsAsync(), ImagePicker.getMediaLibraryPermissionsAsync()]);
+      setIzin({ mikrofon: m.granted, kamera: k.granted, galeri: g.granted });
+    }
+    setKilit(await kilitAcikMi()); setBio(await biyometrikVarMi());
+  };
+  useEffect(() => { yenile(); }, []);
+  const iste = async (k: string) => {
+    if (k === "mikrofon") await requestRecordingPermissionsAsync();
+    if (k === "kamera") await Camera.requestCameraPermissionsAsync();
+    if (k === "galeri") await ImagePicker.requestMediaLibraryPermissionsAsync();
+    yenile();
+  };
+  const IZINLER: [string, string, string][] = [["mikrofon", "🎙️ Mikrofon", "Sesli yazma ve canlı sohbet"], ["kamera", "📷 Kamera", "Fotoğraf, canlı görüntü, yüz analizi"], ["galeri", "🖼️ Fotoğraflar", "Galeriden fotoğraf/video analizi"]];
+  return (
+    <Bolum baslik="🔐 Güvenlik & izinler">
+      <Text style={us.etiket}>İzinler</Text>
+      {IZINLER.map(([k, ad, a]) => (
+        <View key={k} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 8, gap: 10 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: R.yazi, fontSize: 15 }}>{ad}</Text>
+            <Text style={{ color: R.soluk, fontSize: 12 }}>{a}</Text>
+          </View>
+          {izin[k] ? <Text style={{ color: R.yesil, fontWeight: "700" }}>✓ Açık</Text> : <Dugme kucuk yazi="İzin ver" onPress={() => iste(k)} />}
+        </View>
+      ))}
+      {Platform.OS !== "web" ? <Dugme kucuk ikincil yazi="⚙️ Telefon ayarlarında AREX izinlerini aç" onPress={() => Linking.openSettings()} style={{ marginTop: 6 }} /> : null}
+      {Platform.OS === "android" ? (
+        <View style={{ marginTop: 12 }}>
+          <Text style={us.etiket}>🤖 Yan tuş asistanı</Text>
+          <Text style={[us.alt, { marginBottom: 8 }]}>"Dijital asistan uygulaması" olarak AREX AI'ı seç; yan tuşa (ya da ana ekran tuşuna) basılı tutunca AREX altta açılıp dinlemeye başlar. Bazı telefonlarda ayrıca "Yan tuş → Basılı tut → Dijital asistan" ayarı açılmalıdır.</Text>
+          <Dugme kucuk yazi="AREX'i varsayılan asistan yap" onPress={() => Linking.sendIntent("android.settings.VOICE_INPUT_SETTINGS").catch(() => Linking.sendIntent("android.settings.MANAGE_DEFAULT_APPS_SETTINGS").catch(() => Linking.openSettings()))} />
+        </View>
+      ) : null}
+      <View style={{ height: 1, backgroundColor: R.cizgi, marginVertical: 14 }} />
+      <Text style={us.etiket}>Uygulama kilidi {kilit ? "🔒 açık" : "🔓 kapalı"}</Text>
+      <Text style={[us.alt, { marginBottom: 8 }]}>Açılışta PIN{bio ? " ya da parmak izi / yüz tanıma" : ""} ister; AREX yalnızca sana özel kalır. API anahtarların uygulamada hiçbir yerde açık gösterilmez.</Text>
+      <Girdi value={yeniPin} onChangeText={(v) => setYeniPin(v.replace(/\D/g, "").slice(0, 6))} placeholder="4-6 haneli PIN" keyboardType="number-pad" secureTextEntry />
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        <Dugme yazi={kilit ? "🔁 PIN'i değiştir" : "🔒 Kilidi aç"} onPress={async () => {
+          if (yeniPin.length < 4) { setMesaj("PIN en az 4 haneli olmalı."); return; }
+          await pinAyarla(yeniPin); setYeniPin(""); setMesaj("✅ Kilit açık. Uygulama bir sonraki açılışta kilit isteyecek."); yenile();
+        }} style={{ flex: 1 }} />
+        {kilit ? <Dugme ikincil yazi="Kilidi kaldır" onPress={async () => { await pinAyarla(null); setMesaj("Kilit kaldırıldı."); yenile(); }} style={{ flex: 1 }} /> : null}
+      </View>
+      {mesaj ? <Text style={{ color: R.yesil, marginTop: 8 }}>{mesaj}</Text> : null}
+    </Bolum>
   );
 }
