@@ -8,6 +8,7 @@ import { ActivityIndicator, Animated, Dimensions, Linking, PanResponder, Platfor
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { AyarSaglayici, useAyar } from "./src/ayar";
 import { anahtarlariYukle } from "./src/depo";
+import { guncellemeDenetle, guncellemeyiIndir, type Guncelleme } from "./src/guncelleme";
 import AnalizEkrani from "./src/ekranlar/Analiz";
 import AraclarEkrani from "./src/ekranlar/Araclar";
 import AyarlarEkrani from "./src/ekranlar/Ayarlar";
@@ -40,6 +41,8 @@ function Uygulama() {
     return () => abone.remove();
   }, []);
   const buyut = () => { setAsistan(false); setSekme("canli"); };
+  const [yeniSurum, setYeniSurum] = useState<Guncelleme | null>(null);
+  useEffect(() => { guncellemeDenetle().then(setYeniSurum); }, []);
   const sohbeteGonder = (metin: string, cevap: string) => { setDisMesaj({ metin, cevap }); setSekme("sohbet"); };
   const ekran = {
     sohbet: <SohbetEkrani disaridanMesaj={disMesaj} temizle={() => setDisMesaj(null)} canliyaGit={() => setSekme("canli")} />,
@@ -55,6 +58,18 @@ function Uygulama() {
     <Arkaplan key={ayar.tema + ayar.yaziOlcek}>
       <StatusBar style="light" />
       <View style={{ flex: 1, maxWidth: Platform.OS === "web" ? 980 : undefined, width: "100%", alignSelf: "center" }}>{ekran}</View>
+      {yeniSurum ? (
+        <Pressable onPress={() => guncellemeyiIndir(yeniSurum)} style={{ position: "absolute", top: ic.top + 56, left: 14, right: 14, zIndex: 40 }}>
+          <View style={{ backgroundColor: R.hap, borderColor: R.acc, borderWidth: 1, borderRadius: 18, padding: 12, flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Ionicons name="cloud-download" size={22} color="#fff" />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: "#fff", fontWeight: "800" }}>Yeni sürüm hazır: {yeniSurum.surum}</Text>
+              <Text style={{ color: "#e6e9ff", fontSize: 12 }} numberOfLines={1}>{yeniSurum.notlar?.[0] || "Dokun, indir ve kur"}</Text>
+            </View>
+            <Pressable hitSlop={10} onPress={() => setYeniSurum(null)}><Ionicons name="close" size={20} color="#fff" /></Pressable>
+          </View>
+        </Pressable>
+      ) : null}
       {asistan ? <AsistanPaneli kapat={() => setAsistan(false)} buyut={buyut} sohbeteGonder={sohbeteGonder} /> : null}
       {ayar.gozKoruma ? <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(255,150,40,0.10)", zIndex: 50 }]} /> : null}
       <View style={[st.cubukDis, { paddingBottom: Math.max(ic.bottom, 6) }]}>

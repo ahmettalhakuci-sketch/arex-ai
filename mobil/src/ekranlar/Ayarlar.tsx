@@ -12,6 +12,7 @@ import { Camera } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import { Linking, Platform } from "react-native";
 import { biyometrikVarMi, kilitAcikMi, pinAyarla } from "../Kilit";
+import { guncellemeDenetle, guncellemeyiIndir, mevcutSurum, type Guncelleme } from "../guncelleme";
 import { anahtar, ANAHTAR_ADLARI, anahtarKaydet, maskele, profilKaydet, profilOku, sohbetleriOku, type AnahtarAdi, type Profil } from "../depo";
 import { DILLER, R, TEMALAR } from "../tema";
 import { Baslik, Dugme, Girdi, Kart, s as us, Secici } from "../ui";
@@ -155,6 +156,8 @@ export default function AyarlarEkrani() {
         }} />
       </Bolum>
 
+      <GuncellemeBolumu Bolum={Bolum} />
+
       <Bolum baslik="ℹ️ Hakkında">
         <Text style={us.alt}>AREX AI v15 • Groq + Gemini + OpenRouter (ücretsiz katmanlar) • Gemini Live canlı ses • MediaPipe cihaz içi yüz analizi • mathjs cihaz içi matematik • Project Gutenberg klasik masallar • Open-Meteo, AlAdhan, USGS, CoinGecko açık verileri.</Text>
       </Bolum>
@@ -217,6 +220,30 @@ function GuvenlikBolumu({ Bolum, Anahtar }: { Bolum: any; Anahtar: any }) {
         {kilit ? <Dugme ikincil yazi="Kilidi kaldır" onPress={async () => { await pinAyarla(null); setMesaj("Kilit kaldırıldı."); yenile(); }} style={{ flex: 1 }} /> : null}
       </View>
       {mesaj ? <Text style={{ color: R.yesil, marginTop: 8 }}>{mesaj}</Text> : null}
+    </Bolum>
+  );
+}
+
+
+function GuncellemeBolumu({ Bolum }: { Bolum: any }) {
+  const [durum, setDurum] = useState("");
+  const [yeni, setYeni] = useState<Guncelleme | null>(null);
+  const [bekle, setBekle] = useState(false);
+  return (
+    <Bolum baslik={`🔄 Güncelleme (sürüm ${mevcutSurum()})`}>
+      <Text style={[us.alt, { marginBottom: 8 }]}>AREX açılışta günde bir kez yeni sürümü denetler; varsa üstte bildirim çıkar. Kurulumu Android senden onaylar, verilerin silinmez.</Text>
+      <Dugme yazi="🔄 Güncellemeleri denetle" yukleniyor={bekle} onPress={async () => {
+        setBekle(true); const g = await guncellemeDenetle(true); setBekle(false);
+        setYeni(g); setDurum(g ? "" : "✅ En güncel sürümü kullanıyorsun.");
+      }} />
+      {yeni ? (
+        <View style={{ marginTop: 10 }}>
+          <Text style={{ color: "#fff", fontWeight: "800" }}>Yeni sürüm: {yeni.surum}</Text>
+          {(yeni.notlar || []).map((n, i) => <Text key={i} style={{ color: R.yazi, fontSize: 13 }}>• {n}</Text>)}
+          <Dugme yazi="⬇️ İndir ve kur" onPress={() => guncellemeyiIndir(yeni)} style={{ marginTop: 8 }} />
+        </View>
+      ) : null}
+      {durum ? <Text style={{ color: R.yesil, marginTop: 8 }}>{durum}</Text> : null}
     </Bolum>
   );
 }

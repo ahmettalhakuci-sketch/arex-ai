@@ -1,0 +1,10 @@
+{
+  "surum": "15.6.0",
+  "kod": 156,
+  "apk": "https://github.com/ahmettalhakuci-sketch/arex-ai/releases/latest/download/AREX-AI.apk",
+  "notlar": [
+    "Otomatik güncelleme denetimi",
+    "Canlı sekmesinde CANLI işareti, yeni vektör simgeler",
+    "Kur'an & Hafızlık, mizah/içten/mümin modları, telefon komutları"
+  ]
+}
