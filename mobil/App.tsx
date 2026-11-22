@@ -40,6 +40,7 @@ function Uygulama() {
       if (u.startsWith("arex://asistan")) setAsistan(true);
       // yan tuş kartından: ⤢ büyüt → Canlı, sohbete aktar → Sohbet
       else if (u.startsWith("arex://canli")) { setAsistan(false); setSekme("canli"); }
+      else if (u.startsWith("arex://ayarlar")) { setAsistan(false); setSekme("ayarlar"); }
       else if (u.startsWith("arex://sohbet")) {
         const q = (ad: string) => { const m = u.match(new RegExp("[?&]" + ad + "=([^&]*)")); return m ? decodeURIComponent(m[1]) : ""; };
         if (q("m") || q("c")) { setDisMesaj({ metin: q("m"), cevap: q("c") }); }

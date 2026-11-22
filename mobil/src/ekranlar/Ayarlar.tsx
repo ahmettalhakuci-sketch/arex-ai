@@ -40,6 +40,54 @@ function Anahtar({ etiket, deger, onChange }: { etiket: string; deger: boolean; 
   );
 }
 
+/** 🔐 İzinler: her iznin durumu + doğrudan o ayar sayfasına giden bağlantı. Uygulamaya dönünce durumlar yenilenir. */
+function IzinlerKarti() {
+  const [d, setD] = useState(Erisim.durumlar());
+  const [mik, setMik] = useState(false);
+  const [kam, setKam] = useState(false);
+  const yenile = async () => {
+    setD(Erisim.durumlar());
+    try { setMik((await getRecordingPermissionsAsync()).granted); setKam((await Camera.getCameraPermissionsAsync()).granted); } catch {}
+  };
+  useEffect(() => {
+    yenile();
+    const a = AppState.addEventListener("change", (x) => { if (x === "active") yenile(); });
+    return () => a.remove();
+  }, []);
+  if (Platform.OS !== "android" || !Erisim.destekVar()) return null;
+  const satirlar: { ad: string; alt: string; ok: boolean | null; ac: () => void }[] = [
+    { ad: "♿ Telefon erişimi", alt: "Ekranı oku, dokun, yaz, kaydır", ok: d.erisim, ac: () => Erisim.ayarAc("erisim") },
+    { ad: "🔓 Kısıtlanmış ayarlar", alt: "Erişim gri/kapanıyorsa: ⋮ → Kısıtlanmış ayarlara izin ver", ok: d.erisim ? true : null, ac: () => Erisim.ayarAc("uygulama") },
+    { ad: "🎙️ Mikrofon", alt: "Sesli soru ve Canlı sohbet", ok: mik, ac: async () => { const r = await requestRecordingPermissionsAsync(); if (!r.granted) Erisim.ayarAc("uygulama"); yenile(); } },
+    { ad: "📷 Kamera", alt: "Canlı görüntü ve fotoğraf analizi", ok: kam, ac: async () => { const r = await Camera.requestCameraPermissionsAsync(); if (!r.granted) Erisim.ayarAc("uygulama"); yenile(); } },
+    { ad: "✨ Yan tuş asistanı", alt: "Dijital asistan uygulaması → AREX AI", ok: d.asistanBiliniyor ? d.asistan : null, ac: () => Erisim.ayarAc("asistan") },
+    { ad: "🔋 Pil kısıtlaması yok", alt: "Ekran kapalıyken tilavet kesilmesin", ok: d.pil, ac: () => Erisim.ayarAc("pil") },
+    { ad: "🔔 Bildirimler", alt: "Hatırlatıcı ve pomodoro uyarıları", ok: null, ac: () => Erisim.ayarAc("bildirim") },
+    { ad: "🛡️ Güvenlik (Otomatik Engelleyici)", alt: "Kurulum/erişim engelleniyorsa", ok: null, ac: () => Erisim.ayarAc("guvenlik") },
+  ];
+  const tamam = satirlar.filter((x) => x.ok === true).length;
+  const bilinen = satirlar.filter((x) => x.ok !== null).length;
+  return (
+    <Kart style={{ borderColor: R.acc + "88" }}>
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
+        <Text style={{ color: "#fff", fontSize: 18, fontWeight: "800", flex: 1 }}>🔐 İzinler</Text>
+        <Text style={{ color: tamam === bilinen ? R.yesil : R.sari, fontWeight: "800" }}>{tamam}/{bilinen} hazır</Text>
+      </View>
+      <Text style={[us.alt, { marginBottom: 6, fontSize: 12.5 }]}>Bağlantıya dokun → doğrudan o ayar sayfası açılır. Geri dönünce durum kendiliğinden güncellenir.</Text>
+      {satirlar.map((x) => (
+        <Pressable key={x.ad} onPress={x.ac} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, borderTopWidth: 1, borderTopColor: R.cizgi, opacity: pressed ? 0.6 : 1 })}>
+          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: x.ok === true ? R.yesil : x.ok === false ? R.kirmizi : R.soluk }} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14.5 }}>{x.ad}</Text>
+            <Text style={{ color: R.soluk, fontSize: 11.5 }}>{x.alt}</Text>
+          </View>
+          <Text style={{ color: x.ok === true ? R.yesil : R.acc2, fontWeight: "800", fontSize: 13, textDecorationLine: x.ok === true ? "none" : "underline" }}>{x.ok === true ? "✓ Açık" : "Aç ›"}</Text>
+        </Pressable>
+      ))}
+    </Kart>
+  );
+}
+
 /** ♿ Telefon erişimi (Erişilebilirlik Servisi): durum + aç düğmesi; uygulamaya dönünce durumu yeniler */
 function TelefonErisimi() {
   const [acik, setAcik] = useState(Erisim.etkinMi());
@@ -89,6 +137,7 @@ export default function AyarlarEkrani() {
   return (
     <ScrollView contentContainerStyle={{ padding: 14, paddingTop: ic.top + 10, paddingBottom: 50 }} keyboardShouldPersistTaps="handled">
       <Baslik alt="Görünüm, sohbet, ses, anahtarlar ve kişisel hafıza.">⚙️ Ayarlar</Baslik>
+      <IzinlerKarti />
 
       <Bolum baslik="👤 Kullanım modu" acik>
         <Text style={[us.alt, { marginBottom: 8 }]}>Kişisel modda AREX seni tanır (profil, hafıza, notlar). Başkalarına tanıtırken 🌐 Misafir modunu seç: kişisel bilgilerin gizlenir.</Text>

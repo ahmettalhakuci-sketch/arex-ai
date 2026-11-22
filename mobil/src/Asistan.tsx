@@ -133,6 +133,7 @@ function Panel() {
                 {([["📖 Ekranı özetle", "ekranı özetle"], ["⬅️ Geri", "geri"], ["🏠 Ana ekran", "ana ekran"], ["🔔 Bildirimler", "bildirimleri aç"], ["⬇️ Kaydır", "aşağı kaydır"]] as const).map(([ad, k]) => (
                   <Pressable key={k} onPress={() => calistir(k)} style={st.cip}><Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>{ad}</Text></Pressable>
                 ))}
+                <Pressable onPress={() => anaya("ayarlar")} style={[st.cip, { borderColor: "#a259ff" }]}><Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>🔐 İzinler</Text></Pressable>
               </ScrollView>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 7 }}>
                 <TextInput value={komut} onChangeText={setKomut} onSubmitEditing={() => calistir(komut)} returnKeyType="send" placeholder={kilitli ? "🔒 AREX kilitli — kilidi açmak için dokun" : "Gönder'e dokun • yaz: merhaba • google aç"} onFocus={() => { if (kilitli) canliAc(); }} placeholderTextColor="#7d86ad"

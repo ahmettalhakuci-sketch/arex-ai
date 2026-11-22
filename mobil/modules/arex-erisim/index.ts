@@ -11,3 +11,8 @@ export const yaz = (metin: string): boolean => { try { return !!N?.yaz(metin); }
 export const kaydir = (ileri: boolean): boolean => { try { return !!N?.kaydir(ileri); } catch { return false; } };
 export const genel = (eylem: "geri" | "ana" | "son" | "bildirim" | "hizli" | "kilit" | "ekranGoruntusu"): boolean => { try { return !!N?.genel(eylem); } catch { return false; } };
 export const uygulamaAc = (ad: string): string => { try { return N?.uygulamaAc(ad) || ""; } catch { return ""; } };
+export type IzinTuru = "erisim" | "uygulama" | "bildirim" | "pil" | "asistan" | "kurulum" | "guvenlik";
+export const ayarAc = (tur: IzinTuru): boolean => { try { return !!N?.ayarAc(tur); } catch { return false; } };
+export const durumlar = (): { erisim: boolean; pil: boolean; asistan: boolean; asistanBiliniyor: boolean } => {
+  try { return N?.durumlar() || { erisim: false, pil: false, asistan: false, asistanBiliniyor: false }; } catch { return { erisim: false, pil: false, asistan: false, asistanBiliniyor: false }; }
+};
