@@ -126,20 +126,22 @@ export const s = StyleSheet.create({
   girdi: { backgroundColor: R.kart, borderColor: R.cizgi, borderWidth: 1, borderRadius: 14, color: R.yazi, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16 },
 });
 
-/** Görsel aç/kapat anahtarı: kayan topuz + renkli iz + AÇIK/KAPALI etiketi (animasyonlu) */
+/** Görsel aç/kapat anahtarı: renk/yazı/simge doğrudan duruma bağlı (her cihazda anında değişir), topuz kayarak gider */
 export function Anahtar({ acik, onChange, renk }: { acik: boolean; onChange: (v: boolean) => void; renk?: string }) {
   const x = React.useRef(new Animated.Value(acik ? 1 : 0)).current;
-  React.useEffect(() => { Animated.spring(x, { toValue: acik ? 1 : 0, useNativeDriver: false, bounciness: 8, speed: 18 }).start(); }, [acik]);
+  React.useEffect(() => { Animated.spring(x, { toValue: acik ? 1 : 0, useNativeDriver: true, bounciness: 8, speed: 18 }).start(); }, [acik]);
   const r = renk || R.acc;
   return (
     <Pressable onPress={() => { titret(); onChange(!acik); }} hitSlop={8} accessibilityRole="switch" accessibilityState={{ checked: acik }}>
-      <Animated.View style={{ width: 68, height: 32, borderRadius: 16, justifyContent: "center", borderWidth: 1,
-        borderColor: x.interpolate({ inputRange: [0, 1], outputRange: [R.cizgi, r] }),
-        backgroundColor: x.interpolate({ inputRange: [0, 1], outputRange: ["rgba(255,255,255,0.08)", r + "cc"] }) }}>
-        <Text style={{ position: "absolute", left: acik ? 9 : undefined, right: acik ? undefined : 6, fontSize: 8.5, letterSpacing: 0.3, fontWeight: "900", color: acik ? "#fff" : R.soluk }}>{acik ? "AÇIK" : "KAPALI"}</Text>
-        <Animated.View style={{ position: "absolute", left: x.interpolate({ inputRange: [0, 1], outputRange: [3, 41] }), width: 24, height: 24, borderRadius: 12, backgroundColor: "#fff",
-          shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 3 }} />
-      </Animated.View>
+      <View style={{ width: 80, height: 34, borderRadius: 17, justifyContent: "center", borderWidth: 1.5,
+        borderColor: acik ? r : "rgba(255,255,255,0.22)", backgroundColor: acik ? r : "rgba(255,255,255,0.06)" }}>
+        <Text style={{ position: "absolute", left: acik ? 10 : undefined, right: acik ? undefined : 7, fontSize: 8.5, fontWeight: "900", letterSpacing: 0.3, color: acik ? "#1a1408" : R.soluk }}>{acik ? "AÇIK" : "KAPALI"}</Text>
+        <Animated.View style={{ position: "absolute", left: 3, width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center",
+          backgroundColor: acik ? "#fff" : "#8a90ad", transform: [{ translateX: x.interpolate({ inputRange: [0, 1], outputRange: [0, 48] }) }],
+          shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 3 }}>
+          <Text style={{ fontSize: 13, fontWeight: "900", color: acik ? r : "#2a2f48", marginTop: -1 }}>{acik ? "✓" : "✕"}</Text>
+        </Animated.View>
+      </View>
     </Pressable>
   );
 }

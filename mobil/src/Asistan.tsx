@@ -5,9 +5,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Animated, BackHandler, Dimensions, Easing, Linking, PanResponder, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Animated, ScrollView, TextInput, BackHandler, Dimensions, Easing, Linking, PanResponder, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
+import * as Erisim from "../modules/arex-erisim";
 import { AyarSaglayici } from "./ayar";
+import { telefonKomutu } from "./telefon";
 import { anahtarlariYukle } from "./depo";
 import CanliEkrani from "./ekranlar/Canli";
 import KilitEkrani, { kilitAcikMi } from "./Kilit";
@@ -23,13 +25,23 @@ const kapatPencere = () => { if (Platform.OS === "android") BackHandler.exitApp(
 function Panel() {
   const ic = useSafeAreaInsets();
   const H = Dimensions.get("window").height;
-  const yukseklik = Math.min(560, H * 0.58);
+  const yukseklik = Math.min(640, H * 0.66);
   const y = useRef(new Animated.Value(yukseklik + 40)).current;
   const perde = useRef(new Animated.Value(0)).current;
   const isilti = useRef(new Animated.Value(0)).current;
   const [hazir, setHazir] = useState(false);
   const [kilitli, setKilitli] = useState(false);
   const kapaniyor = useRef(false);
+  const [komut, setKomut] = useState("");
+  const [sonuc, setSonuc] = useState("");
+  const [isliyor, setIsliyor] = useState(false);
+  const calistir = async (k: string) => {
+    if (!k.trim() || isliyor) return;
+    titret(); setIsliyor(true); setKomut("");
+    const r = await telefonKomutu(k).catch(() => null);
+    setSonuc(r ? r.replace(/[#*_>]/g, "").trim() : "Bunu telefon komutu olarak anlayamadım. Sesli sormak için aşağıdaki Canlı asistanı kullan.");
+    setIsliyor(false);
+  };
 
   useEffect(() => {
     Promise.all([anahtarlariYukle(), kilitAcikMi().then(setKilitli)]).finally(() => setHazir(true));
@@ -93,6 +105,30 @@ function Panel() {
               <Pressable onPress={kapat} hitSlop={10} style={st.yuvarlak}><Ionicons name="close" size={19} color="#fff" /></Pressable>
             </View>
           </View>
+          {/* Hızlı telefon komutları (Erişilebilirlik servisiyle arkadaki uygulamaya etki eder) */}
+          {Erisim.destekVar() ? (
+            <View style={{ paddingHorizontal: 12, paddingBottom: 6 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }} keyboardShouldPersistTaps="handled">
+                {([["📖 Ekranı özetle", "ekranı özetle"], ["⬅️ Geri", "geri"], ["🏠 Ana ekran", "ana ekran"], ["🔔 Bildirimler", "bildirimleri aç"], ["⬇️ Kaydır", "aşağı kaydır"]] as const).map(([ad, k]) => (
+                  <Pressable key={k} onPress={() => calistir(k)} style={st.cip}><Text style={{ color: "#fff", fontSize: 12.5, fontWeight: "700" }}>{ad}</Text></Pressable>
+                ))}
+              </ScrollView>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 }}>
+                <TextInput value={komut} onChangeText={setKomut} onSubmitEditing={() => calistir(komut)} returnKeyType="send" placeholder="Komut yaz: Gönder'e dokun, yaz: merhaba, google aç…" placeholderTextColor="#7d86ad"
+                  style={{ flex: 1, color: "#fff", backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", paddingHorizontal: 12, paddingVertical: 8, fontSize: 13.5 }} />
+                <Pressable onPress={() => calistir(komut)} style={[st.yuvarlak, { backgroundColor: "#a259ff" }]}>
+                  {isliyor ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="arrow-up" size={18} color="#fff" />}
+                </Pressable>
+              </View>
+              {sonuc ? (
+                <ScrollView style={{ maxHeight: 110, marginTop: 8 }} contentContainerStyle={{ backgroundColor: "rgba(162,89,255,0.12)", borderRadius: 12, padding: 10 }}>
+                  <Text style={{ color: "#e6e9ff", fontSize: 13, lineHeight: 19 }}>{sonuc}</Text>
+                </ScrollView>
+              ) : !Erisim.etkinMi() ? (
+                <Pressable onPress={() => Erisim.ayarlariAc()}><Text style={{ color: "#ffb84d", fontSize: 12, marginTop: 6 }}>♿ Ekrana dokunma/okuma için erişimi aç → dokun</Text></Pressable>
+              ) : null}
+            </View>
+          ) : null}
           <View style={{ flex: 1 }}>
             {!hazir ? <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={R.acc2} /></View>
               : kilitli ? <KilitEkrani acildi={() => setKilitli(false)} />
@@ -115,5 +151,6 @@ export default function AsistanKoku() {
 }
 
 const st = StyleSheet.create({
+  cip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.07)", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" },
   yuvarlak: { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.08)", alignItems: "center", justifyContent: "center" },
 });

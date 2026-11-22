@@ -1,6 +1,8 @@
 // AREX — telefon komutları: "YouTube aç", "YouTube'da Yasin tilaveti ara", "WhatsApp aç", "haritada cami göster",
 // "05xx… ara", "Spotify'da X çal", "Google'da X ara", "ayarları aç" (uygulama bağlantıları / derin bağlantılar)
 import { Linking, Platform } from "react-native";
+import * as E from "../modules/arex-erisim";
+import { sohbetTamamla } from "./ai";
 
 export type Hedef = "youtube" | "whatsapp" | "instagram" | "telegram" | "spotify" | "gmail" | "harita" | "yol" | "telefon" | "sms" | "google" | "ayarlar";
 export const HEDEFLER: Hedef[] = ["youtube", "whatsapp", "instagram", "telegram", "spotify", "gmail", "harita", "yol", "telefon", "sms", "google", "ayarlar"];
@@ -41,8 +43,56 @@ export async function acHedef(hedef: Hedef, sorgu = ""): Promise<string> {
   return ok ? `${ad} açılıyor${s ? `: **${s}**` : ""} ✅` : `${ad} açılamadı — uygulama yüklü olmayabilir.`;
 }
 
+const ERISIM_YOK = "♿ Bunun için **AREX erişim izni** gerekli: ⚙️ Ayarlar → 📱 Telefon erişimi → **Erişimi aç** (Erişilebilirlik → AREX AI Asistan).";
+
+/** Erişilebilirlik komutları: ekranı oku/özetle, X'e dokun, yaz, kaydır, geri, ana ekran, bildirimler, kilitle, uygulama aç. Komut değilse null. */
+export async function erisimKomutu(metin: string): Promise<string | null> {
+  if (Platform.OS !== "android" || !E.destekVar()) return null;
+  const t = metin.trim().toLocaleLowerCase("tr").replace(/[.!?]+$/, "");
+  let m: RegExpMatchArray | null;
+  const gerek = () => E.etkinMi();
+  if (/^(?:erişim(?:i)?|telefon erişimi(?:ni)?|erişilebilirlik(?:i)?)\s+(?:aç|ver|etkinleştir)/.test(t)) { E.ayarlariAc(); return "♿ Erişilebilirlik ayarları açıldı → **AREX AI Asistan** → aç."; }
+  // Uygulama aç (servis gerekmez): "google aç", "saat uygulamasını aç", "hesap makinesini aç"
+  if ((m = t.match(/^(.{2,30}?)(?:'?(?:[ıiuü]|y[ıiuü]|n[ıiuü]))?\s*(?:uygulamas[ıi]n[ıi]\s+)?(?:aç|başlat|açar mısın)$/)) && !/^(?:ekran|bildirim|erişim|sayfa|kur'?an|meal|ezber|pomodoro|kamera izn)/.test(m[1])) {
+    const ad = m[1].replace(/\s*uygulama(?:s[ıi])?$/, "").replace(/'(?:[ıiuü]|y[ıiuü]|n[ıiuü])$/, "").trim();
+    const acilan = E.uygulamaAc(ad);
+    if (acilan) return `📱 **${acilan}** açılıyor ✅`;
+    return null;  // bulunamadıysa eski derin bağlantı yoluna düşsün
+  }
+  const ekranMi = /^ekran(?:ı|da|daki)?\s*(?:ne var|ne yazıyor|oku|özetle|anlat|neler var)|^(?:bu )?ekranı (?:oku|özetle|anlat|açıkla)|^ekranda ne/.test(t);
+  if (ekranMi) {
+    if (!gerek()) return ERISIM_YOK;
+    const metinEkran = E.ekranOku();
+    if (!metinEkran.trim()) return "📱 Ekranda okunabilir yazı bulamadım.";
+    if (/özetle|anlat|açıkla|ne var|neler/.test(t)) {
+      const r = await sohbetTamamla([{ role: "user", content: "Telefon ekranındaki öğeler (🔘 dokunulabilir, ✏️ yazı alanı):\n" + metinEkran.slice(0, 5000) + "\n\nBu ekranda ne olduğunu Türkçe, kısa ve maddeler halinde özetle; önemli düğmeleri belirt." }], { sicaklik: 0.3, maks: 600 });
+      if (r.metin) return "### 📱 Ekran özeti\n\n" + r.metin;
+    }
+    return "### 📱 Ekrandaki yazılar\n\n" + metinEkran.split("\n").slice(0, 80).join("\n\n");
+  }
+  const genel: [RegExp, Parameters<typeof E.genel>[0], string][] = [
+    [/^(?:geri(?: git| dön| gel)?|geri tuşu)$/, "geri", "⬅️ Geri"], [/^ana ekran(?:a dön|a git)?$|^ana sayfaya dön$/, "ana", "🏠 Ana ekran"],
+    [/^son uygulamalar|^açık uygulamalar/, "son", "🗂️ Son uygulamalar"], [/^bildirim(?:ler(?:i)?)?\s*(?:aç|göster|indir)?$/, "bildirim", "🔔 Bildirimler"],
+    [/^hızlı ayarlar/, "hizli", "⚡ Hızlı ayarlar"], [/^(?:ekranı |telefonu )?kilitle$/, "kilit", "🔒 Ekran kilitlendi"], [/^ekran görüntüsü al/, "ekranGoruntusu", "📸 Ekran görüntüsü alındı"],
+  ];
+  for (const [re, e, ad] of genel) if (re.test(t)) { if (!gerek()) return ERISIM_YOK; return E.genel(e) ? ad + " ✅" : ad + " yapılamadı."; }
+  if ((m = t.match(/^(?:aşağı|yukarı)\s*(?:kaydır|in|çık)$|^(?:kaydır)$/))) { if (!gerek()) return ERISIM_YOK; return E.kaydir(!/yukarı/.test(t)) ? "↕️ Kaydırıldı ✅" : "↕️ Kaydırılacak alan bulunamadı."; }
+  if ((m = metin.trim().match(/^(.{1,40}?)\s*(?:'?(?:[ıiuü]|y[ıiuü]|[ae]|y[ae]))?\s+(?:dokun|tıkla|bas)$/i)) || (m = metin.trim().match(/^(?:dokun|tıkla|bas)\s*[:\-]?\s*(.{1,40})$/i))) {
+    if (!gerek()) return null;  // servis kapalıyken gündelik cümleleri ("kalbime dokun") komut sanma
+    const hedef = m[1].replace(/['’](?:[ıiuü]|y[ıiuü]|[ae]|y[ae])$/i, "").replace(/^["“]|["”]$/g, "").trim();
+    return E.tikla(hedef) ? `👆 **${hedef}** öğesine dokunuldu ✅` : `👆 Ekranda **${hedef}** bulunamadı. "ekranı oku" diyerek yazıları görebilirsin.`;
+  }
+  if ((m = metin.trim().match(/^(?:yaz|şunu yaz)\s*[:\-]\s*(.+)$/i))) {
+    if (!gerek()) return ERISIM_YOK;
+    return E.yaz(m[1]) ? `⌨️ Yazıldı: **${m[1]}** ✅` : "⌨️ Yazı alanı bulunamadı (önce yazı alanına dokun).";
+  }
+  return null;
+}
+
 /** Sohbet metninden telefon komutu çıkarır ve çalıştırır; komut değilse null. */
 export async function telefonKomutu(metin: string): Promise<string | null> {
+  const er = await erisimKomutu(metin);
+  if (er) return er;
   const t = metin.trim().toLocaleLowerCase("tr").replace(/[.!?]+$/, "");
   let m: RegExpMatchArray | null;
   if ((m = t.match(/^youtube'?(?:da|de|ta|te)?\s+(.+?)\s+(?:ara|aç|bul|izle|oynat|çal)$/))) return acHedef("youtube", m[1]);

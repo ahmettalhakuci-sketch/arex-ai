@@ -10,7 +10,7 @@ import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, Text, TextIn
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { oku, yaz } from "../depo";
 import {
-  AYET_SAYISI, BESMELE, KARILER, MEALLER, SURELER, SURE_SAYFA, bugun, bugunkuSayfa, cuzBaslangic, cuzBitis, esma, gununAyeti, gununHadisi,
+  ayetler as ayetGetir, AYET_SAYISI, BESMELE, KARILER, MEALLER, SURELER, SURE_SAYFA, bugun, bugunkuSayfa, cuzBaslangic, cuzBitis, esma, gununAyeti, gununHadisi,
   hafizlikOku, hafizlikYaz, kariBul, kariOku, kariYaz, sayfaGetir, sayfaninCuzu, sayfaninSuresi, seri, sureBul, tekrarOnerisi,
   type Ayet, type Hadis, type Hafizlik, type SayfaAyet,
 } from "../kuran";
@@ -22,8 +22,8 @@ const ayetDugme = { flexDirection: "row" as const, alignItems: "center" as const
 const yuvarlak = { width: 38, height: 38, borderRadius: 19, borderWidth: 1, borderColor: "rgba(255,255,255,0.18)", backgroundColor: "rgba(255,255,255,0.06)", alignItems: "center" as const, justifyContent: "center" as const };
 
 type Sekme = "bugun" | "oku" | "hafizlik" | "pomodoro" | "teknik";
-type Mod = "sure" | "cuz" | "sayfa";
-type OkuAyar = { mod: Mod; sure: number; cuz: number; sayfa: number; meal: string; mealGoster: boolean; ezber: boolean; yazi: number };
+type Mod = "sure" | "cuz" | "sayfa" | "ayet";
+type OkuAyar = { mod: Mod; sure: number; cuz: number; sayfa: number; meal: string; mealGoster: boolean; ezber: boolean; yazi: number; ayet?: number; ayetDevam?: boolean };
 const OKU_VARSAYILAN: OkuAyar = { mod: "sure", sure: 36, cuz: 1, sayfa: 440, meal: "tr.vakfi", mealGoster: true, ezber: false, yazi: 1 };
 
 const ALTIN = "#e8c872";
@@ -258,17 +258,28 @@ function OkuDinle({ font }: { font?: string }) {
   const sayfaCaliyor = t.aktif && t.toplam > 2 && t.parca?.sayfa === sayfa;
   const fs = 26 * a.yazi;
 
-  return (
-    <View>
-      {/* Mod seçimi */}
+  const modSecici = (
       <View style={{ flexDirection: "row", backgroundColor: R.kart, borderRadius: 18, padding: 4, borderWidth: 1, borderColor: R.cizgi, marginBottom: 10 }}>
-        {([["sure", "📜 Sure"], ["cuz", "📚 Cüz"], ["sayfa", "📄 Sayfa"]] as [Mod, string][]).map(([m, ad]) => (
+        {([["ayet", "🎯 Ayet"], ["sure", "📜 Sure"], ["cuz", "📚 Cüz"], ["sayfa", "📄 Sayfa"]] as [Mod, string][]).map(([m, ad]) => (
           <Pressable key={m} onPress={() => { titret(); guncelle({ mod: m }); }} style={{ flex: 1, borderRadius: 14, overflow: "hidden" }}>
-            {a.mod === m ? <LinearGradient colors={[ALTIN, "#c99a3e"]} style={{ paddingVertical: 10, alignItems: "center" }}><Text style={{ color: "#1a1408", fontWeight: "800" }}>{ad}</Text></LinearGradient>
-              : <View style={{ paddingVertical: 10, alignItems: "center" }}><Text style={{ color: R.yazi, fontWeight: "600" }}>{ad}</Text></View>}
+            {a.mod === m ? <LinearGradient colors={[ALTIN, "#c99a3e"]} style={{ paddingVertical: 10, alignItems: "center" }}><Text style={{ color: "#1a1408", fontWeight: "800", fontSize: 13 }}>{ad}</Text></LinearGradient>
+              : <View style={{ paddingVertical: 10, alignItems: "center" }}><Text style={{ color: R.yazi, fontWeight: "600", fontSize: 13 }}>{ad}</Text></View>}
           </Pressable>
         ))}
       </View>
+  );
+  if (a.mod === "ayet") return (
+    <View>
+      {modSecici}
+      <AyetModu a={a} guncelle={guncelle} font={font} sureSec={() => setSureAcik(true)} kariSec={() => setKariAcik(true)} />
+      <SureSecici acik={sureAcik} kapat={() => setSureAcik(false)} sec={(n) => guncelle({ sure: n, ayet: 1, sayfa: SURE_SAYFA[n - 1] })} />
+      <KariSecici acik={kariAcik} kapat={() => setKariAcik(false)} />
+    </View>
+  );
+
+  return (
+    <View>
+      {modSecici}
 
       <Kart>
         {a.mod === "sure" ? (
@@ -420,6 +431,100 @@ function OkuDinle({ font }: { font?: string }) {
       <Text style={{ color: R.soluk, fontSize: 11, marginTop: 10, textAlign: "center" }}>Metin & meal: alquran.cloud ({MEALLER[a.meal]}) • Ses: everyayah.com • Hat: Amiri Quran</Text>
       <SureSecici acik={sureAcik} kapat={() => setSureAcik(false)} sec={(n) => guncelle({ sure: n, sayfa: SURE_SAYFA[n - 1] })} />
       <KariSecici acik={kariAcik} kapat={() => setKariAcik(false)} />
+    </View>
+  );
+}
+
+// ---------- 🎯 Ayet modu: tek ayet seç, dinle, tekrarla (ezber) ----------
+function AyetModu({ a, guncelle, font, sureSec, kariSec }: { a: OkuAyar; guncelle: (y: Partial<OkuAyar>) => void; font?: string; sureSec: () => void; kariSec: () => void }) {
+  const t = useTilavet();
+  const no = Math.min(AYET_SAYISI[a.sure - 1], Math.max(1, a.ayet || 1));
+  const [ayet, setAyet] = useState<Ayet | null>(null);
+  const [hata, setHata] = useState("");
+  const [yazi, setYazi] = useState("");
+  const kari = kariBul(t.kari);
+  useEffect(() => {
+    let iptal = false; setHata("");
+    ayetGetir(a.sure, no, no, a.meal).then((l) => { if (!iptal) setAyet(l[0] || null); }).catch(() => { if (!iptal) setHata("Ayet yüklenemedi (internet)."); });
+    return () => { iptal = true; };
+  }, [a.sure, no, a.meal]);
+  // "sonraki ayete geç" açıkken çalan ayeti takip et
+  useEffect(() => { if (t.aktif && !t.parca?.besmele && t.parca && (t.parca.sure !== a.sure || t.parca.no !== no)) guncelle({ sure: t.parca.sure, ayet: t.parca.no }); }, [t.parca?.sure, t.parca?.no]);
+  const sec = (n: number) => { titret(); guncelle({ ayet: Math.min(AYET_SAYISI[a.sure - 1], Math.max(1, n)) }); };
+  const calan = t.aktif && t.parca?.sure === a.sure && (t.parca?.no === no || !!t.parca?.besmele);
+  const dinle = () => {
+    titret();
+    if (calan) { T.durdur(); return; }
+    const devam = a.ayetDevam ? async (son: T.Parca) => (son.no < AYET_SAYISI[son.sure - 1] ? [{ sure: son.sure, no: son.no + 1 }] : null) : undefined;
+    T.cal([{ sure: a.sure, no }], 0, devam);
+  };
+  const fs = 30 * a.yazi;
+  return (
+    <View>
+      <Kart>
+        <Pressable onPress={sureSec} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: R.soluk, fontSize: 12, fontWeight: "600" }}>SURE</Text>
+            <Text style={{ color: "#fff", fontSize: 20, fontWeight: "800" }}>{a.sure}. {SURELER[a.sure - 1]}</Text>
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: R.hap, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14 }}>
+            <Text style={{ color: "#fff", fontWeight: "700" }}>Değiştir</Text><Ionicons name="chevron-down" size={16} color="#fff" />
+          </View>
+        </Pressable>
+        <Text style={{ color: R.soluk, fontSize: 12, fontWeight: "600", marginTop: 14, marginBottom: 8 }}>AYET</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Pressable onPress={() => sec(no - 1)} disabled={no <= 1} style={[yuvarlak, { width: 48, height: 48, borderRadius: 24, opacity: no <= 1 ? 0.4 : 1 }]}><Ionicons name="remove" size={24} color="#fff" /></Pressable>
+          <View style={{ flex: 1, alignItems: "center" }}>
+            <TextInput value={yazi} onChangeText={setYazi} keyboardType="number-pad" placeholder={String(no)} placeholderTextColor="#fff"
+              onSubmitEditing={() => { if (Number(yazi)) sec(Number(yazi)); setYazi(""); }} onBlur={() => { if (Number(yazi)) sec(Number(yazi)); setYazi(""); }}
+              style={{ color: "#fff", fontSize: 34, fontWeight: "900", textAlign: "center", minWidth: 90, padding: 0 }} />
+            <Text style={{ color: ALTIN, fontSize: 12 }}>/ {AYET_SAYISI[a.sure - 1]} ayet • dokun → numara yaz</Text>
+          </View>
+          <Pressable onPress={() => sec(no + 1)} disabled={no >= AYET_SAYISI[a.sure - 1]} style={[yuvarlak, { width: 48, height: 48, borderRadius: 24, opacity: no >= AYET_SAYISI[a.sure - 1] ? 0.4 : 1 }]}><Ionicons name="add" size={24} color="#fff" /></Pressable>
+        </View>
+        <Pressable onPress={kariSec} style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 14, padding: 10, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.04)", borderWidth: 1, borderColor: R.cizgi }}>
+          <KariAvatar ad={kari.ad} secili boyut={36} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: "#fff", fontWeight: "800" }}>{kari.ad}</Text>
+            <Text style={{ color: ALTIN, fontSize: 11.5 }}>{kari.tarz} • {kari.kbps} kbps • değiştir</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={R.soluk} />
+        </Pressable>
+        <Text style={[us.etiket, { marginTop: 12 }]}>🔁 Tekrar sayısı</Text>
+        <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
+          {[1, 3, 5, 7, 10, 20].map((n) => <Hap key={n} yazi={n === 1 ? "1 kez" : n + "x"} secili={t.tekrar === n} onPress={() => T.ayarla({ tekrar: n })} />)}
+        </View>
+        <Text style={[us.etiket, { marginTop: 10 }]}>⏱ Hız</Text>
+        <View style={{ flexDirection: "row", gap: 6 }}>
+          {[0.75, 1, 1.25, 1.5].map((n) => <Hap key={n} yazi={n + "x"} secili={t.hiz === n} onPress={() => T.ayarla({ hiz: n })} />)}
+        </View>
+        <View style={{ height: 1, backgroundColor: R.cizgi, marginTop: 12 }} />
+        <AnahtarSatiri simge="⏭" baslik="Bitince sonraki ayete geç" alt={a.ayetDevam ? "Ayetler sırayla devam eder" : "Yalnız seçili ayet okunur"} acik={!!a.ayetDevam} renk={ALTIN} onChange={(v) => guncelle({ ayetDevam: v })} />
+        <AnahtarSatiri simge="📝" baslik="Meal" acik={a.mealGoster} renk={ALTIN} onChange={(v) => guncelle({ mealGoster: v })} />
+      </Kart>
+
+      <LinearGradient colors={[ALTIN + "26", "rgba(20,18,40,0.8)"]} style={{ borderRadius: 26, borderWidth: 1.5, borderColor: calan ? ALTIN : ALTIN + "66", padding: 18, marginBottom: 12 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+          <Text style={{ color: ALTIN, fontWeight: "800" }}>{SURELER[a.sure - 1]} • {no}. ayet</Text>
+          {ayet ? <Text style={{ color: R.soluk, fontSize: 12 }}>{ayet.sureArapca}</Text> : null}
+        </View>
+        {hata ? <Text style={{ color: R.kirmizi, textAlign: "center", marginVertical: 20 }}>{hata}</Text> : !ayet ? <ActivityIndicator color={ALTIN} style={{ marginVertical: 30 }} /> : (
+          <>
+            <Text style={[ARAPCA, { fontFamily: font, fontSize: fs, lineHeight: fs * 1.95, textAlign: "center" }]}>{ayet.arapca} <Text style={{ color: ALTIN, fontSize: fs * 0.8 }}>﴿{arapRakam(no)}﴾</Text></Text>
+            {a.mealGoster ? <Text style={{ color: "#d9def7", fontSize: 15.5 * a.yazi, lineHeight: 24 * a.yazi, marginTop: 8, textAlign: "center" }}>{ayet.meal}</Text> : null}
+          </>
+        )}
+        <Pressable onPress={dinle} style={{ alignSelf: "center", marginTop: 16, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: calan ? "#fff" : ALTIN, paddingHorizontal: 22, paddingVertical: 13, borderRadius: 999 }}>
+          {calan && t.yukleniyor ? <ActivityIndicator color="#1a1408" /> : <Ionicons name={calan ? "stop" : "play"} size={20} color="#1a1408" />}
+          <Text style={{ color: "#1a1408", fontWeight: "900", fontSize: 15 }}>
+            {calan ? `Durdur${t.tekrar > 1 ? ` (${t.tekrarSayac}/${t.tekrar})` : ""}` : `Bu ayeti dinle${t.tekrar > 1 ? ` • ${t.tekrar} kez` : ""}`}
+          </Text>
+        </Pressable>
+      </LinearGradient>
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        <Dugme ikincil yazi="‹ Önceki ayet" onPress={() => sec(no - 1)} devreDisi={no <= 1} style={{ flex: 1 }} />
+        <Dugme ikincil yazi="Sonraki ayet ›" onPress={() => sec(no + 1)} devreDisi={no >= AYET_SAYISI[a.sure - 1]} style={{ flex: 1 }} />
+      </View>
     </View>
   );
 }

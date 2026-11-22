@@ -10,7 +10,8 @@ import { KULLANIM_MODLARI, SOHBET_TARZLARI } from "../beyin";
 import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from "expo-audio";
 import { Camera } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
-import { Linking, Platform } from "react-native";
+import { AppState, Linking, Platform } from "react-native";
+import * as Erisim from "../../modules/arex-erisim";
 import { biyometrikVarMi, kilitAcikMi, pinAyarla } from "../Kilit";
 import { guncellemeDenetle, guncellemeyiIndir, mevcutSurum, type Guncelleme } from "../guncelleme";
 import { anahtar, ANAHTAR_ADLARI, anahtarKaydet, maskele, profilKaydet, profilOku, sohbetleriOku, type AnahtarAdi, type Profil } from "../depo";
@@ -36,6 +37,30 @@ function Anahtar({ etiket, deger, onChange }: { etiket: string; deger: boolean; 
       <Text style={{ color: R.yazi, fontSize: 15, flex: 1 }}>{etiket}</Text>
       <GorselAnahtar acik={deger} onChange={onChange} />
     </Pressable>
+  );
+}
+
+/** ♿ Telefon erişimi (Erişilebilirlik Servisi): durum + aç düğmesi; uygulamaya dönünce durumu yeniler */
+function TelefonErisimi() {
+  const [acik, setAcik] = useState(Erisim.etkinMi());
+  useEffect(() => {
+    const a = AppState.addEventListener("change", (d) => { if (d === "active") setAcik(Erisim.etkinMi()); });
+    return () => a.remove();
+  }, []);
+  if (Platform.OS !== "android" || !Erisim.destekVar()) return null;
+  return (
+    <View>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 6 }}>
+        <Text style={[us.etiket, { flex: 1, marginBottom: 0 }]}>📱 Telefon erişimi (tam asistan)</Text>
+        <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: acik ? R.yesil + "33" : R.kirmizi + "33", borderWidth: 1, borderColor: acik ? R.yesil : R.kirmizi }}>
+          <Text style={{ color: acik ? R.yesil : R.kirmizi, fontWeight: "800", fontSize: 12 }}>{acik ? "● AÇIK" : "● KAPALI"}</Text>
+        </View>
+      </View>
+      <Text style={[us.alt, { marginBottom: 8 }]}>Açınca AREX senin komutunla ekranı okur/özetler, düğmelere dokunur, yazar, kaydırır; geri, ana ekran, bildirimler, kilitle ve uygulama açma yapar. Ekran içeriğini kaydetmez; yalnız "ekranı özetle" dediğinde yapay zekâya gönderir.</Text>
+      <Text style={[us.alt, { marginBottom: 10, fontSize: 12.5 }]}>Örnekler: "ekranı özetle" • "Gönder'e dokun" • "yaz: geliyorum" • "aşağı kaydır" • "geri" • "ana ekran" • "bildirimleri aç" • "google aç" • "telefonu kilitle"</Text>
+      <Dugme ikincil={acik} yazi={acik ? "⚙️ Erişim ayarlarını aç" : "♿ Erişimi aç"} onPress={() => Erisim.ayarlariAc()} />
+      {!acik ? <Text style={[us.alt, { fontSize: 12, marginTop: 8 }]}>Açılan ekranda: Yüklü uygulamalar → <Text style={{ color: "#fff", fontWeight: "700" }}>AREX AI Asistan</Text> → Aç. (Samsung "kısıtlanmış ayar" derse: Ayarlar → Uygulamalar → AREX AI → ⋮ → Kısıtlanmış ayarlara izin ver.)</Text> : null}
+    </View>
   );
 }
 
@@ -208,6 +233,8 @@ function GuvenlikBolumu({ Bolum, Anahtar }: { Bolum: any; Anahtar: any }) {
           <Dugme kucuk yazi="AREX'i varsayılan asistan yap" onPress={() => Linking.sendIntent("android.settings.VOICE_INPUT_SETTINGS").catch(() => Linking.sendIntent("android.settings.MANAGE_DEFAULT_APPS_SETTINGS").catch(() => Linking.openSettings()))} />
         </View>
       ) : null}
+      <View style={{ height: 1, backgroundColor: R.cizgi, marginVertical: 14 }} />
+      <TelefonErisimi />
       <View style={{ height: 1, backgroundColor: R.cizgi, marginVertical: 14 }} />
       <Text style={us.etiket}>Uygulama kilidi {kilit ? "🔒 açık" : "🔓 kapalı"}</Text>
       <Text style={[us.alt, { marginBottom: 8 }]}>Açılışta PIN{bio ? " ya da parmak izi / yüz tanıma" : ""} ister; AREX yalnızca sana özel kalır. API anahtarların uygulamada hiçbir yerde açık gösterilmez.</Text>

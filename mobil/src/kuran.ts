@@ -39,7 +39,7 @@ export async function ayetler(sure: number, bas = 1, son = bas, meal = "tr.vakfi
   const limit = Math.min(30, Math.max(1, son - bas + 1));
   const d = await json(`https://api.alquran.cloud/v1/surah/${sure}/editions/quran-uthmani,${MEALLER[meal] ? meal : "tr.vakfi"},ar.alafasy?offset=${bas - 1}&limit=${limit}`);
   const [ar, tr, ses] = d.data;
-  return ar.ayahs.map((a: any, i: number) => ({ sure, sureAd: SURELER[sure - 1], sureArapca: ar.name, no: a.numberInSurah, arapca: a.text, meal: tr.ayahs[i].text, ses: ses.ayahs[i].audio }));
+  return ar.ayahs.map((a: any, i: number) => ({ sure, sureAd: SURELER[sure - 1], sureArapca: ar.name, no: a.numberInSurah, arapca: besmeleAyir(a.text, sure, a.numberInSurah), meal: tr.ayahs[i].text, ses: ses.ayahs[i].audio }));
 }
 
 const bugun = () => new Date().toISOString().slice(0, 10);
