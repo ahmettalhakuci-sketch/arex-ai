@@ -43,6 +43,12 @@ class AsistanActivity : ReactActivity() {
     overridePendingTransition(0, 0)
   }
 
+  /** Ana AREX (⤢ büyüt) ya da başka uygulama öne gelince bu pencere görünmez olur → güvenle kapan */
+  override fun onStop() {
+    super.onStop()
+    if (!isFinishing) finish()
+  }
+
   /** Ana ekrana / başka uygulamaya geçilince kart açık kalmasın */
   override fun onUserLeaveHint() {
     super.onUserLeaveHint()
