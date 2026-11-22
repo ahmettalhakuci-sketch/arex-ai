@@ -30,7 +30,8 @@ header{display:flex;align-items:center;justify-content:space-between;padding:14p
 #gozBtn::before{content:none}
 @media (max-width:480px){#gozBtn{font-size:12px;padding:8px 12px}}
 /* ✨ PREMIUM TAM EKRAN SES MODU ("AREX" ile uyanınca) — sade, büyük küre, ışıltılı arka plan */
-body.tamEkran header,body.tamEkran .karakterler,body.tamEkran .persona-alt,body.tamEkran #kamera,body.tamEkran #cevir,body.tamEkran #ekran{display:none!important}
+body.tamEkran header,body.tamEkran .persona-alt,body.tamEkran #ekran{display:none!important}
+body.tamEkran .karakterler{justify-content:flex-start;padding:0 14px}
 body.tamEkran .aurora{opacity:1;filter:blur(60px) saturate(1.35)}
 body.tamEkran #sahne{justify-content:center;gap:10px}
 body.tamEkran .kure{width:min(300px,72vw);height:min(300px,72vw);box-shadow:0 0 90px color-mix(in srgb,var(--acc) 70%,transparent),0 0 180px color-mix(in srgb,var(--acc2) 40%,transparent)}
@@ -611,6 +612,8 @@ function yaziGonder() {
 }
 
 $("basla").onclick = () => aktif ? bitir() : basla();
+// Uygulamadan komut: başka sekmeye geçilince konuşmayı bitir (mikrofon arkada açık kalmasın)
+window.AREX_KOMUT = (k) => { if (k === "bitir" && aktif) bitir(); };
 if (CFG.tamEkran) document.body.classList.add("tamEkran");
 // "Konuşmak için dokun": küreye dokunmak da başlatır/durdurur
 $("kure").style.cursor = "pointer";

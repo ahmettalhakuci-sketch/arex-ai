@@ -2,7 +2,7 @@
 import React, { useEffect, useRef } from "react";
 import { Platform, View } from "react-native";
 
-type Props = { html: string; ayar?: Record<string, unknown>; onMesaj?: (veri: any) => void };
+type Props = { html: string; ayar?: Record<string, unknown>; onMesaj?: (veri: any) => void; /** Değişince sayfada window.AREX_KOMUT(komut) çağrılır (ör. "bitir") */ komut?: string };
 
 function enjekte(html: string, ayar?: Record<string, unknown>) {
   if (!ayar) return html;
@@ -10,12 +10,20 @@ function enjekte(html: string, ayar?: Record<string, unknown>) {
   return html.replace("<head>", "<head>" + js);
 }
 
-export default function WebSayfa({ html, ayar, onMesaj }: Props) {
+export default function WebSayfa({ html, ayar, onMesaj, komut }: Props) {
   const kaynak = enjekte(html, ayar);
+  const wv = useRef<any>(null);
+  useEffect(() => {
+    if (!komut) return;
+    const js = `try{window.AREX_KOMUT&&window.AREX_KOMUT(${JSON.stringify(komut.split("#")[0])})}catch(e){};true;`;
+    if (Platform.OS === "web") { try { (document.querySelector("iframe") as any)?.contentWindow?.AREX_KOMUT?.(komut.split("#")[0]); } catch {} }
+    else wv.current?.injectJavaScript(js);
+  }, [komut]);
   if (Platform.OS === "web") return <IframeSayfa html={kaynak} onMesaj={onMesaj} />;
   const { WebView } = require("react-native-webview");
   return (
     <WebView
+      ref={wv}
       originWhitelist={["*"]}
       source={{ html: kaynak, baseUrl: "https://arex.local/" }}
       javaScriptEnabled

@@ -163,13 +163,114 @@ export function HafizaKartlari({ yas }: { yas: string }) {
   );
 }
 
+// ---------- 🎨 Renkler & Şekiller ----------
+const RENKLER: [string, string][] = [["kırmızı", "#ff4d4d"], ["mavi", "#3b82f6"], ["sarı", "#facc15"], ["yeşil", "#22c55e"], ["mor", "#a855f7"], ["turuncu", "#f97316"], ["pembe", "#ec4899"]];
+const SEKILLER: [string, string][] = [["daire", "●"], ["kare", "■"], ["üçgen", "▲"], ["yıldız", "★"], ["kalp", "♥"]];
+export function RenkSekil() {
+  const yeni = () => {
+    const sec = karistir(RENKLER.flatMap(([rad, r]) => SEKILLER.map(([sad, s]) => ({ rad, r, sad, s })))).slice(0, 4);
+    return { sec, hedef: sec[rnd(4)] };
+  };
+  const [s, setS] = useState(yeni);
+  const [secim, setSecim] = useState<number | null>(null);
+  const [puan, setPuan] = useState({ d: 0, t: 0 });
+  useEffect(() => { soyle(`${s.hedef.rad} ${s.hedef.sad} hangisi?`); }, [s]);
+  const sec = (i: number) => {
+    if (secim !== null) return; titret(); setSecim(i);
+    const ok = s.sec[i] === s.hedef; setPuan((p) => ({ d: p.d + (ok ? 1 : 0), t: p.t + 1 })); soyle(ok ? "Çok güzel!" : "Tekrar bakalım");
+    setTimeout(() => { setSecim(null); setS(yeni()); }, 1300);
+  };
+  return (
+    <View>
+      <Puan dogru={puan.d} toplam={puan.t} />
+      <Kart renk={["#5b2a86", "#14183a"]}><Text style={{ color: "#fff", fontSize: 26, fontWeight: "900", textAlign: "center" }}>{s.hedef.rad.toLocaleUpperCase("tr")} {s.hedef.sad.toLocaleUpperCase("tr")} hangisi?</Text></Kart>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "space-between" }}>
+        {s.sec.map((x, i) => (
+          <Pressable key={i} onPress={() => sec(i)} style={{ width: "47.5%", aspectRatio: 1.25, borderRadius: 22, alignItems: "center", justifyContent: "center", borderWidth: 2,
+            backgroundColor: "rgba(255,255,255,0.06)", borderColor: secim === null ? "rgba(255,255,255,0.12)" : x === s.hedef ? "#2ee59d" : i === secim ? "#ff4d6d" : "rgba(255,255,255,0.12)" }}>
+            <Text style={{ fontSize: 70, color: x.r }}>{x.s}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ---------- 🔤 Harf Avı (ilk harf) ----------
+const HARF_KELIME: [string, string][] = [["🍎", "Elma"], ["🐱", "Kedi"], ["🐶", "Köpek"], ["🌙", "Ay"], ["📖", "Kitap"], ["🏠", "Ev"], ["🌳", "Ağaç"], ["🐦", "Kuş"], ["🚗", "Araba"], ["⭐", "Yıldız"], ["🍞", "Ekmek"], ["🌸", "Çiçek"], ["🐟", "Balık"], ["🦁", "Aslan"], ["🍌", "Muz"], ["🐝", "Arı"], ["🥕", "Havuç"], ["🍉", "Karpuz"], ["⚽", "Top"], ["🐢", "Kaplumbağa"]];
+export function HarfAvi() {
+  const yeni = () => { const d = HARF_KELIME[rnd(HARF_KELIME.length)]; const dogru = d[1][0]; const harfler = karistir(Array.from(new Set([dogru, ...karistir("ABCÇDEFGHIİKLMNOÖPRSŞTUÜYZ".split("")).filter((h) => h !== dogru).slice(0, 3)]))); return { d, dogru, harfler }; };
+  const [s, setS] = useState(yeni);
+  const [secim, setSecim] = useState<string | null>(null);
+  const [puan, setPuan] = useState({ d: 0, t: 0 });
+  useEffect(() => { soyle(`${s.d[1]} hangi harfle başlar?`); }, [s]);
+  const sec = (h: string) => {
+    if (secim) return; titret(); setSecim(h);
+    const ok = h === s.dogru; setPuan((p) => ({ d: p.d + (ok ? 1 : 0), t: p.t + 1 })); soyle(ok ? `Evet! ${s.d[1]}, ${s.dogru} harfiyle başlar` : `${s.d[1]}, ${s.dogru} harfiyle başlar`);
+    setTimeout(() => { setSecim(null); setS(yeni()); }, 1700);
+  };
+  return (
+    <View>
+      <Puan dogru={puan.d} toplam={puan.t} />
+      <Kart renk={["#8a3c0f", "#14183a"]}>
+        <Text style={{ fontSize: 80, textAlign: "center" }}>{s.d[0]}</Text>
+        <Text style={{ color: "#ffe2c7", fontSize: 22, fontWeight: "800", textAlign: "center" }}>{secim ? s.d[1] : "_" + s.d[1].slice(1).toLocaleLowerCase("tr")}</Text>
+        <Text style={{ color: "#ffd9b8", textAlign: "center", fontSize: 14, marginTop: 4 }}>Hangi harfle başlar?</Text>
+      </Kart>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "space-between" }}>
+        {s.harfler.map((h) => <Secenek key={h} yazi={h} onPress={() => sec(h)} durum={!secim ? undefined : h === s.dogru ? "dogru" : h === secim ? "yanlis" : undefined} />)}
+      </View>
+    </View>
+  );
+}
+
+// ---------- 💡 Bil Bakalım (yaşa göre doğru/yanlış) ----------
+const BILGILER: Record<string, [string, boolean, string][]> = {
+  "3-6": [["Kediler miyavlar.", true, "Evet, kediler miyav der!"], ["Balıklar ağaçta yaşar.", false, "Balıklar suda yaşar."], ["Güneş geceleri parlar.", false, "Geceleri ay ve yıldızlar görünür."], ["İnekler süt verir.", true, "Evet, inekler süt verir."], ["Kar sıcaktır.", false, "Kar soğuktur."], ["Kuşların kanatları vardır.", true, "Evet, kuşlar kanatlarıyla uçar."]],
+  "7-9": [["Dünya Güneş'in etrafında döner.", true, "Evet, bir turu yaklaşık 365 günde tamamlar."], ["Örümceklerin 6 bacağı vardır.", false, "Örümceklerin 8 bacağı vardır."], ["Su 100 derecede kaynar.", true, "Evet, deniz seviyesinde 100 °C'de kaynar."], ["Bitkiler güneş ışığıyla besin üretir.", true, "Buna fotosentez denir."], ["Ay kendi ışığını üretir.", false, "Ay, Güneş'in ışığını yansıtır."], ["Bir haftada 8 gün vardır.", false, "Bir haftada 7 gün vardır."]],
+  "10-12": [["Işık sesten hızlıdır.", true, "Bu yüzden şimşeği gök gürültüsünden önce görürüz."], ["Yarasa bir kuştur.", false, "Yarasa uçabilen bir memelidir."], ["İnsan vücudunda 206 kemik vardır.", true, "Yetişkinlerde 206 kemik bulunur."], ["Venüs Güneş'e en yakın gezegendir.", false, "Güneş'e en yakın gezegen Merkür'dür."], ["Su molekülü H₂O'dur.", true, "İki hidrojen ve bir oksijen."], ["Kalp vücudun sol tarafındadır, tamamen.", false, "Kalp göğsün ortasında, biraz sola yatıktır."]],
+};
+export function BilBakalim({ yas }: { yas: string }) {
+  const liste = BILGILER[yas] || BILGILER["7-9"];
+  const [i, setI] = useState(() => rnd(liste.length));
+  const [secim, setSecim] = useState<boolean | null>(null);
+  const [puan, setPuan] = useState({ d: 0, t: 0 });
+  const [c, dogru, aciklama] = liste[i];
+  useEffect(() => { soyle(c + " Doğru mu, yanlış mı?"); }, [i]);
+  const sec = (b: boolean) => {
+    if (secim !== null) return; titret(); setSecim(b);
+    const ok = b === dogru; setPuan((p) => ({ d: p.d + (ok ? 1 : 0), t: p.t + 1 })); soyle((ok ? "Bildin! " : "Aslında… ") + aciklama);
+    setTimeout(() => { setSecim(null); setI((x) => (x + 1 + rnd(liste.length - 1)) % liste.length); }, 2600);
+  };
+  return (
+    <View>
+      <Puan dogru={puan.d} toplam={puan.t} />
+      <Kart renk={["#0f4c75", "#14183a"]}>
+        <Text style={{ color: "#fff", fontSize: 22, fontWeight: "800", textAlign: "center", lineHeight: 31 }}>{c}</Text>
+        {secim !== null ? <Text style={{ color: secim === dogru ? "#7cf5c0" : "#ffb3c1", textAlign: "center", marginTop: 10, fontSize: 15 }}>{secim === dogru ? "✅ " : "💡 "}{aciklama}</Text> : null}
+      </Kart>
+      <View style={{ flexDirection: "row", gap: 10 }}>
+        {([[true, "✅ Doğru", "#2ee59d"], [false, "❌ Yanlış", "#ff4d6d"]] as const).map(([b, ad, r]) => (
+          <Pressable key={ad} onPress={() => sec(b)} style={{ flex: 1, borderRadius: 20, paddingVertical: 20, alignItems: "center", borderWidth: 2, borderColor: secim !== null && b === dogru ? r : "rgba(255,255,255,0.14)", backgroundColor: r + "22" }}>
+            <Text style={{ color: "#fff", fontSize: 20, fontWeight: "900" }}>{ad}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+type Oyun = "mat" | "kelime" | "hafiza" | "renk" | "harf" | "bil";
 // ---------- Oyun seçici ----------
 export default function CocukOyunlari({ yas }: { yas: string }) {
-  const [oyun, setOyun] = useState<"mat" | "kelime" | "hafiza" | null>(null);
-  const OYUNLAR: ["mat" | "kelime" | "hafiza", string, string, string, [string, string]][] = [
+  const [oyun, setOyun] = useState<Oyun | null>(null);
+  const OYUNLAR: [Oyun, string, string, string, [string, string]][] = [
     ["mat", "🧮", "Matematik Yarışı", yas === "3-6" ? "Saymayı öğren" : yas === "7-9" ? "Toplama • çıkarma" : "Çarpma • bölme", ["#7c5cff", "#4f8cff"]],
     ["kelime", "🌍", "Kelime Avı", "4 dilde kelimeler", ["#11998e", "#38ef7d"]],
     ["hafiza", "🧠", "Hafıza Kartları", "Eşleri bul", ["#f093fb", "#f5576c"]],
+    ["renk", "🎨", "Renkler & Şekiller", "Doğru renkli şekli bul", ["#a855f7", "#ec4899"]],
+    ["harf", "🔤", "Harf Avı", "Kelimenin ilk harfi", ["#f97316", "#facc15"]],
+    ["bil", "💡", "Bil Bakalım", "Doğru mu yanlış mı?", ["#0ea5e9", "#22d3ee"]],
   ];
   if (!oyun) return (
     <View style={{ gap: 12 }}>
@@ -195,6 +296,9 @@ export default function CocukOyunlari({ yas }: { yas: string }) {
       {oyun === "mat" && <MatematikYarisi yas={yas} />}
       {oyun === "kelime" && <KelimeAvi />}
       {oyun === "hafiza" && <HafizaKartlari yas={yas} />}
+      {oyun === "renk" && <RenkSekil />}
+      {oyun === "harf" && <HarfAvi />}
+      {oyun === "bil" && <BilBakalim yas={yas} />}
     </View>
   );
 }
