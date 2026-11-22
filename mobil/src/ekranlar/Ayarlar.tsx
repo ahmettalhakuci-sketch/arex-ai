@@ -12,6 +12,7 @@ import { Camera } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import { AppState, Linking, Platform } from "react-native";
 import * as Erisim from "../../modules/arex-erisim";
+import { izinIste } from "../izin";
 import { biyometrikVarMi, kilitAcikMi, pinAyarla } from "../Kilit";
 import { guncellemeDenetle, guncellemeyiIndir, mevcutSurum, type Guncelleme } from "../guncelleme";
 import { anahtar, ANAHTAR_ADLARI, anahtarKaydet, maskele, profilKaydet, profilOku, sohbetleriOku, type AnahtarAdi, type Profil } from "../depo";
@@ -58,8 +59,8 @@ function IzinlerKarti() {
   const satirlar: { ad: string; alt: string; ok: boolean | null; ac: () => void }[] = [
     { ad: "♿ Telefon erişimi", alt: "Ekranı oku, dokun, yaz, kaydır", ok: d.erisim, ac: () => Erisim.ayarAc("erisim") },
     { ad: "🔓 Kısıtlanmış ayarlar", alt: "Erişim gri/kapanıyorsa: ⋮ → Kısıtlanmış ayarlara izin ver", ok: d.erisim ? true : null, ac: () => Erisim.ayarAc("uygulama") },
-    { ad: "🎙️ Mikrofon", alt: "Sesli soru ve Canlı sohbet", ok: mik, ac: async () => { const r = await requestRecordingPermissionsAsync(); if (!r.granted) Erisim.ayarAc("uygulama"); yenile(); } },
-    { ad: "📷 Kamera", alt: "Canlı görüntü ve fotoğraf analizi", ok: kam, ac: async () => { const r = await Camera.requestCameraPermissionsAsync(); if (!r.granted) Erisim.ayarAc("uygulama"); yenile(); } },
+    { ad: "🎙️ Mikrofon", alt: "Sesli soru ve Canlı sohbet", ok: mik, ac: async () => { await izinIste("Mikrofon", requestRecordingPermissionsAsync); yenile(); } },
+    { ad: "📷 Kamera", alt: "Canlı görüntü ve fotoğraf analizi", ok: kam, ac: async () => { await izinIste("Kamera", Camera.requestCameraPermissionsAsync); yenile(); } },
     { ad: "✨ Yan tuş asistanı", alt: "Dijital asistan uygulaması → AREX AI", ok: d.asistanBiliniyor ? d.asistan : null, ac: () => Erisim.ayarAc("asistan") },
     { ad: "🔋 Pil kısıtlaması yok", alt: "Ekran kapalıyken tilavet kesilmesin", ok: d.pil, ac: () => Erisim.ayarAc("pil") },
     { ad: "🔔 Bildirimler", alt: "Hatırlatıcı ve pomodoro uyarıları", ok: null, ac: () => Erisim.ayarAc("bildirim") },
@@ -256,9 +257,9 @@ function GuvenlikBolumu({ Bolum, Anahtar }: { Bolum: any; Anahtar: any }) {
   };
   useEffect(() => { yenile(); }, []);
   const iste = async (k: string) => {
-    if (k === "mikrofon") await requestRecordingPermissionsAsync();
-    if (k === "kamera") await Camera.requestCameraPermissionsAsync();
-    if (k === "galeri") await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (k === "mikrofon") await izinIste("Mikrofon", requestRecordingPermissionsAsync);
+    if (k === "kamera") await izinIste("Kamera", Camera.requestCameraPermissionsAsync);
+    if (k === "galeri") await izinIste("Fotoğraflar", () => ImagePicker.requestMediaLibraryPermissionsAsync());
     yenile();
   };
   const IZINLER: [string, string, string][] = [["mikrofon", "🎙️ Mikrofon", "Sesli yazma ve canlı sohbet"], ["kamera", "📷 Kamera", "Fotoğraf, canlı görüntü, yüz analizi"], ["galeri", "🖼️ Fotoğraflar", "Galeriden fotoğraf/video analizi"]];

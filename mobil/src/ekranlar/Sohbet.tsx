@@ -12,6 +12,7 @@ import { cevapUret, KULLANIM_MODLARI, SOHBET_TARZLARI } from "../beyin";
 import { notKomutu, sohbetKaydet, sohbetleriOku, sohbettenOgren, yeniId, type Mesaj, type Sohbet } from "../depo";
 import GecmisPaneli from "../GecmisPaneli";
 import { telefonKomutu } from "../telefon";
+import { izinIste } from "../izin";
 import { SYMPY_KURALI, yanitiDogrula } from "../matematik";
 import { medyaSec, type Ek } from "../medya";
 import { anlat, sesiDurdur } from "../ses";
@@ -148,8 +149,7 @@ export default function SohbetEkrani({ disaridanMesaj, temizle, canliyaGit }: { 
       else Alert.alert("Anlaşılamadı", "Ses yazıya dökülemedi, tekrar dener misin?");
       return;
     }
-    const izin = await requestRecordingPermissionsAsync();
-    if (!izin.granted) { Alert.alert("İzin gerekli", "Sesli yazmak için mikrofon izni ver."); return; }
+    if (!(await izinIste("Mikrofon", requestRecordingPermissionsAsync))) return;
     await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
     await kaydedici.prepareToRecordAsync();
     kaydedici.record();

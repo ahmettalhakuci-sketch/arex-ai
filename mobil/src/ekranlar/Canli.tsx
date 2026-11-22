@@ -1,5 +1,6 @@
 // AREX — Canlı: Gemini Live (doğal sesli + kameralı gerçek zamanlı sohbet) ve cihaz içi Yerel Analiz
 import { requestRecordingPermissionsAsync } from "expo-audio";
+import { izinIste as izinIste2 } from "../izin";
 import { Camera } from "expo-camera";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Platform, Text, View } from "react-native";
@@ -21,11 +22,13 @@ export default function CanliEkrani({ sohbeteGonder, mini = false }: { sohbeteGo
   const [cfg, setCfg] = useState<Record<string, unknown> | null>(null);
   const [hata, setHata] = useState("");
 
-  const izinIste = async () => {
-    const a = await requestRecordingPermissionsAsync();
-    const k = await Camera.requestCameraPermissionsAsync();
-    setIzin(a.granted && k.granted);
-    if (!a.granted) setHata("Mikrofon izni gerekli (Ayarlar → Uygulamalar → AREX AI → İzinler).");
+  /** Mikrofon zorunlu, kamera isteğe bağlı (kamera reddedilse de sesli sohbet çalışır).
+   *  Açılışta sessizce sorar; düğmeyle basılınca soramıyorsa izin sayfasına yönlendirir (Samsung "bir daha sorma" durumu). */
+  const izinIste = async (dugme = false) => {
+    const mik = dugme ? await izinIste2("Mikrofon", requestRecordingPermissionsAsync) : (await requestRecordingPermissionsAsync()).granted;
+    try { await Camera.requestCameraPermissionsAsync(); } catch {}
+    setIzin(mik);
+    if (!mik) setHata("Mikrofon izni gerekli — aşağıdaki düğmeye dokun.");
   };
   useEffect(() => { if (Platform.OS !== "web") izinIste(); }, []);
 
@@ -52,7 +55,7 @@ export default function CanliEkrani({ sohbeteGonder, mini = false }: { sohbeteGo
       {!izin ? (
         <View style={{ padding: 20 }}>
           <Text style={us.alt}>Canlı sohbet ve yüz analizi için mikrofon ve kamera izni gerekli.</Text>
-          <Dugme yazi="İzin ver" onPress={izinIste} style={{ marginTop: 12 }} />
+          <Dugme yazi="İzin ver" onPress={() => izinIste(true)} style={{ marginTop: 12 }} />
           {hata ? <Text style={{ color: R.kirmizi, marginTop: 10 }}>{hata}</Text> : null}
         </View>
       ) : sekme === "canli" ? (

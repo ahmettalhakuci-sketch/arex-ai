@@ -2,6 +2,7 @@
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { Alert, Platform } from "react-native";
+import { izinIste } from "./izin";
 
 export type Ek = { uri: string; b64: string; mime: string; video: boolean; onizleme: string; ad: string };
 
@@ -39,8 +40,7 @@ async function gorselHazirla(uri: string): Promise<Ek> {
 export async function medyaSec(kaynak: "galeri" | "kamera" | "video"): Promise<Ek | null> {
   try {
     if (kaynak === "kamera") {
-      const izin = await ImagePicker.requestCameraPermissionsAsync();
-      if (!izin.granted) { Alert.alert("İzin gerekli", "Fotoğraf çekmek için kamera izni ver."); return null; }
+      if (!(await izinIste("Kamera", ImagePicker.requestCameraPermissionsAsync))) return null;
     }
     const ayar: ImagePicker.ImagePickerOptions = { mediaTypes: kaynak === "video" ? ["videos"] : ["images"], quality: 0.85, videoMaxDuration: 120 };
     const sonuc = kaynak === "kamera" ? await ImagePicker.launchCameraAsync(ayar) : await ImagePicker.launchImageLibraryAsync(ayar);
