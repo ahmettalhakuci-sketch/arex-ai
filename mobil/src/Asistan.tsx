@@ -56,7 +56,7 @@ function Panel() {
   useEffect(() => {
     if (motor !== "live" || !canli) return;
     baglandi.current = false;
-    const t = setTimeout(() => { if (!baglandi.current) { setMotor("hizli"); setBilgi("Live şu an yanıt vermiyor — ⚡ Hızlı moda geçtim"); setTimeout(() => setBilgi(""), 5000); } }, 7000);
+    const t = setTimeout(() => { if (!baglandi.current) { setMotor("hizli"); setBilgi("Kapsamlı mod şu an yanıt vermiyor — ⚡ Hızlı moda geçtim"); setTimeout(() => setBilgi(""), 5000); } }, 7000);
     return () => clearTimeout(t);
   }, [motor, canli]);
   // "AREX" ile uyandıysa: konuşan sahip mi? (ses imzası, cihaz içi) — değilse kişisel özellikler kilitli
@@ -268,7 +268,7 @@ function Panel() {
                   {bilgi ? <Text style={{ color: "#ffd08a", fontSize: 12, textAlign: "center", marginBottom: 4 }}>{bilgi}</Text> : null}
                   {/* Ses motoru seçici: altta zarif segment */}
                   <View style={{ flexDirection: "row", alignSelf: "center", padding: 3, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.05)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 10, marginTop: 4 }}>
-                    {([["hizli", "⚡ Hızlı"], ["live", "✨ Gemini Live"]] as const).map(([k, ad]) => (
+                    {([["hizli", "⚡ Hızlı"], ["live", "✨ Kapsamlı"]] as const).map(([k, ad]) => (
                       <Pressable key={k} onPress={() => { titret(); setMotor(k); }} style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 13, backgroundColor: motor === k ? "rgba(162,89,255,0.4)" : "transparent" }}>
                         <Text style={{ color: motor === k ? "#fff" : "#9aa3c7", fontSize: 12, fontWeight: "700" }}>{ad}</Text>
                       </Pressable>

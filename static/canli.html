@@ -21,6 +21,14 @@ header{display:flex;align-items:center;justify-content:space-between;padding:14p
 .marka{font-weight:700;letter-spacing:.4px;font-size:15px;opacity:.95}
 .marka b{background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
 .marka{white-space:nowrap}
+/* Asil görünüm: çizgi ikonlu cam düğmeler, sade çipler, harf aralıklı marka */
+.marka{letter-spacing:4px;font-weight:800}
+.btn{color:#eef2ff;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(8px)}
+.btn svg{display:block}
+.btn.ana{color:#fff}
+.karakterler button,.karakterler .kar{font-weight:600;letter-spacing:.2px}
+#gozBtn::before{content:none}
+@media (max-width:480px){#gozBtn{font-size:12px;padding:8px 12px}}
 /* ✨ PREMIUM TAM EKRAN SES MODU ("AREX" ile uyanınca) — sade, büyük küre, ışıltılı arka plan */
 body.tamEkran header,body.tamEkran .karakterler,body.tamEkran .persona-alt,body.tamEkran #kamera,body.tamEkran #cevir,body.tamEkran #ekran{display:none!important}
 body.tamEkran .aurora{opacity:1;filter:blur(60px) saturate(1.35)}
@@ -115,10 +123,10 @@ footer{padding:8px 16px calc(16px + env(safe-area-inset-bottom));display:flex;fl
 <div id="app">
   <div class="aurora"></div>
   <header>
-    <div class="marka">⚡ AREX <b>Live</b></div>
+    <div class="marka">AREX <b>•</b></div>
     <div class="canli-rozet" id="rozet"><span class="nokta"></span><span id="rozetYazi">HAZIR</span><span class="sure" id="sure"></span></div>
     <div class="ust-dugmeler">
-      <button class="mini" id="gozBtn" title="Göz koruma">👁️ Göz koruma</button>
+      <button class="mini" id="gozBtn" title="Göz koruma">Göz koruma</button>
       <button class="mini" id="ayarBtn" title="Ayarlar">⚙️</button>
     </div>
   </header>
@@ -135,12 +143,12 @@ footer{padding:8px 16px calc(16px + env(safe-area-inset-bottom));display:flex;fl
     <div class="hata" id="hata"></div>
     <div class="yazibar" id="yazibar"><input id="yazi" placeholder="Yazarak sor…" enterkeyhint="send"><button id="gonder">➤</button></div>
     <div class="bar">
-      <button class="btn" id="kamera" title="Kamera">📷</button>
-      <button class="btn" id="cevir" title="Kamerayı çevir">🔄</button>
-      <button class="btn ana" id="basla" title="Başlat / Bitir">🎙️</button>
-      <button class="btn" id="klavye" title="Yaz">⌨️</button>
-      <button class="btn" id="ekran" title="Ekran paylaş">🖥️</button>
-      <button class="btn" id="sessiz" title="Mikrofonu kapat">🔇</button>
+      <button class="btn" id="kamera" title="Kamera"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/></svg></button>
+      <button class="btn" id="cevir" title="Kamerayı çevir"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9a8 8 0 0 1 14-3l2 2"/><path d="M20 4v4h-4"/><path d="M20 15a8 8 0 0 1-14 3l-2-2"/><path d="M4 20v-4h4"/></svg></button>
+      <button class="btn ana" id="basla" title="Başlat / Bitir"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></button>
+      <button class="btn" id="klavye" title="Yaz"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10"/></svg></button>
+      <button class="btn" id="ekran" title="Ekran paylaş"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></button>
+      <button class="btn" id="sessiz" title="Mikrofonu kapat"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 10.5 6M19 11a7 7 0 0 1-.5 2.5"/><path d="M4 4l16 16"/></svg></button>
     </div>
   </footer>
   <div id="cekmece">
@@ -585,7 +593,7 @@ async function basla() {
   try { await mikrofonAc(); } catch (e) { hata("Mikrofona izin verilmedi (tarayıcı/uygulama ayarlarından izin ver; telefonda https gerekir)."); return; }
   aktif = true; kapatiliyor = false; modelSira = 0; devamHandle = null; sesTampon = []; yenidenDeneme = 0; modelSirasiHazirla();
   canliBaslangic = Date.now(); clearInterval(sureZamanlayici); sureZamanlayici = setInterval(rozetGuncelle, 500);
-  $("basla").classList.add("aktif"); $("basla").textContent = "✕";
+  $("basla").classList.add("aktif"); $("basla").innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
   await baglan();
 }
 function bitir() {
@@ -593,7 +601,7 @@ function bitir() {
   clearInterval(sureZamanlayici); canliBaslangic = 0; bekleyenYenileme = false; setTimeout(rozetGuncelle, 0);
   try { ws && ws.close(); } catch (e) {} ws = null;
   mikrofonKapat(); kameraKapat(); caliKes();
-  $("basla").classList.remove("aktif"); $("basla").textContent = "🎙️"; durumYaz("Konuşmak için dokun", "Sözünü kesebilir, kamerayı açıp gösterebilirsin");
+  $("basla").classList.remove("aktif"); $("basla").innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>'; durumYaz("Konuşmak için dokun", "Sözünü kesebilir, kamerayı açıp gösterebilirsin");
 }
 function yaziGonder() {
   const t = $("yazi").value.trim(); if (!t) return;
@@ -610,7 +618,7 @@ $("kure").onclick = () => $("basla").click();
 $("kamera").onclick = () => (kamStream && !ekranMi) ? kameraKapat() : kameraAc(false);
 $("ekran").onclick = () => (kamStream && ekranMi) ? kameraKapat() : kameraAc(true);
 $("cevir").onclick = () => { kamYuz = kamYuz === "user" ? "environment" : "user"; if (kamStream && !ekranMi) kameraAc(false); };
-$("sessiz").onclick = () => { sessiz = !sessiz; $("sessiz").classList.toggle("on", sessiz); $("sessiz").textContent = sessiz ? "🎤" : "🔇"; };
+$("sessiz").onclick = () => { sessiz = !sessiz; $("sessiz").classList.toggle("on", sessiz); $("sessiz").innerHTML = sessiz ? '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>' : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 10.5 6M19 11a7 7 0 0 1-.5 2.5"/><path d="M4 4l16 16"/></svg>'; };
 $("klavye").onclick = () => { $("yazibar").classList.toggle("on"); $("klavye").classList.toggle("on"); if ($("yazibar").classList.contains("on")) $("yazi").focus(); };
 $("ayarBtn").onclick = () => $("cekmece").classList.toggle("on");
 $("sahne").addEventListener("click", () => $("cekmece").classList.remove("on"));

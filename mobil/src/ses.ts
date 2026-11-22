@@ -23,7 +23,7 @@ async function calariDurdur() {
   try { await Speech.stop(); } catch {}
 }
 
-async function baytlariCal(bayt: Uint8Array) {
+export async function baytlariCal(bayt: Uint8Array) {
   await calariDurdur();
   let kaynak: string;
   if (Platform.OS === "web") {

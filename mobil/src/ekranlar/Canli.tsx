@@ -64,7 +64,7 @@ export default function CanliEkrani({ sohbeteGonder, mini = false, tam = false, 
     <View style={{ flex: 1, paddingTop: mini ? 0 : ic.top }}>
       <View style={{ flexDirection: "row", gap: 8, padding: 10, paddingBottom: 6, display: mini ? "none" : "flex" }}>
         <View style={{ flex: 1 }}><Hap yazi="⚡ Hızlı" secili={sekme === "hizli"} onPress={() => setSekme("hizli")} /></View>
-        <View style={{ flex: 1 }}><Hap yazi="✨ Live" secili={sekme === "canli"} onPress={() => setSekme("canli")} /></View>
+        <View style={{ flex: 1 }}><Hap yazi="✨ Kapsamlı" secili={sekme === "canli"} onPress={() => setSekme("canli")} /></View>
         <View style={{ flex: 1 }}><Hap yazi="🧠 Analiz" secili={sekme === "yerel"} onPress={() => setSekme("yerel")} /></View>
       </View>
       {sekme === "hizli" && !mini ? <HizliSes otomatik={false} kisitli={kisitli} /> : !izin ? (

@@ -8,13 +8,25 @@ import * as Speech from "expo-speech";
 import React, { useEffect, useRef, useState } from "react";
 import { Animated, Easing, Pressable, ScrollView, Text, View } from "react-native";
 import * as Erisim from "../modules/arex-erisim";
-import { seseUygun, sesiYaziyaDok, sohbetTamamla, type Rol } from "./ai";
+import { dogalSes, seseUygun, sesiYaziyaDok, sohbetTamamla, type Rol } from "./ai";
+import { baytlariCal, sesiDurdur } from "./ses";
 import { profilOzeti } from "./depo";
 import { izinIste } from "./izin";
 import { telefonKomutu } from "./telefon";
 import { titret } from "./ui";
 
 type Faz = "hazir" | "dinliyor" | "dusunuyor" | "konusuyor";
+/** Ses karakterleri: doğal insan sesi (Gemini TTS) + üslup */
+const KARAKTERLER: Record<string, { ad: string; anlatici: string; uslup: string }> = {
+  asistan: { ad: "✨ AREX", anlatici: "asistan", uslup: "" },
+  abi: { ad: "🧔 Abi", anlatici: "abi", uslup: "Güven veren, akıl veren bir ABİ gibi: 'kardeşim', 'aslanım' hitaplarıyla, sıcak ve kararlı." },
+  abla: { ad: "👧 Abla", anlatici: "abla", uslup: "Şefkatli, neşeli bir ABLA gibi: 'canım', 'tatlım' hitaplarıyla." },
+  anne: { ad: "👩 Anne", anlatici: "anne", uslup: "Sabırlı, sevgi dolu bir ANNE gibi: 'yavrum', 'kuzum' hitaplarıyla, dua eder gibi yumuşak." },
+  baba: { ad: "👨 Baba", anlatici: "baba", uslup: "Sakin, sağlam ve sevgi dolu bir BABA gibi: 'evladım' hitabıyla, kısa ve tecrübeli öğütlerle." },
+  dede: { ad: "👴 Dede", anlatici: "dede", uslup: "Bilge, tatlı dilli bir DEDE gibi: 'torunum' hitabıyla, atasözleri ve hikmetle." },
+  hoca: { ad: "🧑‍🏫 Hoca", anlatici: "hoca", uslup: "İyi bir ÖĞRETMEN gibi: net, sabırlı, adım adım, soru sorarak düşündüren." },
+  arkadas: { ad: "😄 Arkadaş", anlatici: "neseli", uslup: "Yakın bir ARKADAŞ gibi: rahat, esprili, samimi, 'kanka' tadında ama saygılı." },
+};
 const SES_KURALI = "Sen AREX'sin; kullanıcının yakın dostu gibi SESLİ konuşuyorsun: içten, sıcakkanlı, samimi, gerektiğinde esprili; ona değer verdiğini hissettir. Cevapların kısa (1-3 cümle), doğal konuşma Türkçesi; madde işareti, emoji, markdown, başlık YOK. " +
   "Önceki konuşmayı hatırla ve ona bağlan. Telefonda işlem yaptığını ASLA uydurma (arama, mesaj, uygulama açma vb. senin elinde değil).";
 
@@ -25,6 +37,8 @@ export default function HizliSes({ kisitli = false, otomatik = true }: { kisitli
   const [sen, setSen] = useState("");
   const [arex, setArex] = useState("");
   const [sure, setSure] = useState("");
+  const [kar, setKar] = useState("asistan");
+  const karRef = useRef("asistan"); karRef.current = kar;
   const gecmis = useRef<Rol[]>([]);
   const ses = useRef({ konustu: false, sessizBas: 0, bas: 0 });
   const fazRef = useRef<Faz>("hazir"); fazRef.current = faz;
@@ -41,7 +55,7 @@ export default function HizliSes({ kisitli = false, otomatik = true }: { kisitli
 
   const dinle = async () => {
     if (kapali.current) return;
-    Speech.stop();
+    Speech.stop(); sesiDurdur();
     if (!(await izinIste("Mikrofon", requestRecordingPermissionsAsync, getRecordingPermissionsAsync))) return;
     Erisim.uyanmaDuraklat(true);
     try {
@@ -79,7 +93,7 @@ export default function HizliSes({ kisitli = false, otomatik = true }: { kisitli
     if (!cevap) {
       const oz = kisitli ? "" : await profilOzeti().catch(() => "");
       const r = await sohbetTamamla([...gecmis.current.slice(-12), { role: "user", content: metin }],
-        { sistem: SES_KURALI + (oz ? "\nKullanıcı hakkında bilinenler: " + oz.slice(0, 800) : ""), maks: 260, sicaklik: 0.6 });
+        { sistem: SES_KURALI + (KARAKTERLER[karRef.current]?.uslup ? "\nKARAKTER: " + KARAKTERLER[karRef.current].uslup : "") + (oz ? "\nKullanıcı hakkında bilinenler: " + oz.slice(0, 800) : ""), maks: 260, sicaklik: 0.6 });
       cevap = r.metin ? seseUygun(r.metin) : "Şu an cevap veremedim, birazdan tekrar dener misin?";
     }
     gecmis.current = [...gecmis.current, { role: "user" as const, content: metin }, { role: "assistant" as const, content: cevap }].slice(-16);
@@ -87,10 +101,19 @@ export default function HizliSes({ kisitli = false, otomatik = true }: { kisitli
     setArex(cevap); konus(cevap);
   };
 
-  const konus = (metin: string) => {
+  /** Önce DOĞAL insan sesi (Gemini TTS, ~1-2 sn); olmazsa cihaz sesi anında */
+  const konus = async (metin: string) => {
     if (kapali.current) return;
-    setFaz("konusuyor");
-    Speech.speak(metin, { language: "tr-TR", rate: 1.05, pitch: 1.0,
+    setFaz("konusuyor"); fazRef.current = "konusuyor";
+    const zaman = new Promise<null>((r) => setTimeout(() => r(null), 4500));
+    const bayt = await Promise.race([dogalSes(metin, "sohbet", KARAKTERLER[karRef.current]?.anlatici || "asistan").catch(() => null), zaman]);
+    if (kapali.current || fazRef.current !== "konusuyor") return;
+    if (bayt) {
+      await baytlariCal(bayt);
+      if (!kapali.current && fazRef.current === "konusuyor") { setFaz("hazir"); dinle(); }
+      return;
+    }
+    Speech.speak(metin, { language: "tr-TR", rate: 1.0, pitch: 1.0,
       onDone: () => { if (!kapali.current) { setFaz("hazir"); dinle(); } },
       onStopped: () => { if (!kapali.current && fazRef.current === "konusuyor") setFaz("hazir"); },
       onError: () => setFaz("hazir") });
@@ -98,7 +121,7 @@ export default function HizliSes({ kisitli = false, otomatik = true }: { kisitli
 
   const dokun = () => {
     titret();
-    if (faz === "konusuyor") { Speech.stop(); dinle(); }  // sözünü kes
+    if (faz === "konusuyor") { fazRef.current = "hazir"; sesiDurdur(); Speech.stop(); dinle(); }  // sözünü kes
     else if (faz === "dinliyor") bitir();
     else if (faz === "hazir") dinle();
   };
@@ -150,6 +173,14 @@ export default function HizliSes({ kisitli = false, otomatik = true }: { kisitli
             <Text style={{ color: "#f3f5ff", fontSize: 16, lineHeight: 23 }}>{arex}</Text>
           </View>
         ) : null}
+      </ScrollView>
+      {/* Ses karakteri */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 40, marginTop: 8 }} contentContainerStyle={{ gap: 6, paddingHorizontal: 4 }}>
+        {Object.entries(KARAKTERLER).map(([k, v]) => (
+          <Pressable key={k} onPress={() => { titret(); setKar(k); }} style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, backgroundColor: kar === k ? "rgba(162,89,255,0.32)" : "rgba(255,255,255,0.05)", borderWidth: 1, borderColor: kar === k ? "rgba(190,170,255,0.7)" : "rgba(255,255,255,0.1)" }}>
+            <Text style={{ color: kar === k ? "#fff" : "#aab2d8", fontSize: 12.5, fontWeight: "700" }}>{v.ad}</Text>
+          </Pressable>
+        ))}
       </ScrollView>
       {sure ? <Text style={{ color: "#5d6690", fontSize: 10.5, marginTop: 4 }}>{sure}</Text> : null}
       {kisitli ? <Text style={{ color: "#ffb84d", fontSize: 11.5, marginTop: 6 }}>🟡 Kısıtlı mod — kişisel işlemler parmak izi ister</Text> : null}
