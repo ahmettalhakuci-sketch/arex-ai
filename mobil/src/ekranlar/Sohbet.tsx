@@ -1,5 +1,5 @@
 // AREX — ana sohbet ekranı (Gemini tarzı ek önizleme, sesli yazma, doğal sesli dinleme, geçmiş)
-import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder } from "expo-audio";
+import { getRecordingPermissionsAsync, RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder } from "expo-audio";
 import * as Clipboard from "expo-clipboard";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -149,7 +149,7 @@ export default function SohbetEkrani({ disaridanMesaj, temizle, canliyaGit }: { 
       else Alert.alert("Anlaşılamadı", "Ses yazıya dökülemedi, tekrar dener misin?");
       return;
     }
-    if (!(await izinIste("Mikrofon", requestRecordingPermissionsAsync))) return;
+    if (!(await izinIste("Mikrofon", requestRecordingPermissionsAsync, getRecordingPermissionsAsync))) return;
     await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
     await kaydedici.prepareToRecordAsync();
     kaydedici.record();

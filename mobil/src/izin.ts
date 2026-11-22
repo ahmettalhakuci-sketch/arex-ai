@@ -6,9 +6,16 @@ import { Alert, Linking, Platform } from "react-native";
 type Yanit = { granted: boolean; canAskAgain?: boolean; accessPrivileges?: string };
 
 /** İzni ister; sorulamıyorsa ayarlara yönlendirir. Dönüş: izin verildi mi */
-export async function izinIste(ad: string, iste: () => Promise<Yanit>): Promise<boolean> {
+export async function izinIste(ad: string, iste: () => Promise<Yanit>, mevcut?: () => Promise<Yanit>): Promise<boolean> {
+  // 1) Zaten verilmişse hiç sormadan geç (sorma isteği bazen cevapsız kalıyor — aşağıya bak)
+  if (mevcut) { try { const m = await mevcut(); if (m.granted) return true; } catch {} }
+  // 2) Sor; ama en fazla 8 sn bekle. Yan tuş penceresi açılıp kapandıktan sonra Android izin isteğini KAPANMIŞ pencereye
+  //    bağlıyor ve istek hiç dönmüyordu → "İzin ver" düğmesi donuyordu (telefonda gerçek testte bulundu).
   let r: Yanit;
-  try { r = await iste(); } catch { r = { granted: false, canAskAgain: false }; }
+  try {
+    r = await Promise.race([iste(), new Promise<Yanit>((ok) => setTimeout(() => ok({ granted: false, canAskAgain: false }), 8000))]);
+  } catch { r = { granted: false, canAskAgain: false }; }
+  if (!r.granted && mevcut) { try { if ((await mevcut()).granted) return true; } catch {} }
   if (r.granted || r.accessPrivileges === "limited" || r.accessPrivileges === "all") return true;
   if (Platform.OS !== "web") {
     Alert.alert(`${ad} izni gerekli`,

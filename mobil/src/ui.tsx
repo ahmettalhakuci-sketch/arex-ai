@@ -119,7 +119,7 @@ export const s = StyleSheet.create({
   dugmeIc: { paddingVertical: 14, paddingHorizontal: 18, alignItems: "center", justifyContent: "center" },
   dugmeYazi: { color: "#fff", fontWeight: "700", fontSize: 16 },
   ikincil: { backgroundColor: R.kart, borderColor: R.cizgi, borderWidth: 1, borderRadius: 16 },
-  hap: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: R.kart, borderWidth: 1, borderColor: R.cizgi },
+  hap: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, alignItems: "center", backgroundColor: R.kart, borderWidth: 1, borderColor: R.cizgi },
   hapSecili: { backgroundColor: "rgba(124,92,255,0.45)", borderColor: R.acc },
   hapYazi: { color: R.yazi, fontSize: 14, fontWeight: "600" },
   etiket: { color: R.soluk, fontSize: 13, marginBottom: 6, fontWeight: "600" },

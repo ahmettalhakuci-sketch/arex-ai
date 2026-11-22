@@ -66,8 +66,8 @@ function IzinlerKarti() {
   const satirlar: { ad: string; alt: string; ok: boolean | null; ac: () => void }[] = [
     { ad: "♿ Telefon erişimi", alt: d.erisim ? "Ekranı oku, dokun, yaz, kaydır" : ayarda ? "Açık ama bağlantı kopmuş → anahtarı kapatıp tekrar aç" : "Ekranı oku, dokun, yaz, kaydır", ok: d.erisim, ac: () => Erisim.ayarAc("erisim") },
     { ad: "🔓 Kısıtlanmış ayarlar", alt: "Erişim gri/kapanıyorsa: ⋮ → Kısıtlanmış ayarlara izin ver", ok: d.erisim ? true : null, ac: () => Erisim.ayarAc("uygulama") },
-    { ad: "🎙️ Mikrofon", alt: "Sesli soru ve Canlı sohbet", ok: mik, ac: async () => { await izinIste("Mikrofon", requestRecordingPermissionsAsync); yenile(); } },
-    { ad: "📷 Kamera", alt: "Canlı görüntü ve fotoğraf analizi", ok: kam, ac: async () => { await izinIste("Kamera", Camera.requestCameraPermissionsAsync); yenile(); } },
+    { ad: "🎙️ Mikrofon", alt: "Sesli soru ve Canlı sohbet", ok: mik, ac: async () => { await izinIste("Mikrofon", requestRecordingPermissionsAsync, getRecordingPermissionsAsync); yenile(); } },
+    { ad: "📷 Kamera", alt: "Canlı görüntü ve fotoğraf analizi", ok: kam, ac: async () => { await izinIste("Kamera", Camera.requestCameraPermissionsAsync, Camera.getCameraPermissionsAsync); yenile(); } },
     { ad: "✨ Yan tuş asistanı", alt: "Dijital asistan uygulaması → AREX AI", ok: d.asistanBiliniyor ? d.asistan : null, ac: () => Erisim.ayarAc("asistan") },
     { ad: "🔋 Pil kısıtlaması yok", alt: "Ekran kapalıyken tilavet kesilmesin", ok: d.pil, ac: () => Erisim.ayarAc("pil") },
     { ad: "🔔 Bildirimler", alt: "Hatırlatıcı ve pomodoro uyarıları", ok: null, ac: () => Erisim.ayarAc("bildirim") },
@@ -266,9 +266,9 @@ function GuvenlikBolumu({ Bolum, Anahtar }: { Bolum: any; Anahtar: any }) {
   };
   useEffect(() => { yenile(); }, []);
   const iste = async (k: string) => {
-    if (k === "mikrofon") await izinIste("Mikrofon", requestRecordingPermissionsAsync);
-    if (k === "kamera") await izinIste("Kamera", Camera.requestCameraPermissionsAsync);
-    if (k === "galeri" && !galeriIzinsiz) await izinIste("Fotoğraflar", () => ImagePicker.requestMediaLibraryPermissionsAsync());
+    if (k === "mikrofon") await izinIste("Mikrofon", requestRecordingPermissionsAsync, getRecordingPermissionsAsync);
+    if (k === "kamera") await izinIste("Kamera", Camera.requestCameraPermissionsAsync, Camera.getCameraPermissionsAsync);
+    if (k === "galeri" && !galeriIzinsiz) await izinIste("Fotoğraflar", () => ImagePicker.requestMediaLibraryPermissionsAsync(), () => ImagePicker.getMediaLibraryPermissionsAsync());
     yenile();
   };
   const IZINLER: [string, string, string][] = [["mikrofon", "🎙️ Mikrofon", "Sesli yazma ve canlı sohbet"], ["kamera", "📷 Kamera", "Fotoğraf, canlı görüntü, yüz analizi"], ["galeri", "🖼️ Fotoğraflar", "Galeriden fotoğraf/video analizi"]];

@@ -40,7 +40,7 @@ async function gorselHazirla(uri: string): Promise<Ek> {
 export async function medyaSec(kaynak: "galeri" | "kamera" | "video"): Promise<Ek | null> {
   try {
     if (kaynak === "kamera") {
-      if (!(await izinIste("Kamera", ImagePicker.requestCameraPermissionsAsync))) return null;
+      if (!(await izinIste("Kamera", ImagePicker.requestCameraPermissionsAsync, ImagePicker.getCameraPermissionsAsync))) return null;
     }
     const ayar: ImagePicker.ImagePickerOptions = { mediaTypes: kaynak === "video" ? ["videos"] : ["images"], quality: 0.85, videoMaxDuration: 120 };
     const sonuc = kaynak === "kamera" ? await ImagePicker.launchCameraAsync(ayar) : await ImagePicker.launchImageLibraryAsync(ayar);

@@ -144,6 +144,7 @@ export async function medyaAnaliz(b64: string, mime: string, talimat: string, op
 export const ANLATICILAR: Record<string, { ad: string; ses: string }> = {
   masalci: { ad: "🧚 Masal Perisi", ses: "Leda" },
   anne: { ad: "👩 Sıcak Anne", ses: "Sulafat" },
+  baba: { ad: "👨 Güven Veren Baba", ses: "Alnilam" },
   dede: { ad: "👴 Dede Masalcı", ses: "Algieba" },
   neseli: { ad: "😄 Neşeli", ses: "Puck" },
   fisilti: { ad: "🌙 Uyku Fısıltısı", ses: "Achernar" },

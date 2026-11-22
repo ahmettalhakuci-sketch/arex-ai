@@ -1,5 +1,5 @@
 // AREX — Canlı: Gemini Live (doğal sesli + kameralı gerçek zamanlı sohbet) ve cihaz içi Yerel Analiz
-import { requestRecordingPermissionsAsync } from "expo-audio";
+import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from "expo-audio";
 import { izinIste as izinIste2 } from "../izin";
 import { Camera } from "expo-camera";
 import React, { useEffect, useState } from "react";
@@ -25,8 +25,10 @@ export default function CanliEkrani({ sohbeteGonder, mini = false }: { sohbeteGo
   /** Mikrofon zorunlu, kamera isteğe bağlı (kamera reddedilse de sesli sohbet çalışır).
    *  Açılışta sessizce sorar; düğmeyle basılınca soramıyorsa izin sayfasına yönlendirir (Samsung "bir daha sorma" durumu). */
   const izinIste = async (dugme = false) => {
-    const mik = dugme ? await izinIste2("Mikrofon", requestRecordingPermissionsAsync) : (await requestRecordingPermissionsAsync()).granted;
-    try { await Camera.requestCameraPermissionsAsync(); } catch {}
+    // Önce mevcut durum (sormadan) — sorma isteği yan tuş penceresinden sonra cevapsız kalabiliyordu
+    const mik = dugme ? await izinIste2("Mikrofon", requestRecordingPermissionsAsync, getRecordingPermissionsAsync)
+      : (await getRecordingPermissionsAsync().catch(() => ({ granted: false }))).granted || await izinIste2("Mikrofon", requestRecordingPermissionsAsync, getRecordingPermissionsAsync).catch(() => false);
+    Camera.getCameraPermissionsAsync().then((k) => { if (!k.granted) Camera.requestCameraPermissionsAsync().catch(() => {}); }).catch(() => {});
     setIzin(mik);
     if (!mik) setHata("Mikrofon izni gerekli — aşağıdaki düğmeye dokun.");
   };
@@ -49,8 +51,8 @@ export default function CanliEkrani({ sohbeteGonder, mini = false }: { sohbeteGo
   return (
     <View style={{ flex: 1, paddingTop: mini ? 0 : ic.top }}>
       <View style={{ flexDirection: "row", gap: 8, padding: 10, paddingBottom: 6, display: mini ? "none" : "flex" }}>
-        <Hap yazi="🎙️ Canlı Sohbet (ses + kamera)" secili={sekme === "canli"} onPress={() => setSekme("canli")} />
-        <Hap yazi="🧠 Yerel Analiz (cihaz içi)" secili={sekme === "yerel"} onPress={() => setSekme("yerel")} />
+        <View style={{ flex: 1 }}><Hap yazi="🎙️ Canlı Sohbet" secili={sekme === "canli"} onPress={() => setSekme("canli")} /></View>
+        <View style={{ flex: 1 }}><Hap yazi="🧠 Yerel Analiz" secili={sekme === "yerel"} onPress={() => setSekme("yerel")} /></View>
       </View>
       {!izin ? (
         <View style={{ padding: 20 }}>
