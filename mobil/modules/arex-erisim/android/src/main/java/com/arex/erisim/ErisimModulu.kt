@@ -219,6 +219,16 @@ class ErisimModulu : Module() {
       a.runOnUiThread { if (acik) a.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else a.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
       true
     }
+    /** 🛡️ Güvenlik bildirimi (kilit açılamadı vb.) — saatli */
+    Function("guvenlikUyari") { baslik: String, metin: String ->
+      val nm = ctx.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+      if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel("arex_guvenlik") == null)
+        nm.createNotificationChannel(android.app.NotificationChannel("arex_guvenlik", "AREX güvenlik", android.app.NotificationManager.IMPORTANCE_HIGH))
+      val saat = java.text.SimpleDateFormat("HH:mm", java.util.Locale("tr")).format(java.util.Date())
+      val b = if (Build.VERSION.SDK_INT >= 26) android.app.Notification.Builder(ctx, "arex_guvenlik") else android.app.Notification.Builder(ctx)
+      nm.notify((System.currentTimeMillis() % 100000).toInt() + 5000, b.setSmallIcon(android.R.drawable.ic_lock_idle_lock).setContentTitle("🛡️ $baslik").setContentText("$saat • $metin").setAutoCancel(true).build())
+      true
+    }
     Function("uyanmaBaslat") { SesAyar.otomatikYaz(ctx, true); UyanmaServisi.baslat(ctx); true }
     Function("uyanmaDurdur") { SesAyar.otomatikYaz(ctx, false); UyanmaServisi.durdur(ctx); true }
     /** Açılışta: kullanıcı açtıysa servisi yeniden başlat */

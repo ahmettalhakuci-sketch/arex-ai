@@ -65,3 +65,5 @@ export const sonKarar = (): { benzerlik: number; yabanci: number; esik: number; 
 export const sonUyanmayiOgren = (): boolean => { try { return !!N?.sonUyanmayiOgren(); } catch { return false; } };
 /** Sesli sohbet sürerken ekranı açık tut */
 export const ekranAcikTut = (acik: boolean) => { try { N?.ekranAcikTut(acik); } catch {} };
+/** 🛡️ Güvenlik bildirimi gönder */
+export const guvenlikUyari = (baslik: string, metin: string) => { try { N?.guvenlikUyari(baslik, metin); } catch {} };

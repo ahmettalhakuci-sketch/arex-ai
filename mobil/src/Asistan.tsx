@@ -76,6 +76,7 @@ function Panel() {
     // Ses tanınmadıysa: YALNIZ parmak izi (PIN yok). Kilit ekranındaysa ardından telefonun kilidi de açılır.
     const ok = yabanciRef.current ? await biyometrikZorunlu("Sesini tanıyamadım — parmak izinle aç") : Erisim.ekranKilitli() ? await Erisim.kilidiKaldir() : await biyometrikDogrula();
     if (ok) { titret(); if (yabanciRef.current) Erisim.sonUyanmayiOgren(); setYabanci(false); }  // onaylanan sesi öğren
+    else if (yabanciRef.current) Erisim.guvenlikUyari("Tanınmayan ses + başarısız doğrulama", "Biri \"AREX\" dedi ve parmak izi doğrulanamadı");
   };
   const canliRef = useRef(false);
   const yabanciRef = useRef(yabanci); yabanciRef.current = yabanci;

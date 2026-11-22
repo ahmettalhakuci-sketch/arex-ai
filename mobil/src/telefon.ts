@@ -142,8 +142,15 @@ export async function kisiKomutu(metin: string): Promise<string | null> {
     await androidIzin("android.permission.CALL_PHONE", "Telefon");
     return E.ara(k.numara) ? `📞 **${k.ad}** aranıyor…` : `📞 **${k.ad}** için çevirici açıldı — yeşil tuşa bas.`;
   }
-  if (islem === "whatsapp") return E.whatsapp(k.numara, mesaj) ? `💬 WhatsApp'ta **${k.ad}** sohbeti mesajın yazılı açıldı — **Gönder**'e bas.\n\n> ${mesaj}` : `💬 WhatsApp yüklü değil; tarayıcıda açıldı.`;
+  // Telefon erişimi açıksa Gönder'e AREX kendisi basar (kullanıcı açıkça "yaz/gönder" dedi)
+  const otomatik = E.etkinMi() || (await E.onar()) === "onarildi";
+  if (islem === "whatsapp") {
+    if (!E.whatsapp(k.numara, mesaj)) return `💬 WhatsApp yüklü değil; tarayıcıda açıldı.`;
+    if (otomatik) { E.sonraTikla(["Gönder", "Send"], 2200, 8); return `💬 **${k.ad}** kişisine WhatsApp'tan gönderiyorum ✅\n\n> ${mesaj}`; }
+    return `💬 WhatsApp'ta **${k.ad}** sohbeti mesajın yazılı açıldı — **Gönder**'e bas.\n\n> ${mesaj}`;
+  }
   E.sms(k.numara, mesaj);
+  if (otomatik) { E.sonraTikla(["Gönder", "Send", "Gönder SMS"], 2000, 8); return `✉️ **${k.ad}** kişisine SMS gönderiyorum ✅\n\n> ${mesaj}`; }
   return `✉️ **${k.ad}** için SMS yazılı açıldı — **Gönder**'e bas.\n\n> ${mesaj}`;
 }
 

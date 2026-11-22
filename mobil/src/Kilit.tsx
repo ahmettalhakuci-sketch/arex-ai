@@ -42,7 +42,13 @@ export default function KilitEkrani({ acildi }: { acildi: () => void }) {
   const [hata, setHata] = useState("");
   const [bio, setBio] = useState(false);
   const [hazir, setHazir] = useState(false);
-  const parmak = () => biyometrikZorunlu("AREX — parmak izinle aç").then((ok) => { if (ok) acildi(); else setHata("Parmak izi doğrulanamadı — tekrar dene"); });
+  const basarisiz = React.useRef(0);
+  const parmak = () => biyometrikZorunlu("AREX — parmak izinle aç").then((ok) => {
+    if (ok) { basarisiz.current = 0; acildi(); return; }
+    setHata("Parmak izi doğrulanamadı — tekrar dene");
+    // 3 başarısız denemede sahibine güvenlik bildirimi
+    if (++basarisiz.current === 3) import("../modules/arex-erisim").then((E) => E.guvenlikUyari("AREX kilidi açılamadı", "Üst üste 3 başarısız parmak izi denemesi")).catch(() => {});
+  });
   useEffect(() => { biyometrikVarMi().then((v) => { setBio(v); setHazir(true); if (v) parmak(); }); }, []);
   const tus = async (t: string) => {
     titret(); setHata("");
