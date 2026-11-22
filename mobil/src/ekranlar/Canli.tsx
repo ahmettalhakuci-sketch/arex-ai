@@ -4,7 +4,7 @@ import { izinIste as izinIste2 } from "../izin";
 import * as Erisim from "../../modules/arex-erisim";
 import { Camera } from "expo-camera";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Platform, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Text, View, AppState } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { canliToken } from "../ai";
 import { useAyar } from "../ayar";
@@ -35,7 +35,13 @@ export default function CanliEkrani({ sohbeteGonder, mini = false, tam = false }
   };
   useEffect(() => { if (Platform.OS !== "web") izinIste(); }, []);
   // Canlı açıkken mikrofon onun: "AREX" dinlemesini duraklat, çıkınca sürdür
-  useEffect(() => { Erisim.uyanmaDuraklat(true); return () => Erisim.uyanmaDuraklat(false); }, []);
+  useEffect(() => {
+    // Yalnız uygulama EKRANDAYKEN duraklat; arka plana geçince "AREX" dinlemesi sürsün (yoksa Canlı sekmesinde kalınca hiç uyanmıyordu)
+    if (mini) return;  // yan tuş kartında duraklatmayı yerel taraf yönetiyor
+    Erisim.uyanmaDuraklat(AppState.currentState === "active");
+    const a = AppState.addEventListener("change", (d) => Erisim.uyanmaDuraklat(d === "active"));
+    return () => { a.remove(); Erisim.uyanmaDuraklat(false); };
+  }, []);
 
   const hazirla = async () => {
     setHata(""); setCfg(null);

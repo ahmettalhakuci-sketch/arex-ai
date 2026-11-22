@@ -34,10 +34,12 @@ class AsistanActivity : ReactActivity() {
     window.addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH)
     window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
     com.arex.erisim.UyanmaServisi.duraklat = true  // kart açıkken mikrofon Canlı sohbetin
+    com.arex.erisim.UyanmaServisi.kartAcik = true
   }
 
   override fun onDestroy() {
     com.arex.erisim.UyanmaServisi.duraklat = false  // kart kapandı: "AREX" dinlemeye devam
+    com.arex.erisim.UyanmaServisi.kartAcik = false
     super.onDestroy()
   }
 
