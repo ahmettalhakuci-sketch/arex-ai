@@ -184,6 +184,7 @@ export default function App() {
       }
     }
     SystemUI.setBackgroundColorAsync(R.bg1).catch(() => {});
+    Erisim.uyanmaSurdur();  // KİLİT EKRANINDAN ÖNCE: uygulama kilidi açılmasa da "AREX" dinlemesi başlasın (güncelleme sonrası takılmasın)
     Promise.all([anahtarlariYukle(), kilitAcikMi().then(setKilitli)]).finally(() => setHazir(true));
   }, []);
   return (

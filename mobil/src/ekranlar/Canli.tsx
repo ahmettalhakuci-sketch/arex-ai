@@ -74,6 +74,7 @@ export default function CanliEkrani({ sohbeteGonder, mini = false, tam = false }
           if (v?.tur === "arex_not" && v.metin) notKaydet(String(v.metin), "canlı");
           if (v?.tur === "arex_goz") guncelle({ gozKoruma: !!v.acik });
           if (v?.tur === "arex_ac" && HEDEFLER.includes(v.hedef)) acHedef(v.hedef, String(v.sorgu || ""));
+          if (v?.tur === "arex_olcum") console.log("AREX-OLCUM", v.m);
           if (v?.tur === "arex_komut" && v.komut) telefonKomutu(String(v.komut)).catch(() => {});
         }} /> : (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 20 }}>

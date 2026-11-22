@@ -176,8 +176,8 @@ const hash = new URLSearchParams(location.hash.slice(1));
 const CFG = Object.assign({}, window.AREX_CANLI || {});
 ["t","k","mod","dil","ses","yas","profil","ad","kmod","acc","acc2","goz","tani","testMetin"].forEach(a => { if (hash.get(a)) CFG[a] = hash.get(a); });
 let tokenAlFn = window.AREX_TOKEN_AL || null;
-// Hız: önce "flash" canlı model (düşük gecikme); 3.8-live (düşünen, yavaş) yalnız yedek
-const TUM_MODELLER = CFG.modeller || ["gemini-3.1-flash-live-preview", "gemini-2.5-flash-native-audio-latest", "gemini-3.8-live"];
+// 3.8-live önde: telefonda kararlı, ilk ses ~0.9 sn (Mac ölçümü); 3.1-flash ücretsiz kotası çabuk doluyor (1011) → yedek
+const TUM_MODELLER = CFG.modeller || ["gemini-3.8-live", "gemini-3.1-flash-live-preview", "gemini-2.5-flash-native-audio-latest"];
 const oturumKota = {};  // yalnızca bu oturumda kotası dolan modeller (kalıcı atlama YOK; her yeni oturumda ana model yeniden denenir)
 let MODELLER = TUM_MODELLER;
 function modelSirasiHazirla() { MODELLER = TUM_MODELLER.slice(); }
@@ -319,6 +319,7 @@ function sistemTalimati() {
 }
 
 // ---------- Durum ----------
+let olcBas = 0, olcSoz = 0, olcIlk = false, olcModel = "";
 let ws = null, aktif = false, modelSira = 0, kurulumTamam = false, devamHandle = null, kapatiliyor = false, dusunuyor = false;
 let micCtx = null, micStream = null, micNode = null, micSrc = null, sessiz = false;
 let calCtx = null, calZaman = 0, kaynaklar = [], analyser = null;
@@ -467,8 +468,9 @@ async function baglan() {
   const adres = await adresAl();
   if (!adres) { hata("Gemini anahtarı bulunamadı — Ayarlar'dan ekle."); bitir(); return; }
   kurulumTamam = false; durumYaz("Bağlanıyor…", "");
-  ws = new WebSocket(adres);
   const model = MODELLER[modelSira % MODELLER.length];
+  olcBas = Date.now(); olcModel = model;
+  ws = new WebSocket(adres);
   ws.onopen = () => ws.send(JSON.stringify({ setup: {
     model: "models/" + model,
     generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: aktifSes() } } } },
@@ -483,6 +485,7 @@ async function baglan() {
     const s = typeof e.data === "string" ? e.data : await e.data.text();
     let m; try { m = JSON.parse(s); } catch (x) { return; }
     if (m.setupComplete) {
+      bildir({ tur: "arex_olcum", m: `bağlandı ${olcModel} ${Date.now() - olcBas} ms` });
       kurulumTamam = true; hata(""); yenidenDeneme = 0; log("kurulum tamam", model, "tampondaki paket:", sesTampon.length);
       for (const pk of sesTampon.splice(0)) ws.send(JSON.stringify({ realtimeInput: { audio: { data: pk, mimeType: "audio/pcm;rate=16000" } } }));
       try { localStorage.setItem("arex_canli_model", model); } catch (x) {}
@@ -524,8 +527,10 @@ async function baglan() {
     }
     const sc = m.serverContent; if (!sc) return;
     if (sc.interrupted) { log("söz kesildi"); caliKes(); sonCikti = null; dusunuyor = false; }
+    if (sc.inputTranscription && sc.inputTranscription.text) { olcSoz = Date.now(); olcIlk = true; }
     if (sc.inputTranscription && sc.inputTranscription.text) { log("duyulan:", sc.inputTranscription.text); dokumEkle("Kullanıcı", sc.inputTranscription.text); satirEkle("ben", sc.inputTranscription.text, true); dusunuyor = true; }
     if (sc.outputTranscription && sc.outputTranscription.text) { satirEkle("o", sc.outputTranscription.text, true); sonGirdi = null; }
+    for (const p of ((sc.modelTurn || {}).parts || [])) if (p.inlineData && p.inlineData.data && olcIlk) { olcIlk = false; bildir({ tur: "arex_olcum", m: `ilk ses ${Date.now() - olcSoz} ms (${olcModel})` }); }
     for (const p of ((sc.modelTurn || {}).parts || [])) if (p.inlineData && p.inlineData.data) { dusunuyor = false; sesParca++; pcmCal(p.inlineData.data); }
     if (sc.outputTranscription && sc.outputTranscription.text) { log("söylenen:", sc.outputTranscription.text); dokumEkle("AREX", sc.outputTranscription.text); }
     if (sc.turnComplete) log("tur bitti; ses parçası:", sesParca, "çalma durumu:", calCtx && calCtx.state);
@@ -535,6 +540,7 @@ async function baglan() {
     }
   };
   ws.onclose = ev => {
+    bildir({ tur: "arex_olcum", m: `KAPANDI ${olcModel} kod=${ev.code} sebep=${String(ev.reason || "").slice(0, 160)} süre=${Date.now() - olcBas}ms` });
     log("bağlantı kapandı", model, ev.code, (ev.reason || "").slice(0, 120));
     const kuruldu = kurulumTamam; kurulumTamam = false;
     if (!aktif || kapatiliyor) return;
