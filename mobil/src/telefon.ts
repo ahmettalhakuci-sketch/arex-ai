@@ -162,7 +162,9 @@ export async function uygulamaIciKomut(metin: string): Promise<string | null> {
   let m: RegExpMatchArray | null;
   // YouTube: oynat/aç/izle/çal → ilk videoyu doğrudan oynat ("ara/bul" ise arama sayfası — eski yol)
   if ((m = t.match(/^(?:youtube|yutup)['’]?(?:da|dan|de|den|ta|tan)?\s+(.+?)\s+(?:videosunu\s+|şarkısını\s+|klibini\s+)?(?:aç|oynat|izle|çal|başlat|dinle)$/))
-    || (m = t.match(/^(.+?)\s+(?:videosunu|şarkısını|klibini|türküsünü|ilahisini)\s+(?:aç|oynat|izle|çal|dinle)$/))) {
+    || (m = t.match(/^(.+?)\s+(?:videosunu|şarkısını|klibini|türküsünü|ilahisini)\s+(?:aç|oynat|izle|çal|dinle)$/))
+    // "Yenileceksiniz youtubeden aç", "tarkan şımarık youtube'da oynat" (önce ad, sonra YouTube)
+    || (m = t.match(/^(.+?)['’]?(?:y[ıiuü]|[ıiuü])?\s+(?:youtube|yutup|yutub)['’]?(?:dan|den|da|de|tan|ten|ta|te)?\s+(?:aç|oynat|izle|çal|dinle|başlat|açar mısın)$/))) {
     const sorgu = m[1].trim();
     const id = await ilkVideo(sorgu);
     if (id) {

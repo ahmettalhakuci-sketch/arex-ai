@@ -21,6 +21,11 @@ header{display:flex;align-items:center;justify-content:space-between;padding:14p
 .marka{font-weight:700;letter-spacing:.4px;font-size:15px;opacity:.95}
 .marka b{background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
 .marka{white-space:nowrap}
+/* Ses ekolayzeri: AREX konuşunca frekanslar, sen konuşunca mikrofon seviyesi */
+.dalga{display:flex;align-items:center;justify-content:center;gap:4px;height:64px;margin:6px auto 0;width:min(320px,82vw)}
+.dalga i{flex:1;max-width:7px;min-height:4px;height:4px;border-radius:6px;background:linear-gradient(180deg,#ff5fa2,var(--acc) 55%,var(--acc2));
+  box-shadow:0 0 10px rgba(162,89,255,.55);transition:height .08s linear,opacity .2s;opacity:.55}
+.dalga.aktif i{opacity:1}
 /* Telefon (dar ekran): üst çubuk tek satır — "AREX Live" bölünmesin, Göz koruma yalnız simge */
 @media (max-width:480px){
   .marka{font-size:14px}
@@ -107,6 +112,7 @@ footer{padding:8px 16px calc(16px + env(safe-area-inset-bottom));display:flex;fl
   <div id="sahne">
     <video id="video" playsinline muted autoplay></video>
     <div class="kure" id="kure"><div class="k k1"></div><div class="k k2"></div><div class="k k3"></div><div class="cekirdek"></div></div>
+    <div class="dalga" id="dalga"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <div class="durumYazi" id="durum">Konuşmak için dokun<small id="altDurum">Sözünü kesebilir, kamerayı açıp gösterebilirsin</small></div>
     <div id="altyazi"></div>
   </div>
@@ -342,6 +348,22 @@ function animasyon() {
     let s = 0; if (analyser) { analyser.getByteTimeDomainData(d); for (const v of d) s = Math.max(s, Math.abs(v - 128)); }
     const kon = kaynaklar.length > 0;
     const k = $("kure");
+    // Ekolayzer çubukları
+    const dl = $("dalga");
+    if (dl && !dl.childElementCount) for (let i = 0; i < 28; i++) dl.appendChild(document.createElement("i"));
+    if (dl) {
+      const cubuk = dl.children, n = cubuk.length, t = performance.now() / 1000;
+      let fr = null; if (analyser && kon) { fr = new Uint8Array(analyser.frequencyBinCount); analyser.getByteFrequencyData(fr); }
+      for (let i = 0; i < n; i++) {
+        const orta = 1 - Math.abs(i - (n - 1) / 2) / ((n - 1) / 2);          // ortadakiler daha yüksek
+        let v;
+        if (fr) v = fr[Math.min(fr.length - 1, 2 + Math.floor(i * (fr.length * 0.55) / n))] / 255;   // AREX konuşuyor
+        else if (aktif) v = Math.min(1, micSeviye * 9) * (0.55 + 0.45 * Math.abs(Math.sin(t * 7 + i * 0.9))) * (0.5 + 0.5 * orta);  // sen konuşuyorsun
+        else v = 0.06 + 0.05 * Math.sin(t * 2 + i * 0.5) * orta;            // sakin nefes
+        cubuk[i].style.height = Math.max(4, Math.round(4 + v * 60)) + "px";
+      }
+      dl.classList.toggle("aktif", aktif);
+    }
     k.style.transform = `scale(${(1 + Math.min(.32, s / 200) + Math.min(.18, micSeviye * 1.6)).toFixed(3)})`;
     k.classList.toggle("konusuyor", kon); k.classList.toggle("dusunuyor", aktif && dusunuyor && !kon); k.classList.toggle("dinliyor", aktif && !kon && !dusunuyor);
     if (aktif && kurulumTamam) durumYaz(kon ? "Konuşuyor…" : dusunuyor ? "Düşünüyor…" : (sessiz ? "Mikrofon kapalı" : "Dinliyorum…"), kon ? "Sözünü kesmek için konuşman yeterli" : "");

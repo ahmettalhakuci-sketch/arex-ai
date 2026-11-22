@@ -5,7 +5,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { medyaAnaliz, sesiYaziyaDok, type Rol } from "../ai";
+import { medyaAnaliz, sesiYaziyaDok, type Rol, sonHatalar } from "../ai";
 import { analizTalimati, ETIK, turTahmin } from "../analiz";
 import { useAyar } from "../ayar";
 import { cevapUret, KULLANIM_MODLARI, SOHBET_TARZLARI } from "../beyin";
@@ -146,7 +146,7 @@ export default function SohbetEkrani({ disaridanMesaj, temizle, canliyaGit }: { 
       const metin = await sesiYaziyaDok(uri);
       setBekliyor(false);
       if (metin) gonder(metin);
-      else Alert.alert("Anlaşılamadı", "Ses yazıya dökülemedi, tekrar dener misin?");
+      else Alert.alert("Anlaşılamadı", "Ses yazıya dökülemedi, tekrar dener misin?" + (sonHatalar["ses-yazı"] ? "\n\n(" + sonHatalar["ses-yazı"] + ")" : ""));
       return;
     }
     if (!(await izinIste("Mikrofon", requestRecordingPermissionsAsync, getRecordingPermissionsAsync))) return;

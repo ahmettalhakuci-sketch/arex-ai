@@ -259,13 +259,17 @@ export async function sesiYaziyaDok(uri: string): Promise<string> {
     form.append("file", { uri, name: "ses.m4a", type: "audio/m4a" } as any);
   }
   form.append("model", "whisper-large-v3-turbo");
+  form.append("language", "tr");  // Türkçe sabit: kısa kayıtlarda yanlış dil algılamasını önler
   try {
     const r = await zamanliFetch("https://api.groq.com/openai/v1/audio/transcriptions", {
       method: "POST", headers: { Authorization: "Bearer " + k }, body: form,
     }, 60_000);
-    if (!r.ok) return "";
-    return ((await r.json()).text || "").trim();
-  } catch {
+    if (!r.ok) { sonHatalar["ses-yazı"] = "HTTP " + r.status + " " + (await r.text().catch(() => "")).slice(0, 120); return ""; }
+    const t = ((await r.json()).text || "").trim();
+    if (!t) sonHatalar["ses-yazı"] = "boş metin (ses çok kısa/sessiz olabilir)";
+    return t;
+  } catch (e: any) {
+    sonHatalar["ses-yazı"] = (e?.name || "hata") + " " + String(e?.message || "").slice(0, 80);
     return "";
   }
 }
