@@ -98,7 +98,7 @@ function Uygulama() {
           const secili = sekme === k;
           return (
             <Pressable key={k} style={st.sekme} onPress={() => { titret(); setSekme(k); }}>
-              <View style={[st.ikonKap, secili && { backgroundColor: R.hap }]}>
+              <View style={[st.ikonKap, secili && [st.ikonSecili, { backgroundColor: R.hap }]]}>
                 <Ionicons name={(secili ? ikon : ikon + "-outline") as any} size={22} color={secili ? "#fff" : k === "canli" ? "#ff8a9b" : R.soluk} />
               </View>
               <Text style={[st.sekmeYazi, secili && { color: "#fff", fontWeight: "800" }]}>{ad}</Text>
@@ -197,8 +197,9 @@ export default function App() {
 }
 
 const st = StyleSheet.create({
-  cubukDis: { flexDirection: "row", borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.08)", paddingTop: 6, backgroundColor: Platform.OS === "web" ? "rgba(5,8,22,0.92)" : "rgba(5,8,22,0.55)", overflow: "hidden" },
+  cubukDis: { flexDirection: "row", borderTopWidth: 1, borderTopColor: "rgba(162,140,255,0.18)", paddingTop: 7, backgroundColor: Platform.OS === "web" ? "rgba(5,8,22,0.92)" : "rgba(5,8,22,0.55)", overflow: "hidden" },
   sekme: { flex: 1, alignItems: "center", gap: 2 },
-  ikonKap: { paddingHorizontal: 14, paddingVertical: 4, borderRadius: 14 },
+  ikonKap: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: 16 },
+  ikonSecili: { borderWidth: 1, borderColor: "rgba(190,170,255,0.55)", shadowColor: "#a259ff", shadowOpacity: 0.7, shadowRadius: 10, elevation: 8 },
   sekmeYazi: { color: R.soluk, fontSize: 11 },
 });

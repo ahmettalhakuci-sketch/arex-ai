@@ -10,7 +10,7 @@ import { KULLANIM_MODLARI, SOHBET_TARZLARI } from "../beyin";
 import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from "expo-audio";
 import { Camera } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
-import { AppState, Linking, Platform } from "react-native";
+import { AppState, Linking, PermissionsAndroid, Platform } from "react-native";
 import * as Erisim from "../../modules/arex-erisim";
 import { izinIste } from "../izin";
 import { biyometrikVarMi, kilitAcikMi, pinAyarla } from "../Kilit";
@@ -49,6 +49,8 @@ function IzinlerKarti() {
   const [d, setD] = useState(Erisim.durumlar());
   const [mik, setMik] = useState(false);
   const [kam, setKam] = useState(false);
+  const [rehber, setRehber] = useState(false);
+  const [arama, setArama] = useState(false);
   const [ayarda, setAyarda] = useState(false);
   const yenile = async () => {
     // Ayarlarda açık ama bağlantı kopuksa (her güncellemeden sonra olur) önce kendini yeniden bağla
@@ -56,6 +58,7 @@ function IzinlerKarti() {
     setAyarda(Erisim.ayardaAcik());
     setD(Erisim.durumlar());
     try { setMik((await getRecordingPermissionsAsync()).granted); setKam((await Camera.getCameraPermissionsAsync()).granted); } catch {}
+    try { setRehber(await PermissionsAndroid.check("android.permission.READ_CONTACTS" as any)); setArama(await PermissionsAndroid.check("android.permission.CALL_PHONE" as any)); } catch {}
   };
   useEffect(() => {
     yenile();
@@ -68,6 +71,8 @@ function IzinlerKarti() {
     { ad: "🔓 Kısıtlanmış ayarlar", alt: "Erişim gri/kapanıyorsa: ⋮ → Kısıtlanmış ayarlara izin ver", ok: d.erisim ? true : null, ac: () => Erisim.ayarAc("uygulama") },
     { ad: "🎙️ Mikrofon", alt: "Sesli soru ve Canlı sohbet", ok: mik, ac: async () => { await izinIste("Mikrofon", requestRecordingPermissionsAsync, getRecordingPermissionsAsync); yenile(); } },
     { ad: "📷 Kamera", alt: "Canlı görüntü ve fotoğraf analizi", ok: kam, ac: async () => { await izinIste("Kamera", Camera.requestCameraPermissionsAsync, Camera.getCameraPermissionsAsync); yenile(); } },
+    { ad: "📇 Rehber", alt: "\"Babamı ara\", \"ablama WhatsApp'tan yaz\" için kişileri bulur", ok: rehber, ac: async () => { await izinIste("Rehber", async () => ({ granted: (await PermissionsAndroid.request("android.permission.READ_CONTACTS" as any)) === "granted", canAskAgain: true }), async () => ({ granted: await PermissionsAndroid.check("android.permission.READ_CONTACTS" as any) })); yenile(); } },
+    { ad: "📞 Telefon (doğrudan arama)", alt: "Kapalıysa çevirici açılır, yeşil tuşa sen basarsın", ok: arama, ac: async () => { await izinIste("Telefon", async () => ({ granted: (await PermissionsAndroid.request("android.permission.CALL_PHONE" as any)) === "granted", canAskAgain: true }), async () => ({ granted: await PermissionsAndroid.check("android.permission.CALL_PHONE" as any) })); yenile(); } },
     { ad: "✨ Yan tuş asistanı", alt: "Dijital asistan uygulaması → AREX AI", ok: d.asistanBiliniyor ? d.asistan : null, ac: () => Erisim.ayarAc("asistan") },
     { ad: "🔋 Pil kısıtlaması yok", alt: "Ekran kapalıyken tilavet kesilmesin", ok: d.pil, ac: () => Erisim.ayarAc("pil") },
     { ad: "🔔 Bildirimler", alt: "Hatırlatıcı ve pomodoro uyarıları", ok: null, ac: () => Erisim.ayarAc("bildirim") },
@@ -94,6 +99,13 @@ function IzinlerKarti() {
       ))}
     </Kart>
   );
+}
+
+/** 🎙️ Yan tuşa basınca hemen dinle */
+function YanTusAyari() {
+  const { ayar, guncelle } = useAyar();
+  if (Platform.OS !== "android") return null;
+  return <Anahtar etiket="🎙️ Yan tuşa basınca hemen sesli dinle" deger={ayar.yanTusOtomatik !== false} onChange={(v) => guncelle({ yanTusOtomatik: v })} />;
 }
 
 /** ♿ Telefon erişimi (Erişilebilirlik Servisi): durum + aç düğmesi; uygulamaya dönünce durumu yeniler */
@@ -294,6 +306,7 @@ function GuvenlikBolumu({ Bolum, Anahtar }: { Bolum: any; Anahtar: any }) {
       ) : null}
       <View style={{ height: 1, backgroundColor: R.cizgi, marginVertical: 14 }} />
       <TelefonErisimi />
+      <YanTusAyari />
       <View style={{ height: 1, backgroundColor: R.cizgi, marginVertical: 14 }} />
       <Text style={us.etiket}>Uygulama kilidi {kilit ? "🔒 açık" : "🔓 kapalı"}</Text>
       <Text style={[us.alt, { marginBottom: 8 }]}>Açılışta PIN{bio ? " ya da parmak izi / yüz tanıma" : ""} ister; AREX yalnızca sana özel kalır. API anahtarların uygulamada hiçbir yerde açık gösterilmez.</Text>

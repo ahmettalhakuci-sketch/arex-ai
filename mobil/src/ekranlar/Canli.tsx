@@ -12,7 +12,7 @@ import { CANLI_HTML, YEREL_HTML } from "../gomuluHtml";
 import { R } from "../tema";
 import { Dugme, Hap, s as us } from "../ui";
 import WebSayfa from "../WebSayfa";
-import { acHedef, HEDEFLER } from "../telefon";
+import { acHedef, HEDEFLER, telefonKomutu } from "../telefon";
 
 export default function CanliEkrani({ sohbeteGonder, mini = false }: { sohbeteGonder: (metin: string, cevap: string) => void; mini?: boolean }) {
   const ic = useSafeAreaInsets();
@@ -65,6 +65,7 @@ export default function CanliEkrani({ sohbeteGonder, mini = false }: { sohbeteGo
           if (v?.tur === "arex_not" && v.metin) notKaydet(String(v.metin), "canlı");
           if (v?.tur === "arex_goz") guncelle({ gozKoruma: !!v.acik });
           if (v?.tur === "arex_ac" && HEDEFLER.includes(v.hedef)) acHedef(v.hedef, String(v.sorgu || ""));
+          if (v?.tur === "arex_komut" && v.komut) telefonKomutu(String(v.komut)).catch(() => {});
         }} /> : (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 20 }}>
             {hata ? <><Text style={{ color: R.kirmizi, textAlign: "center" }}>{hata}</Text><Dugme yazi="Tekrar dene" onPress={hazirla} style={{ marginTop: 12 }} /></> : <ActivityIndicator color={R.acc2} size="large" />}

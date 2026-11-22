@@ -16,8 +16,10 @@ export type Ayarlar = {
   kullanimModu: string;
   gozKoruma: boolean;
   sohbetTarzi: string;
+  /** Yan tuşa basınca kart açılır açılmaz sesli dinlemeye başla (Gemini gibi) */
+  yanTusOtomatik: boolean;
 };
-const VARSAYILAN: Ayarlar = { yanitDili: "tr", cocukModu: false, yas: "7-9", yaraticilik: 0.75, anlatici: "masalci", otomatikSes: false, dogalSes: true, tema: "gece", yaziOlcek: 1, kullanimModu: "kisisel", gozKoruma: false, sohbetTarzi: "dengeli" };
+const VARSAYILAN: Ayarlar = { yanitDili: "tr", cocukModu: false, yas: "7-9", yaraticilik: 0.75, anlatici: "masalci", otomatikSes: false, dogalSes: true, tema: "gece", yaziOlcek: 1, kullanimModu: "kisisel", gozKoruma: false, sohbetTarzi: "dengeli", yanTusOtomatik: true };
 
 const Ctx = createContext<{ ayar: Ayarlar; guncelle: (p: Partial<Ayarlar>) => void }>({ ayar: VARSAYILAN, guncelle: () => {} });
 

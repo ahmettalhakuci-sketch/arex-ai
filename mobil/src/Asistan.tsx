@@ -8,7 +8,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Animated, ScrollView, TextInput, BackHandler, Dimensions, Easing, Linking, PanResponder, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Erisim from "../modules/arex-erisim";
-import { AyarSaglayici } from "./ayar";
+import { AyarSaglayici, useAyar } from "./ayar";
 import { genelEylem, telefonKomutu } from "./telefon";
 import { anahtarlariYukle } from "./depo";
 import CanliEkrani from "./ekranlar/Canli";
@@ -33,6 +33,7 @@ const kapatPencere = () => { if (Platform.OS === "android") BackHandler.exitApp(
 
 function Panel() {
   const ic = useSafeAreaInsets();
+  const { ayar } = useAyar();
   const H = Dimensions.get("window").height;
   const yukseklik = Math.min(540, H * 0.56);  // yalnız Canlı (ses+kamera) açıkken
   const y = useRef(new Animated.Value(yukseklik + 40)).current;
@@ -48,6 +49,11 @@ function Panel() {
   const [canli, setCanli] = useState(false);
   const canliRef = useRef(false);
   const canliAc = () => { titret(); canliRef.current = true; setCanli(true); };
+  // Yan tuşa basınca hemen dinle (Ayarlar'dan kapatılabilir). Kilitliyse önce kilit ekranı gelir.
+  const otomatikYapildi = useRef(false);
+  useEffect(() => {
+    if (hazir && ayar.yanTusOtomatik !== false && !otomatikYapildi.current && (ayar.kullanimModu || "kisisel") === "kisisel") { otomatikYapildi.current = true; canliAc(); }
+  }, [hazir, ayar.yanTusOtomatik, ayar.kullanimModu]);
   const calistir = async (k: string) => {
     if (!k.trim() || isliyor) return;
     if (kilitli) { canliAc(); return; }  // kilitliyken telefon komutu yok: önce kilidi aç
