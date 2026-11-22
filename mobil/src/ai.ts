@@ -56,7 +56,7 @@ const OPENROUTER = ["openrouter/free", "nvidia/nemotron-3-ultra-550b-a55b:free",
 
 // ---------- 🖥️ Mac'teki Ollama (ev Wi-Fi'si; ücretsiz, yerel) ----------
 // Açıksa ve Mac'e ulaşılabiliyorsa önce Ollama denenir; ulaşılamazsa sessizce Groq/Gemini'ye geçilir.
-export const OLLAMA_SOHBET = "llama3.2", OLLAMA_GORSEL = "gemma3:4b";
+export const OLLAMA_SOHBET = "gemma3:4b", OLLAMA_GORSEL = "gemma3:4b";  // Llama 3.2 Türkçeyi İngilizceyle karıştırıyordu (test edildi); Gemma 3 akıcı
 let ollama = { acik: false, adres: "192.168.1.45:11434" };
 let ollamaDurum: { zaman: number; var: boolean; modeller: string[] } = { zaman: 0, var: false, modeller: [] };
 export function ollamaBildir(acik: boolean, adres?: string) { ollama = { acik, adres: (adres || ollama.adres).replace(/^https?:\/\//, "").replace(/\/$/, "") }; ollamaDurum.zaman = 0; }

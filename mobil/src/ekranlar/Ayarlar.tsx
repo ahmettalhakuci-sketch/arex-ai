@@ -108,6 +108,13 @@ const IMZA_CUMLELERI: [string, number][] = [
   ["AREX", 2], ["AREX", 2], ["AREX, bugün hava nasıl olacak?", 4], ["AREX", 2],
   ["Annemi ara ve akşam geleceğimi söyle.", 4], ["AREX", 2],
 ];
+/** Ses imzasını değiştiren her işlem için sahibin doğrulaması (parmak izi / yüz / telefon şifresi) */
+async function sahipDogrula(): Promise<boolean> {
+  const { biyometrikZorunlu } = await import("../Kilit");
+  return biyometrikZorunlu("Ses imzası için parmak izi");
+}
+/** arex://ses-imzasi ile gelindiğinde sihirbazı aç */
+export const sesImzasiAc = { istek: false };
 function SesTanima() {
   const [d, setD] = useState(Erisim.uyanmaDurum());
   const [sihirbaz, setSihirbaz] = useState(false);
@@ -116,6 +123,11 @@ function SesTanima() {
   const [kayit, setKayit] = useState(false);
   const [mesaj, setMesaj] = useState("");
   const yenile = () => setD(Erisim.uyanmaDurum());
+  useEffect(() => {
+    if (!sesImzasiAc.istek) return;
+    sesImzasiAc.istek = false;
+    sahipDogrula().then((ok) => { if (ok) { setAdim(0); setOrnekler([]); setMesaj(""); setSihirbaz(true); } else setMesaj("🔒 Ses imzası yalnız parmak iziyle değiştirilebilir."); });
+  }, []);
   useEffect(() => { const a = AppState.addEventListener("change", (x) => { if (x === "active") yenile(); }); return () => a.remove(); }, []);
   if (Platform.OS !== "android" || !Erisim.destekVar()) return null;
 
@@ -124,7 +136,7 @@ function SesTanima() {
     if (!(await izinIste("Mikrofon", requestRecordingPermissionsAsync, getRecordingPermissionsAsync))) return;
     try { if (Number(Platform.Version) >= 33) await PermissionsAndroid.request("android.permission.POST_NOTIFICATIONS" as any); } catch {}
     Erisim.uyanmaBaslat(); setTimeout(yenile, 800);
-    if (!Erisim.uyanmaDurum().imzaVar) { setAdim(0); setOrnekler([]); setMesaj(""); setSihirbaz(true); }
+    if (!Erisim.uyanmaDurum().imzaVar && (await sahipDogrula())) { setAdim(0); setOrnekler([]); setMesaj(""); setSihirbaz(true); }
   };
   const kaydet = async () => {
     if (kayit) return;
@@ -143,6 +155,7 @@ function SesTanima() {
   };
   /** Başka birine (ör. abi) 3 kez "AREX" dedir → "bu ben değilim" olarak öğrenilir */
   const yabanciOgret = async () => {
+    if (!(await sahipDogrula())) { setMesaj("🔒 Bu işlem için parmak izi doğrulaması gerekli."); return; }
     for (let i = 1; i <= 3; i++) {
       setMesaj(`👥 ${i}/3 — Diğer kişi telefona "AREX" desin (2 sn)…`); setKayit(true);
       const r = await Erisim.imzaOrnek(2); setKayit(false);
@@ -169,16 +182,18 @@ function SesTanima() {
         {d.acik ? (d.calisiyor ? "● Dinliyor — \"AREX\" de, yarım saniye bekle, isteğini söyle." : "Başlatılıyor…") : "Kapalı."} Ses yalnız bu telefonda işlenir; hiçbir yere gönderilmez. Bildirim çubuğunda küçük 🎙 simgesi görünür (Android zorunluluğu).
       </Text>
       <View style={{ flexDirection: "row", gap: 8 }}>
-        <Dugme kucuk ikincil={d.imzaVar} yazi={d.imzaVar ? "🔁 Ses imzasını yenile" : "🧬 Sesimi tanıt (6 kısa kayıt)"} onPress={() => { setAdim(0); setOrnekler([]); setMesaj(""); setSihirbaz(true); }} style={{ flex: 1 }} />
+        <Dugme kucuk ikincil={d.imzaVar} yazi={d.imzaVar ? "🔁 Ses imzasını yenile" : "🧬 Sesimi tanıt (6 kısa kayıt)"} onPress={async () => { if (!(await sahipDogrula())) { setMesaj("🔒 Ses imzası yalnız parmak iziyle değiştirilebilir."); return; } setAdim(0); setOrnekler([]); setMesaj(""); setSihirbaz(true); }} style={{ flex: 1 }} />
         {d.imzaVar ? <Dugme kucuk ikincil yazi="🧪 Beni tanıyor mu?" onPress={testEt} style={{ flex: 1 }} /> : null}
       </View>
       {d.imzaVar ? (
         <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
           <Dugme kucuk ikincil yazi={`👥 Başkasının sesini öğret${d.yabanciSayi ? ` (${d.yabanciSayi})` : ""}`} onPress={yabanciOgret} style={{ flex: 2 }} />
-          {d.yabanciSayi ? <Dugme kucuk ikincil yazi="🗑️ Sil" onPress={() => { Erisim.yabancilariSil(); yenile(); setMesaj("Öğretilen yabancı sesler silindi."); }} style={{ flex: 1 }} /> : null}
+          {d.yabanciSayi ? <Dugme kucuk ikincil yazi="🗑️ Sil" onPress={async () => { if (!(await sahipDogrula())) return; Erisim.yabancilariSil(); yenile(); setMesaj("Öğretilen yabancı sesler silindi."); }} style={{ flex: 1 }} /> : null}
         </View>
       ) : null}
       {d.acik && !d.ustteGoster ? <Pressable onPress={() => Erisim.ayarAc("ustte")}><Text style={{ color: R.sari, fontSize: 12.5, marginTop: 8 }}>⚡ Anında açılması için "Diğer uygulamaların üzerinde göster" iznini aç → dokun</Text></Pressable> : null}
+      {(() => { const k = Erisim.sonKarar(); if (!k || !k.zaman) return null; const sa = new Date(k.zaman).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+        return <Text style={{ color: k.sahip ? R.yesil : R.sari, fontSize: 12, marginTop: 6 }}>{k.sahip ? "✅" : "🔒"} Son "AREX" ({sa}): benzerlik %{Math.round(k.benzerlik * 100)} • eşik %{Math.round(k.esik * 100)}{k.yabanci >= 0 ? ` • yabancı %${Math.round(k.yabanci * 100)}` : ""} → {k.sahip ? "seni tanıdı" : "tanımadı"}</Text>; })()}
       {!d.imzaVar ? <Text style={{ color: R.sari, fontSize: 12, marginTop: 6 }}>⚠️ Ses imzası yok: şu an "AREX" diyen herkes seni sayılır. Sesini tanıt.</Text> : null}
       {mesaj && !sihirbaz ? <Text style={{ color: R.yazi, fontSize: 13, marginTop: 8 }}>{mesaj}</Text> : null}
       <Modal visible={sihirbaz} transparent animationType="slide" onRequestClose={() => setSihirbaz(false)}>
@@ -227,7 +242,7 @@ function OllamaBolumu() {
   };
   return (
     <Bolum baslik="🖥️ Mac'teki Ollama (yerel yapay zekâ)">
-      <Text style={[us.alt, { marginBottom: 8 }]}>Evde, aynı Wi-Fi'deyken sohbet (Llama 3.2) ve fotoğraf analizi (Gemma 3) Mac'te, ücretsiz ve internete çıkmadan yapılır. Mac kapalıysa ya da dışarıdaysan otomatik olarak Groq/Gemini'ye geçer.</Text>
+      <Text style={[us.alt, { marginBottom: 8 }]}>Evde, aynı Wi-Fi'deyken sohbet ve fotoğraf analizi (Gemma 3) Mac'te, ücretsiz ve internete çıkmadan yapılır. Mac kapalıysa ya da dışarıdaysan otomatik olarak Groq/Gemini'ye geçer.</Text>
       <Anahtar etiket="🖥️ Önce Mac'teki Ollama'yı kullan" deger={!!ayar.ollamaAcik} onChange={(v) => guncelle({ ollamaAcik: v })} />
       <Girdi etiket="Mac adresi (IP:port)" value={adres} onChangeText={setAdres} autoCapitalize="none" placeholder="192.168.1.45:11434" />
       <Dugme kucuk yazi="🔌 Bağlantıyı test et" onPress={test} yukleniyor={bekle} />
@@ -293,6 +308,7 @@ export default function AyarlarEkrani() {
     <ScrollView contentContainerStyle={{ padding: 14, paddingTop: ic.top + 10, paddingBottom: 50 }} keyboardShouldPersistTaps="handled">
       <Baslik alt="Görünüm, sohbet, ses, anahtarlar ve kişisel hafıza.">⚙️ Ayarlar</Baslik>
       <IzinlerKarti />
+      <Kart style={{ borderColor: "rgba(162,140,255,0.45)" }}><SesTanima /></Kart>
 
       <Bolum baslik="👤 Kullanım modu" acik>
         <Text style={[us.alt, { marginBottom: 8 }]}>Kişisel modda AREX seni tanır (profil, hafıza, notlar). Başkalarına tanıtırken 🌐 Misafir modunu seç: kişisel bilgilerin gizlenir.</Text>
@@ -443,8 +459,6 @@ function GuvenlikBolumu({ Bolum, Anahtar }: { Bolum: any; Anahtar: any }) {
       <View style={{ height: 1, backgroundColor: R.cizgi, marginVertical: 14 }} />
       <TelefonErisimi />
       <YanTusAyari />
-      <View style={{ height: 1, backgroundColor: R.cizgi, marginVertical: 14 }} />
-      <SesTanima />
       <View style={{ height: 1, backgroundColor: R.cizgi, marginVertical: 14 }} />
       <Text style={us.etiket}>Uygulama kilidi {kilit ? "🔒 açık" : "🔓 kapalı"}</Text>
       <Text style={[us.alt, { marginBottom: 8 }]}>Açılışta PIN{bio ? " ya da parmak izi / yüz tanıma" : ""} ister; AREX yalnızca sana özel kalır. API anahtarların uygulamada hiçbir yerde açık gösterilmez.</Text>

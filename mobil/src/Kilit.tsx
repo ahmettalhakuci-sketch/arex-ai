@@ -22,6 +22,14 @@ export async function biyometrikVarMi(): Promise<boolean> {
   if (Platform.OS === "web") return false;
   try { return (await LocalAuthentication.hasHardwareAsync()) && (await LocalAuthentication.isEnrolledAsync()); } catch { return false; }
 }
+/** YALNIZ parmak izi / yüz (PIN ya da şifre seçeneği yok) — ses imzası ve tanınmayan ses kilidi için */
+export async function biyometrikZorunlu(mesaj = "Parmak izinle doğrula"): Promise<boolean> {
+  if (Platform.OS === "web") return false;
+  try {
+    const r = await LocalAuthentication.authenticateAsync({ promptMessage: mesaj, cancelLabel: "Vazgeç", disableDeviceFallback: true, biometricsSecurityLevel: "strong" } as any);
+    return r.success;
+  } catch { return false; }
+}
 export async function biyometrikDogrula(): Promise<boolean> {
   try {
     const r = await LocalAuthentication.authenticateAsync({ promptMessage: "AREX AI kilidini aç", cancelLabel: "PIN kullan", disableDeviceFallback: false });
@@ -33,7 +41,9 @@ export default function KilitEkrani({ acildi }: { acildi: () => void }) {
   const [pin, setPin] = useState("");
   const [hata, setHata] = useState("");
   const [bio, setBio] = useState(false);
-  useEffect(() => { biyometrikVarMi().then((v) => { setBio(v); if (v) biyometrikDogrula().then((ok) => ok && acildi()); }); }, []);
+  const [hazir, setHazir] = useState(false);
+  const parmak = () => biyometrikZorunlu("AREX — parmak izinle aç").then((ok) => { if (ok) acildi(); else setHata("Parmak izi doğrulanamadı — tekrar dene"); });
+  useEffect(() => { biyometrikVarMi().then((v) => { setBio(v); setHazir(true); if (v) parmak(); }); }, []);
   const tus = async (t: string) => {
     titret(); setHata("");
     if (t === "⌫") { setPin(pin.slice(0, -1)); return; }
@@ -44,6 +54,22 @@ export default function KilitEkrani({ acildi }: { acildi: () => void }) {
       if (y === dogru) acildi(); else { setHata("Yanlış PIN"); setPin(""); }
     }
   };
+  // Parmak izi varsa YALNIZ parmak izi (PIN/şifre yok — şifre görülüp öğrenilebilir). PIN yalnız parmak izi donanımı yoksa.
+  if (hazir && bio) return (
+    <LinearGradient colors={ARKA_GRADYAN} style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <LinearGradient colors={GRADYAN} style={{ width: 96, height: 96, borderRadius: 48, alignItems: "center", justifyContent: "center", marginBottom: 18 }}>
+        <Text style={{ fontSize: 44 }}>👆</Text>
+      </LinearGradient>
+      <Text style={{ color: "#fff", fontSize: 24, fontWeight: "800" }}>AREX kilitli</Text>
+      <Text style={{ color: R.soluk, marginTop: 6, textAlign: "center" }}>Yalnız sen: parmak izin ya da sesin ("AREX")</Text>
+      {hata ? <Text style={{ color: R.kirmizi, marginTop: 12 }}>{hata}</Text> : null}
+      <Pressable onPress={() => { titret(); setHata(""); parmak(); }} style={{ marginTop: 26 }}>
+        <LinearGradient colors={GRADYAN} style={{ paddingHorizontal: 30, paddingVertical: 15, borderRadius: 26 }}>
+          <Text style={{ color: "#fff", fontWeight: "800", fontSize: 16 }}>👆 Parmak izimle aç</Text>
+        </LinearGradient>
+      </Pressable>
+    </LinearGradient>
+  );
   return (
     <LinearGradient colors={ARKA_GRADYAN} style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
       <LinearGradient colors={GRADYAN} style={{ width: 84, height: 84, borderRadius: 42, alignItems: "center", justifyContent: "center", marginBottom: 18 }}>

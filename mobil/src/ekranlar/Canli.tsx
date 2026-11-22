@@ -15,7 +15,7 @@ import { Dugme, Hap, s as us } from "../ui";
 import WebSayfa from "../WebSayfa";
 import { acHedef, HEDEFLER, telefonKomutu } from "../telefon";
 
-export default function CanliEkrani({ sohbeteGonder, mini = false }: { sohbeteGonder: (metin: string, cevap: string) => void; mini?: boolean }) {
+export default function CanliEkrani({ sohbeteGonder, mini = false, tam = false }: { sohbeteGonder: (metin: string, cevap: string) => void; mini?: boolean; tam?: boolean }) {
   const ic = useSafeAreaInsets();
   const { ayar, guncelle } = useAyar();
   const [sekme, setSekme] = useState<"canli" | "yerel">("canli");
@@ -47,7 +47,7 @@ export default function CanliEkrani({ sohbeteGonder, mini = false }: { sohbeteGo
     // Geçici token alınamazsa doğrudan anahtarla (yalnızca bu cihazda) bağlanır
     setCfg({ ...(t ? { t } : { k: anahtar("GEMINI_API_KEY") }), mod: "asistan", kmod: ayar.cocukModu ? "cocuk" : (ayar.kullanimModu || "kisisel"),
       dil: ayar.yanitDili, yas: ayar.yas, profil: kisisel ? oz : "", ad: kisisel ? p.ad : "", goz: ayar.gozKoruma,
-      notlar: kisisel ? notlar.slice(-20).map((n) => n.metin.slice(0, 200)) : [], acc: R.acc, acc2: R.acc2, otomatik: mini });
+      notlar: kisisel ? notlar.slice(-20).map((n) => n.metin.slice(0, 200)) : [], acc: R.acc, acc2: R.acc2, otomatik: mini, tamEkran: tam });
   };
   useEffect(() => { if (sekme === "canli" && izin && !cfg) hazirla(); }, [sekme, izin, ayar.kullanimModu]);
 

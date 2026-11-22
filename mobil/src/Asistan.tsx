@@ -12,7 +12,7 @@ import { AyarSaglayici, useAyar } from "./ayar";
 import { genelEylem, telefonKomutu } from "./telefon";
 import { anahtarlariYukle } from "./depo";
 import CanliEkrani from "./ekranlar/Canli";
-import KilitEkrani, { biyometrikDogrula, kilitAcikMi } from "./Kilit";
+import KilitEkrani, { biyometrikDogrula, biyometrikZorunlu, kilitAcikMi } from "./Kilit";
 import { R } from "./tema";
 import { titret } from "./ui";
 
@@ -54,11 +54,14 @@ function Panel() {
   const [yabanci, setYabanci] = useState(() => !!ilkUyanma && !ilkUyanma.sahip);
   // Kilit ekranındaysa Android'in kendi kilit açma ekranı (PIN/parmak izi), değilse AREX biyometrik doğrulama
   const kilidiAc = async () => {
-    const ok = Erisim.ekranKilitli() ? await Erisim.kilidiKaldir() : await biyometrikDogrula();
+    // Ses tanınmadıysa: YALNIZ parmak izi (PIN yok). Kilit ekranındaysa ardından telefonun kilidi de açılır.
+    const ok = yabanciRef.current ? await biyometrikZorunlu("Sesini tanıyamadım — parmak izinle aç") : Erisim.ekranKilitli() ? await Erisim.kilidiKaldir() : await biyometrikDogrula();
     if (ok) { titret(); setYabanci(false); }
   };
   const canliRef = useRef(false);
   const yabanciRef = useRef(yabanci); yabanciRef.current = yabanci;
+  // Tanınmayan ses: 8 sn içinde parmak izi verilmezse sessizce kapan (cevap yok)
+  useEffect(() => { if (!yabanci) return; const t = setTimeout(() => { if (yabanciRef.current) kapat(); }, 8000); return () => clearTimeout(t); }, [yabanci]);
   const canliAc = () => {
     if (yabanciRef.current) { kilidiAc(); return; }  // ses tanınmadıysa önce kilit/parmak izi
     titret(); canliRef.current = true; setCanli(true);
@@ -218,7 +221,7 @@ function Panel() {
           <View style={{ flex: 1 }}>
             {!hazir ? <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={R.acc2} /></View>
               : kilitli ? <KilitEkrani acildi={() => setKilitli(false)} />
-              : <CanliEkrani mini sohbeteGonder={sohbeteGonder} />}
+              : <CanliEkrani mini tam={tam} sohbeteGonder={sohbeteGonder} />}
           </View>
           )}
         </View>

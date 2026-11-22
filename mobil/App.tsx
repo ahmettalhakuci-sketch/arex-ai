@@ -11,7 +11,7 @@ import { anahtarlariYukle } from "./src/depo";
 import { guncellemeDenetle, guncellemeyiIndir, type Guncelleme } from "./src/guncelleme";
 import AnalizEkrani from "./src/ekranlar/Analiz";
 import AraclarEkrani from "./src/ekranlar/Araclar";
-import AyarlarEkrani from "./src/ekranlar/Ayarlar";
+import AyarlarEkrani, { sesImzasiAc } from "./src/ekranlar/Ayarlar";
 import CanliEkrani from "./src/ekranlar/Canli";
 import CocukEkrani from "./src/ekranlar/Cocuk";
 import KuranEkrani from "./src/ekranlar/Kuran";
@@ -43,6 +43,7 @@ function Uygulama() {
       // yan tuş kartından: ⤢ büyüt → Canlı, sohbete aktar → Sohbet
       else if (u.startsWith("arex://canli")) { setAsistan(false); setSekme("canli"); }
       else if (u.startsWith("arex://ayarlar")) { setAsistan(false); setSekme("ayarlar"); }
+      else if (u.startsWith("arex://ses-imzasi")) { sesImzasiAc.istek = true; setAsistan(false); setSekme("ayarlar"); }
       else if (u.startsWith("arex://sohbet")) {
         // Mesaj yalnız asistan kartının bellekte bıraktığı veriden alınır; URL'deki parametreler yok sayılır (sahte mesaj engeli)
         const b = bekleyenSohbet.deger; bekleyenSohbet.deger = null;
