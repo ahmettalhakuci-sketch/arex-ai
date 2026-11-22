@@ -49,7 +49,11 @@ function IzinlerKarti() {
   const [d, setD] = useState(Erisim.durumlar());
   const [mik, setMik] = useState(false);
   const [kam, setKam] = useState(false);
+  const [ayarda, setAyarda] = useState(false);
   const yenile = async () => {
+    // Ayarlarda açık ama bağlantı kopuksa (her güncellemeden sonra olur) önce kendini yeniden bağla
+    if (!Erisim.etkinMi() && Erisim.ayardaAcik()) await Erisim.onar();
+    setAyarda(Erisim.ayardaAcik());
     setD(Erisim.durumlar());
     try { setMik((await getRecordingPermissionsAsync()).granted); setKam((await Camera.getCameraPermissionsAsync()).granted); } catch {}
   };
@@ -60,7 +64,7 @@ function IzinlerKarti() {
   }, []);
   if (Platform.OS !== "android" || !Erisim.destekVar()) return null;
   const satirlar: { ad: string; alt: string; ok: boolean | null; ac: () => void }[] = [
-    { ad: "♿ Telefon erişimi", alt: "Ekranı oku, dokun, yaz, kaydır", ok: d.erisim, ac: () => Erisim.ayarAc("erisim") },
+    { ad: "♿ Telefon erişimi", alt: d.erisim ? "Ekranı oku, dokun, yaz, kaydır" : ayarda ? "Açık ama bağlantı kopmuş → anahtarı kapatıp tekrar aç" : "Ekranı oku, dokun, yaz, kaydır", ok: d.erisim, ac: () => Erisim.ayarAc("erisim") },
     { ad: "🔓 Kısıtlanmış ayarlar", alt: "Erişim gri/kapanıyorsa: ⋮ → Kısıtlanmış ayarlara izin ver", ok: d.erisim ? true : null, ac: () => Erisim.ayarAc("uygulama") },
     { ad: "🎙️ Mikrofon", alt: "Sesli soru ve Canlı sohbet", ok: mik, ac: async () => { await izinIste("Mikrofon", requestRecordingPermissionsAsync); yenile(); } },
     { ad: "📷 Kamera", alt: "Canlı görüntü ve fotoğraf analizi", ok: kam, ac: async () => { await izinIste("Kamera", Camera.requestCameraPermissionsAsync); yenile(); } },

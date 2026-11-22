@@ -59,6 +59,7 @@ function Panel() {
 
   useEffect(() => {
     Promise.all([anahtarlariYukle(), kilitAcikMi().then(setKilitli)]).finally(() => setHazir(true));
+    Erisim.onar().catch(() => {});  // yan tuşla açılınca servis bağlantısını tazele
     Animated.parallel([
       Animated.spring(y, { toValue: 0, useNativeDriver: true, damping: 18, stiffness: 180, mass: 0.9 }),
       Animated.timing(perde, { toValue: 1, duration: 260, useNativeDriver: true }),

@@ -50,7 +50,8 @@ export async function erisimKomutu(metin: string): Promise<string | null> {
   if (Platform.OS !== "android" || !E.destekVar()) return null;
   const t = metin.trim().toLocaleLowerCase("tr").replace(/[.!?]+$/, "");
   let m: RegExpMatchArray | null;
-  const gerek = () => E.etkinMi();
+  // Servis bağlantısı kopmuşsa (güncelleme/zorla durdurma sonrası) önce kendini onarmayı dener
+  const gerek = async () => E.etkinMi() || (await E.onar()) === "onarildi";
   if (/^(?:erişim(?:i)?|telefon erişimi(?:ni)?|erişilebilirlik(?:i)?)\s+(?:aç|ver|etkinleştir)/.test(t)) { E.ayarlariAc(); return "♿ Erişilebilirlik ayarları açıldı → **AREX AI Asistan** → aç."; }
   // Uygulama aç (servis gerekmez): "google aç", "saat uygulamasını aç", "hesap makinesini aç"
   if ((m = t.match(/^(.{2,30}?)(?:'?(?:[ıiuü]|y[ıiuü]|n[ıiuü]))?\s*(?:uygulamas[ıi]n[ıi]\s+)?(?:aç|başlat|açar mısın)$/)) && !/^(?:ekran|bildirim|erişim|sayfa|kur'?an|meal|ezber|pomodoro|kamera izn)/.test(m[1])) {
@@ -61,7 +62,7 @@ export async function erisimKomutu(metin: string): Promise<string | null> {
   }
   const ekranMi = /^ekran(?:ı|da|daki)?\s*(?:ne var|ne yazıyor|oku|özetle|anlat|neler var)|^(?:bu )?ekranı (?:oku|özetle|anlat|açıkla)|^ekranda ne/.test(t);
   if (ekranMi) {
-    if (!gerek()) return ERISIM_YOK;
+    if (!(await gerek())) return ERISIM_YOK;
     const metinEkran = E.ekranOku();
     if (!metinEkran.trim()) return "📱 Okunacak başka bir uygulama ekranı yok. Başka bir uygulamadayken **yan tuşa basılı tut** → kartta **📖 Ekranı özetle**.";
     if (/özetle|anlat|açıkla|ne var|neler/.test(t)) {
@@ -75,15 +76,15 @@ export async function erisimKomutu(metin: string): Promise<string | null> {
     [/^son uygulamalar|^açık uygulamalar/, "son", "🗂️ Son uygulamalar"], [/^bildirim(?:ler(?:i)?)?\s*(?:aç|göster|indir)?$/, "bildirim", "🔔 Bildirimler"],
     [/^hızlı ayarlar/, "hizli", "⚡ Hızlı ayarlar"], [/^(?:ekranı |telefonu )?kilitle$/, "kilit", "🔒 Ekran kilitlendi"], [/^ekran görüntüsü al/, "ekranGoruntusu", "📸 Ekran görüntüsü alındı"],
   ];
-  for (const [re, e, ad] of genel) if (re.test(t)) { if (!gerek()) return ERISIM_YOK; return E.genel(e) ? ad + " ✅" : ad + " yapılamadı."; }
-  if ((m = t.match(/^(?:aşağı|yukarı)\s*(?:kaydır|in|çık)$|^(?:kaydır)$/))) { if (!gerek()) return ERISIM_YOK; return E.kaydir(!/yukarı/.test(t)) ? "↕️ Kaydırıldı ✅" : "↕️ Kaydırılacak alan bulunamadı."; }
+  for (const [re, e, ad] of genel) if (re.test(t)) { if (!(await gerek())) return ERISIM_YOK; return E.genel(e) ? ad + " ✅" : ad + " yapılamadı."; }
+  if ((m = t.match(/^(?:aşağı|yukarı)\s*(?:kaydır|in|çık)$|^(?:kaydır)$/))) { if (!(await gerek())) return ERISIM_YOK; return E.kaydir(!/yukarı/.test(t)) ? "↕️ Kaydırıldı ✅" : "↕️ Kaydırılacak alan bulunamadı."; }
   if ((m = metin.trim().match(/^(.{1,40}?)\s*(?:'?(?:[ıiuü]|y[ıiuü]|[ae]|y[ae]))?\s+(?:dokun|tıkla|bas)$/i)) || (m = metin.trim().match(/^(?:dokun|tıkla|bas)\s*[:\-]?\s*(.{1,40})$/i))) {
-    if (!gerek()) return null;  // servis kapalıyken gündelik cümleleri ("kalbime dokun") komut sanma
+    if (!(await gerek())) return null;  // servis kapalıyken gündelik cümleleri ("kalbime dokun") komut sanma
     const hedef = m[1].replace(/['’](?:[ıiuü]|y[ıiuü]|[ae]|y[ae])$/i, "").replace(/^["“]|["”]$/g, "").trim();
     return E.tikla(hedef) ? `👆 **${hedef}** öğesine dokunuldu ✅` : `👆 Ekranda **${hedef}** bulunamadı. "ekranı oku" diyerek yazıları görebilirsin.`;
   }
   if ((m = metin.trim().match(/^(?:yaz|şunu yaz)\s*[:\-]\s*(.+)$/i))) {
-    if (!gerek()) return ERISIM_YOK;
+    if (!(await gerek())) return ERISIM_YOK;
     return E.yaz(m[1]) ? `⌨️ Yazıldı: **${m[1]}** ✅` : "⌨️ Yazı alanı bulunamadı (önce yazı alanına dokun).";
   }
   return null;

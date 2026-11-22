@@ -16,3 +16,7 @@ export const ayarAc = (tur: IzinTuru): boolean => { try { return !!N?.ayarAc(tur
 export const durumlar = (): { erisim: boolean; pil: boolean; asistan: boolean; asistanBiliniyor: boolean } => {
   try { return N?.durumlar() || { erisim: false, pil: false, asistan: false, asistanBiliniyor: false }; } catch { return { erisim: false, pil: false, asistan: false, asistanBiliniyor: false }; }
 };
+/** Ayarlarda açık mı (çalışmasa bile) */
+export const ayardaAcik = (): boolean => { try { return !!N?.ayardaAcik(); } catch { return false; } };
+/** Açık ama bağlantısı kopmuşsa kendini yeniden bağlar: "bagli" | "onarildi" | "kapali" | "izin-yok" */
+export const onar = async (): Promise<string> => { try { return N ? await N.onar() : "kapali"; } catch { return "kapali"; } };

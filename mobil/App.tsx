@@ -4,7 +4,7 @@ import { BlurView } from "expo-blur";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Animated, Dimensions, Linking, PanResponder, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, AppState, Animated, Dimensions, Linking, PanResponder, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { AyarSaglayici, useAyar } from "./src/ayar";
 import { anahtarlariYukle } from "./src/depo";
@@ -19,6 +19,7 @@ import { bekleyenSohbet } from "./src/Asistan";
 import KilitEkrani, { kilitAcikMi } from "./src/Kilit";
 import SohbetEkrani from "./src/ekranlar/Sohbet";
 import { R } from "./src/tema";
+import * as Erisim from "./modules/arex-erisim";
 import { Arkaplan, titret } from "./src/ui";
 
 type Sekme = "sohbet" | "canli" | "kuran" | "cocuk" | "analiz" | "araclar" | "ayarlar";
@@ -56,6 +57,12 @@ function Uygulama() {
   const buyut = () => { setAsistan(false); setSekme("canli"); };
   const [yeniSurum, setYeniSurum] = useState<Guncelleme | null>(null);
   useEffect(() => { guncellemeDenetle().then(setYeniSurum); }, []);
+  // Erişim servisi güncelleme/kapanma sonrası bağlantısız kalabiliyor → açılışta ve uygulamaya her dönüşte onar
+  useEffect(() => {
+    Erisim.onar().catch(() => {});
+    const a = AppState.addEventListener("change", (x) => { if (x === "active") Erisim.onar().catch(() => {}); });
+    return () => a.remove();
+  }, []);
   const sohbeteGonder = (metin: string, cevap: string) => { setDisMesaj({ metin, cevap }); setSekme("sohbet"); };
   const ekran = {
     sohbet: <SohbetEkrani disaridanMesaj={disMesaj} temizle={() => setDisMesaj(null)} canliyaGit={() => setSekme("canli")} />,
