@@ -12,6 +12,7 @@ import { AyarSaglayici, useAyar } from "./ayar";
 import { genelEylem, telefonKomutu } from "./telefon";
 import { anahtarlariYukle } from "./depo";
 import CanliEkrani from "./ekranlar/Canli";
+import HizliSes from "./HizliSes";
 import KilitEkrani, { biyometrikDogrula, biyometrikZorunlu, kilitAcikMi } from "./Kilit";
 import { R } from "./tema";
 import { titret } from "./ui";
@@ -47,6 +48,8 @@ function Panel() {
   const [isliyor, setIsliyor] = useState(false);
   /** Varsayılan: küçük komut çubuğu. 🎙 ya da yukarı kaydır → Canlı sohbet (kart büyür) */
   const [canli, setCanli] = useState(false);
+  /** Ses motoru: ⚡ Hızlı (Groq, kota derdi yok, varsayılan) ya da ✨ Gemini Live */
+  const [motor, setMotor] = useState<"hizli" | "live">("hizli");
   // "AREX" ile uyandıysa: konuşan sahip mi? (ses imzası, cihaz içi) — değilse kişisel özellikler kilitli
   // "AREX" ile mi uyandı? (bir kez okunur) → sahipse TAM EKRAN premium ses modu, değilse kilitli
   const ilkUyanma = useRef(Erisim.sonUyanma()).current;
@@ -234,7 +237,15 @@ function Panel() {
                       <Text style={{ color: "#ffd08a", fontSize: 12.5, fontWeight: "700" }}>Muhtemelen sensin • kişisel işlemler için parmak izi</Text>
                     </Pressable>
                   ) : null}
-                  <CanliEkrani key={kisitli ? "k" : "t"} mini tam={tam} kisitli={kisitli} sohbeteGonder={sohbeteGonder} />
+                  <View style={{ flexDirection: "row", alignSelf: "center", gap: 6, marginTop: 6 }}>
+                    {([["hizli", "⚡ Hızlı"], ["live", "✨ Gemini Live"]] as const).map(([k, ad]) => (
+                      <Pressable key={k} onPress={() => { titret(); setMotor(k); }} style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14, backgroundColor: motor === k ? "rgba(162,89,255,0.35)" : "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: motor === k ? "#a259ff" : "rgba(255,255,255,0.12)" }}>
+                        <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>{ad}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                  {motor === "hizli" ? <HizliSes key={kisitli ? "hk" : "ht"} kisitli={kisitli} />
+                    : <CanliEkrani key={kisitli ? "k" : "t"} mini tam={tam} kisitli={kisitli} sohbeteGonder={sohbeteGonder} />}
                 </View>}
           </View>
           )}

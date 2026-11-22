@@ -213,6 +213,12 @@ class ErisimModulu : Module() {
     Function("alarmlariGoster") { ctx.startActivity(Intent(android.provider.AlarmClock.ACTION_SHOW_ALARMS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true }
     /** Tanımadığım sesin kaç kez "AREX" dediği */
     Function("yabanciDurum") { val (n, t) = SesAyar.yabanci(ctx); mapOf("sayi" to n, "son" to t) }
+    /** Sesli sohbet sürerken ekran kararmasın (yalnız o ekran açıkken) */
+    Function("ekranAcikTut") { acik: Boolean ->
+      val a = appContext.currentActivity ?: return@Function false
+      a.runOnUiThread { if (acik) a.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else a.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+      true
+    }
     Function("uyanmaBaslat") { SesAyar.otomatikYaz(ctx, true); UyanmaServisi.baslat(ctx); true }
     Function("uyanmaDurdur") { SesAyar.otomatikYaz(ctx, false); UyanmaServisi.durdur(ctx); true }
     /** Açılışta: kullanıcı açtıysa servisi yeniden başlat */

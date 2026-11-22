@@ -63,3 +63,5 @@ export const yabancilariSil = () => { try { N?.yabancilariSil(); } catch {} };
 export const sonKarar = (): { benzerlik: number; yabanci: number; esik: number; sahip: boolean; zaman: number } | null => { try { return N?.sonKarar() ?? null; } catch { return null; } };
 /** Parmak iziyle onaylanan son "AREX" sesini imzaya öğret */
 export const sonUyanmayiOgren = (): boolean => { try { return !!N?.sonUyanmayiOgren(); } catch { return false; } };
+/** Sesli sohbet sürerken ekranı açık tut */
+export const ekranAcikTut = (acik: boolean) => { try { N?.ekranAcikTut(acik); } catch {} };

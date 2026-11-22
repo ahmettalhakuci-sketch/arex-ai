@@ -1,6 +1,7 @@
 // AREX — Canlı: Gemini Live (doğal sesli + kameralı gerçek zamanlı sohbet) ve cihaz içi Yerel Analiz
 import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from "expo-audio";
 import { izinIste as izinIste2 } from "../izin";
+import HizliSes from "../HizliSes";
 import * as Erisim from "../../modules/arex-erisim";
 import { Camera } from "expo-camera";
 import React, { useEffect, useState } from "react";
@@ -18,7 +19,7 @@ import { acHedef, HEDEFLER, telefonKomutu } from "../telefon";
 export default function CanliEkrani({ sohbeteGonder, mini = false, tam = false, kisitli = false }: { sohbeteGonder: (metin: string, cevap: string) => void; mini?: boolean; tam?: boolean; kisitli?: boolean }) {
   const ic = useSafeAreaInsets();
   const { ayar, guncelle } = useAyar();
-  const [sekme, setSekme] = useState<"canli" | "yerel">("canli");
+  const [sekme, setSekme] = useState<"canli" | "yerel" | "hizli">("hizli");
   const [izin, setIzin] = useState(Platform.OS === "web");
   const [cfg, setCfg] = useState<Record<string, unknown> | null>(null);
   const [hata, setHata] = useState("");
@@ -34,6 +35,7 @@ export default function CanliEkrani({ sohbeteGonder, mini = false, tam = false, 
     if (!mik) setHata("Mikrofon izni gerekli — aşağıdaki düğmeye dokun.");
   };
   useEffect(() => { if (Platform.OS !== "web") izinIste(); }, []);
+  useEffect(() => { Erisim.ekranAcikTut(true); return () => Erisim.ekranAcikTut(false); }, []);  // sohbet sürerken ekran açık
   // Canlı açıkken mikrofon onun: "AREX" dinlemesini duraklat, çıkınca sürdür
   useEffect(() => {
     // Yalnız uygulama EKRANDAYKEN duraklat; arka plana geçince "AREX" dinlemesi sürsün (yoksa Canlı sekmesinde kalınca hiç uyanmıyordu)
@@ -61,10 +63,11 @@ export default function CanliEkrani({ sohbeteGonder, mini = false, tam = false, 
   return (
     <View style={{ flex: 1, paddingTop: mini ? 0 : ic.top }}>
       <View style={{ flexDirection: "row", gap: 8, padding: 10, paddingBottom: 6, display: mini ? "none" : "flex" }}>
-        <View style={{ flex: 1 }}><Hap yazi="🎙️ Canlı Sohbet" secili={sekme === "canli"} onPress={() => setSekme("canli")} /></View>
-        <View style={{ flex: 1 }}><Hap yazi="🧠 Yerel Analiz" secili={sekme === "yerel"} onPress={() => setSekme("yerel")} /></View>
+        <View style={{ flex: 1 }}><Hap yazi="⚡ Hızlı" secili={sekme === "hizli"} onPress={() => setSekme("hizli")} /></View>
+        <View style={{ flex: 1 }}><Hap yazi="✨ Live" secili={sekme === "canli"} onPress={() => setSekme("canli")} /></View>
+        <View style={{ flex: 1 }}><Hap yazi="🧠 Analiz" secili={sekme === "yerel"} onPress={() => setSekme("yerel")} /></View>
       </View>
-      {!izin ? (
+      {sekme === "hizli" && !mini ? <HizliSes otomatik={false} kisitli={kisitli} /> : !izin ? (
         <View style={{ padding: 20 }}>
           <Text style={us.alt}>Canlı sohbet ve yüz analizi için mikrofon ve kamera izni gerekli.</Text>
           <Dugme yazi="İzin ver" onPress={() => izinIste(true)} style={{ marginTop: 12 }} />
