@@ -132,7 +132,7 @@ export async function medyaAnaliz(b64: string, mime: string, talimat: string, op
     const mesaj = [...(sistem ? [{ role: "system", content: sistem }] : []), {
       role: "user", content: [{ type: "text", text: talimat }, { type: "image_url", image_url: { url: `data:${mime};base64,${b64}` } }],
     }];
-    for (const m of ["nvidia/nemotron-3.5-super-vl:free", "google/gemma-4-31b-it:free"]) {
+    for (const m of ["nvidia/nemotron-3.5-super-vl:free", "google/gemma-4-31b-it:free", "google/gemma-4-26b-a4b-it:free"]) {
       const t = await openaiUyumlu("openrouter", "https://openrouter.ai/api/v1/chat/completions", ork, m, mesaj, 0.4, maks, 70_000);
       if (t) return { metin: t, motor: "OpenRouter görsel" };
     }
@@ -202,6 +202,8 @@ export function seseUygun(metin: string) {
   return (metin || "").replace(/[#*_`>|]/g, "").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/\n{2,}/g, "\n").trim().slice(0, 4500);
 }
 
+const TTS_MODELLERI = ["gemini-2.5-flash-preview-tts", "gemini-3.1-flash-tts-preview", "gemini-3.8-flash-lite-tts"];
+
 /** Gemini doğal ses → WAV baytları; olmazsa null (çağıran cihaz sesine düşer). */
 export async function dogalSes(metin: string, uslup = "masal", anlatici = "masalci"): Promise<Uint8Array | null> {
   const k = anahtar("GEMINI_API_KEY");
@@ -210,17 +212,26 @@ export async function dogalSes(metin: string, uslup = "masal", anlatici = "masal
   const talimat = USLUPLAR[uslup] || USLUPLAR.masal;
   try {
     const parcalar = await Promise.all(parcala(seseUygun(metin)).map(async (p) => {
-      const r = await zamanliFetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent", {
-        method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": k },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: `${talimat}:\n\n${p}` }] }],
-          generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: ses } } } },
-        }),
-      }, 120_000);
-      if (r.status === 429) { kota["gemini:tts"] = Date.now() + 300_000; throw new Error("kota"); }
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      const j = await r.json();
-      return b64Bayt(j.candidates[0].content.parts[0].inlineData.data);
+      // Gemini TTS modelleri zaman zaman kapanıyor/yoğunlaşıyor → sırayla dene (ilk çalışan kazanır)
+      let son = "";
+      for (const m of TTS_MODELLERI) {
+        const r = await zamanliFetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
+          method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": k },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `${talimat}:\n\n${p}` }] }],
+            generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: ses } } } },
+          }),
+        }, 60_000).catch(() => null);
+        if (!r) { son = "zaman aşımı"; continue; }
+        if (!r.ok) { son = "HTTP " + r.status; continue; }
+        const j = await r.json().catch(() => null);
+        const veri = j?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (veri) return b64Bayt(veri);
+        son = "boş yanıt";
+      }
+      if (/429/.test(son)) kota["gemini:tts"] = Date.now() + 120_000;
+      sonHatalar["gemini-ses"] = son;
+      throw new Error(son);
     }));
     const sessizlik = new Uint8Array(24000); // 0,5 sn nefes
     const toplam = parcalar.reduce((a, p) => a + p.length, 0) + sessizlik.length * (parcalar.length - 1);
