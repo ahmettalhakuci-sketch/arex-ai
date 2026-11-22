@@ -282,6 +282,8 @@ class ErisimModulu : Module() {
     Function("yabanciEkle") { v: List<Double> -> SesAyar.yabanciEkle(ctx, v.toDoubleArray()); SesAyar.yabancilar(ctx).size }
     /** Son "AREX" kararı (Ayarlar'da gösterilir) */
     Function("sonKarar") { val j = SesAyar.sonKararOku(ctx); if (j == null) null else mapOf("benzerlik" to j.optDouble("b"), "yabanci" to j.optDouble("y"), "esik" to j.optDouble("e"), "sahip" to j.optBoolean("s"), "zaman" to j.optLong("z")) }
+    /** Parmak iziyle onaylanan son "AREX": o anki sesi sahip örneklerine ekle → gerçek kullanım koşullarını öğrenir */
+    Function("sonUyanmayiOgren") { val v = UyanmaServisi.sonVektor; if (v != null) { SesAyar.ornekOgren(ctx, v); UyanmaServisi.sonVektor = null; true } else false }
     Function("yabancilariSil") { SesAyar.yabancilariSil(ctx); true }
     Function("imzaSil") { SesAyar.imzaSil(ctx); true }
     /** Bir örneği kayıtlı imzayla karşılaştır → {benzerlik, esik, sahip} */

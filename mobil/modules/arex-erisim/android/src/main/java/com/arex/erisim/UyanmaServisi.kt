@@ -36,6 +36,8 @@ class UyanmaServisi : Service() {
     /** Yan tuş kartı (AsistanActivity) şu an açık mı — kart açılamazsa dinleme takılı kalmasın */
     @Volatile var kartAcik = false
     @Volatile var uyanmaZamani = 0L
+    /** Son uyanmanın ses imzası: parmak iziyle onaylanırsa sahip örneklerine eklenir (gerçek kullanım koşullarını öğrenir) */
+    @Volatile var sonVektor: DoubleArray? = null
     @Volatile var sonUyanma: JSONObject? = null
     const val KANAL = "arex_uyanma"
     const val ID = 4711
@@ -174,13 +176,14 @@ class UyanmaServisi : Service() {
     // Eski (Vosk) imza varsa ama yeni modelle yeniden kaydedilmediyse: kimse "sahip" sayılmaz → parmak izi (yeniden kayda kadar)
     val imzaVar = SesAyar.imza(this) != null || SesAyar.eskiImzaVar(this)
     val k = if (vek != null) SesAyar.karar(this, vek) else null
+    sonVektor = vek
     val benzerlik = k?.benzerlik ?: -1.0
     // OLASILIKSAL KARAR (3 seviye): 2 = kesin sen, 1 = muhtemelen sen (kişisel işlemler parmak izi ister), 0 = yabancı
     val seviye = when {
       !imzaVar -> 2
       k == null -> 0
       k.sahip -> 2
-      k.benzerlik >= k.esik - 0.12 && (k.yabanciBenzerlik < 0 || k.benzerlik > k.yabanciBenzerlik) -> 1
+      k.benzerlik >= k.esik - 0.17 && (k.yabanciBenzerlik < 0 || k.benzerlik > k.yabanciBenzerlik) -> 1  // telefon verisi: gerçek kullanımda sahip 0.50-0.65
       else -> 0
     }
     val sahip = seviye > 0
@@ -323,8 +326,10 @@ object SesAyar {
     val orn = ornekler(ctx)
     val sO = if (orn.size >= 2) orn.map { SesImza.kosinus(v, it) }.sortedDescending().take(2).average() else SesImza.kosinus(v, im.first)
     val sN = yabancilar(ctx).maxOfOrNull { SesImza.kosinus(v, it) } ?: -1.0
-    val sahip = sO >= im.second && (sN < 0 || sO > sN)  // öğretilen yabancı sesinden daha yakınsa (telefonda %4 pay seni de reddediyordu)
-    return Karar(sahip, sO, sN, im.second)
+    // Gerçek kullanımdan ≥3 örnek öğrenildiyse eşik 0.72'ye çıkar (telefon verisi simülasyonu: sen 0.73-0.94, yabancı ≤0.74 → 0.72'de seni %100 tanır)
+    val esik = if (orn.size >= 9) maxOf(im.second, 0.72) else im.second
+    val sahip = sO >= esik && (sN < 0 || sO > sN)  // öğretilen yabancı sesinden daha yakınsa (telefonda %4 pay seni de reddediyordu)
+    return Karar(sahip, sO, sN, esik)
   }
   fun yabanciSay(ctx: Context) { p(ctx).edit().putInt("yabanci", p(ctx).getInt("yabanci", 0) + 1).putLong("yabanciSon", System.currentTimeMillis()).apply() }
   fun yabanci(ctx: Context) = p(ctx).getInt("yabanci", 0) to p(ctx).getLong("yabanciSon", 0L)

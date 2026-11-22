@@ -61,3 +61,5 @@ export const yabanciDurum = (): { sayi: number; son: number } => { try { return 
 export const yabanciEkle = (v: number[]): number => { try { return N?.yabanciEkle(v) || 0; } catch { return 0; } };
 export const yabancilariSil = () => { try { N?.yabancilariSil(); } catch {} };
 export const sonKarar = (): { benzerlik: number; yabanci: number; esik: number; sahip: boolean; zaman: number } | null => { try { return N?.sonKarar() ?? null; } catch { return null; } };
+/** Parmak iziyle onaylanan son "AREX" sesini imzaya öğret */
+export const sonUyanmayiOgren = (): boolean => { try { return !!N?.sonUyanmayiOgren(); } catch { return false; } };

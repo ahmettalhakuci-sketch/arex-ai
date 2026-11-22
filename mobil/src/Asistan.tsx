@@ -56,12 +56,12 @@ function Panel() {
   const [yabanci, setYabanci] = useState(() => !!ilkUyanma && seviye === 0);
   const [kisitli, setKisitli] = useState(() => !!ilkUyanma && seviye === 1);
   const kisitliRef = useRef(kisitli); kisitliRef.current = kisitli;
-  const dogrula = async () => { if (await biyometrikZorunlu("Sensen parmak izinle doğrula")) { titret(); setKisitli(false); return true; } return false; };
+  const dogrula = async () => { if (await biyometrikZorunlu("Sensen parmak izinle doğrula")) { titret(); Erisim.sonUyanmayiOgren(); setKisitli(false); return true; } return false; };  // onaylanan sesi öğren
   // Kilit ekranındaysa Android'in kendi kilit açma ekranı (PIN/parmak izi), değilse AREX biyometrik doğrulama
   const kilidiAc = async () => {
     // Ses tanınmadıysa: YALNIZ parmak izi (PIN yok). Kilit ekranındaysa ardından telefonun kilidi de açılır.
     const ok = yabanciRef.current ? await biyometrikZorunlu("Sesini tanıyamadım — parmak izinle aç") : Erisim.ekranKilitli() ? await Erisim.kilidiKaldir() : await biyometrikDogrula();
-    if (ok) { titret(); setYabanci(false); }
+    if (ok) { titret(); if (yabanciRef.current) Erisim.sonUyanmayiOgren(); setYabanci(false); }  // onaylanan sesi öğren
   };
   const canliRef = useRef(false);
   const yabanciRef = useRef(yabanci); yabanciRef.current = yabanci;
