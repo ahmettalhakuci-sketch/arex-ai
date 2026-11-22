@@ -34,3 +34,5 @@ export const whatsapp = (numara: string, metin: string): boolean => { try { retu
 export const sms = (numara: string, metin: string): boolean => { try { return !!N?.sms(numara, metin); } catch { return false; } };
 /** ms sonra ekrandaki yazılardan birine dokun (uygulama açıldıktan sonra), deneme kez tekrarla */
 export const sonraTikla = (metinler: string[], ms = 3000, deneme = 6): boolean => { try { return !!N?.sonraTikla(metinler, ms, deneme); } catch { return false; } };
+/** Asılı kalmış medya bildirimini temizler (açılışta) */
+export const medyaBildirimTemizle = (): number => { try { return N?.medyaBildirimTemizle() || 0; } catch { return 0; } };
