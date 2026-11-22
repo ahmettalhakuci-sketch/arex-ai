@@ -198,7 +198,8 @@ export const ANLATICILAR: Record<string, { ad: string; ses: string }> = {
   abla: { ad: "👧 Abla", ses: "Aoede" },
   abi: { ad: "🧔 Abi", ses: "Orus" },
   hoca: { ad: "🧑‍🏫 Hoca", ses: "Charon" },
-  asistan: { ad: "✨ AREX", ses: "Kore" },
+  asistan: { ad: "✨ AREX (erkek)", ses: "Achird" },
+  asistanKiz: { ad: "🌸 AREX (kadın)", ses: "Sulafat" },
 };
 export const USLUPLAR: Record<string, string> = {
   masal: "Sıcak, merak uyandıran, usta bir masalcı gibi; cümle aralarında doğal duraksamalarla, karakterlerin konuşmalarında hafifçe farklı ses tonları kullanarak, gülümseyerek anlat",

@@ -18,7 +18,8 @@ import { titret } from "./ui";
 type Faz = "hazir" | "dinliyor" | "dusunuyor" | "konusuyor";
 /** Ses karakterleri: doğal insan sesi (Gemini TTS) + üslup */
 const KARAKTERLER: Record<string, { ad: string; anlatici: string; uslup: string }> = {
-  asistan: { ad: "✨ AREX", anlatici: "asistan", uslup: "" },
+  asistan: { ad: "✨ AREX ♂", anlatici: "asistan", uslup: "" },
+  asistanKiz: { ad: "🌸 AREX ♀", anlatici: "asistanKiz", uslup: "" },
   abi: { ad: "🧔 Abi", anlatici: "abi", uslup: "Güven veren, akıl veren bir ABİ gibi: 'kardeşim', 'aslanım' hitaplarıyla, sıcak ve kararlı." },
   abla: { ad: "👧 Abla", anlatici: "abla", uslup: "Şefkatli, neşeli bir ABLA gibi: 'canım', 'tatlım' hitaplarıyla." },
   anne: { ad: "👩 Anne", anlatici: "anne", uslup: "Sabırlı, sevgi dolu bir ANNE gibi: 'yavrum', 'kuzum' hitaplarıyla, dua eder gibi yumuşak." },
@@ -101,22 +102,28 @@ export default function HizliSes({ kisitli = false, otomatik = true }: { kisitli
     setArex(cevap); konus(cevap);
   };
 
-  /** Önce DOĞAL insan sesi (Gemini TTS, ~1-2 sn); olmazsa cihaz sesi anında */
+  /** DOĞAL insan sesi, cümle cümle: ilk cümle ~2 sn'de hazır olup hemen çalar, kalanı aynı anda arkada hazırlanır.
+   *  (Telefon ölçümü: 100 harflik cevabın tamamı 4.3-4.8 sn sürüyordu → eski 4.5 sn sınırında robot sese düşüyordu) */
   const konus = async (metin: string) => {
     if (kapali.current) return;
     setFaz("konusuyor"); fazRef.current = "konusuyor";
-    const zaman = new Promise<null>((r) => setTimeout(() => r(null), 4500));
-    const bayt = await Promise.race([dogalSes(metin, "sohbet", KARAKTERLER[karRef.current]?.anlatici || "asistan").catch(() => null), zaman]);
-    if (kapali.current || fazRef.current !== "konusuyor") return;
-    if (bayt) {
-      await baytlariCal(bayt);
-      if (!kapali.current && fazRef.current === "konusuyor") { setFaz("hazir"); dinle(); }
-      return;
+    const anlatici = KARAKTERLER[karRef.current]?.anlatici || "asistan";
+    const cumleler = (metin.match(/[^.!?…]+[.!?…]*\s*/g) || [metin]).map((x) => x.trim()).filter(Boolean);
+    // ilk parça kısa (ilk cümle), kalanı 1-2 parça
+    const parcalar: string[] = [];
+    if (cumleler.length) parcalar.push(cumleler[0]);
+    const kalan = cumleler.slice(1).join(" ");
+    if (kalan) { if (kalan.length > 160) { const k = Math.ceil(cumleler.length / 2); parcalar.push(cumleler.slice(1, k).join(" "), cumleler.slice(k).join(" ")); } else parcalar.push(kalan); }
+    const sozler = parcalar.filter(Boolean).map((p) => dogalSes(p, "sohbet", anlatici).catch(() => null));  // hepsi AYNI ANDA başlar
+    const bekle = <T,>(p: Promise<T>, ms: number) => Promise.race([p, new Promise<null>((r) => setTimeout(() => r(null), ms))]);
+    for (let i = 0; i < sozler.length; i++) {
+      const bayt = await bekle(sozler[i], i === 0 ? 7000 : 9000);
+      if (kapali.current || fazRef.current !== "konusuyor") return;
+      if (bayt) { await baytlariCal(bayt as Uint8Array); continue; }
+      // doğal ses yetişmezse yalnız BU parça cihaz sesiyle
+      await new Promise<void>((r) => Speech.speak(parcalar[i], { language: "tr-TR", rate: 1.0, onDone: () => r(), onStopped: () => r(), onError: () => r() }));
     }
-    Speech.speak(metin, { language: "tr-TR", rate: 1.0, pitch: 1.0,
-      onDone: () => { if (!kapali.current) { setFaz("hazir"); dinle(); } },
-      onStopped: () => { if (!kapali.current && fazRef.current === "konusuyor") setFaz("hazir"); },
-      onError: () => setFaz("hazir") });
+    if (!kapali.current && fazRef.current === "konusuyor") { setFaz("hazir"); dinle(); }
   };
 
   const dokun = () => {
