@@ -1,6 +1,6 @@
 // AREX — uygulama genel ayarları (kalıcı)
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { oku, yaz } from "./depo";
+import { modBildir, oku, yaz } from "./depo";
 import { temaUygula } from "./tema";
 
 export type Ayarlar = {
@@ -23,10 +23,11 @@ const Ctx = createContext<{ ayar: Ayarlar; guncelle: (p: Partial<Ayarlar>) => vo
 
 export function AyarSaglayici({ children }: { children: React.ReactNode }) {
   const [ayar, setAyar] = useState<Ayarlar>(VARSAYILAN);
-  useEffect(() => { oku<Partial<Ayarlar>>("arex_ayar", {}).then((a) => { const y = { ...VARSAYILAN, ...a }; temaUygula(y.tema, y.yaziOlcek); setAyar(y); }); }, []);
+  useEffect(() => { oku<Partial<Ayarlar>>("arex_ayar", {}).then((a) => { const y = { ...VARSAYILAN, ...a }; temaUygula(y.tema, y.yaziOlcek); modBildir(y.kullanimModu); setAyar(y); }); }, []);
   const guncelle = (p: Partial<Ayarlar>) => setAyar((eski) => {
     const y = { ...eski, ...p };
     if (p.tema !== undefined || p.yaziOlcek !== undefined) temaUygula(y.tema, y.yaziOlcek);
+    if (p.kullanimModu !== undefined) modBildir(y.kullanimModu);
     yaz("arex_ayar", y);
     return y;
   });

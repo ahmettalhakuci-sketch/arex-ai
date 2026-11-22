@@ -47,14 +47,29 @@ async function guvenliYaz(ad: string, deger: string | null) {
 export async function anahtarlariYukle() {
   for (const ad of Object.keys(ANAHTAR_ADLARI) as AnahtarAdi[]) {
     let kayitli = await guvenliOku(ad).catch(() => null);
-    // İlk açılış: gömülü anahtarı telefonun şifreli deposuna (Android Keystore) taşı; sonra hep oradan okunur
-    if (!kayitli && VARSAYILAN[ad]) { await guvenliYaz(ad, VARSAYILAN[ad]!).catch(() => {}); kayitli = VARSAYILAN[ad]!; }
+    // Gömülü anahtarı telefonun şifreli deposuna (Android Keystore) taşı: ilk açılışta ya da yeni sürüm FARKLI bir anahtar
+    // getirdiyse (parmak izi değişti) güncelle. Kullanıcının uygulamadan girdiği anahtar, gömülü değişmedikçe korunur.
+    const gomulu = VARSAYILAN[ad];
+    if (gomulu) {
+      const iz = sha256("arex:" + gomulu).slice(0, 16);
+      const eskiIz = await guvenliOku(ad + "_iz").catch(() => null);
+      if (!kayitli || eskiIz !== iz) {
+        await guvenliYaz(ad, gomulu).catch(() => {});
+        await guvenliYaz(ad + "_iz", iz).catch(() => {});
+        kayitli = gomulu;
+      }
+    }
     onbellek[ad] = (kayitli || "").trim();
   }
   return { ...onbellek };
 }
 
+/** Kullanım modu (ayar.tsx günceller). Gemini anahtarı YALNIZ kişisel asistan modunda verilir. */
+let kullanimModu = "kisisel";
+export function modBildir(m: string) { kullanimModu = m || "kisisel"; }
+
 export function anahtar(ad: AnahtarAdi): string {
+  if (ad === "GEMINI_API_KEY" && kullanimModu !== "kisisel") return "";
   return (onbellek[ad] || VARSAYILAN[ad] || "").trim();
 }
 
