@@ -16,7 +16,7 @@ import { Dugme, Hap, s as us } from "../ui";
 import WebSayfa from "../WebSayfa";
 import { acHedef, HEDEFLER, telefonKomutu } from "../telefon";
 
-export default function CanliEkrani({ sohbeteGonder, mini = false, tam = false, kisitli = false }: { sohbeteGonder: (metin: string, cevap: string) => void; mini?: boolean; tam?: boolean; kisitli?: boolean }) {
+export default function CanliEkrani({ sohbeteGonder, mini = false, tam = false, kisitli = false, onBaglandi }: { sohbeteGonder: (metin: string, cevap: string) => void; mini?: boolean; tam?: boolean; kisitli?: boolean; onBaglandi?: () => void }) {
   const ic = useSafeAreaInsets();
   const { ayar, guncelle } = useAyar();
   const [sekme, setSekme] = useState<"canli" | "yerel" | "hizli">("hizli");
@@ -78,7 +78,7 @@ export default function CanliEkrani({ sohbeteGonder, mini = false, tam = false, 
           if (v?.tur === "arex_not" && v.metin && !kisitli) notKaydet(String(v.metin), "canlı");
           if (v?.tur === "arex_goz") guncelle({ gozKoruma: !!v.acik });
           if (v?.tur === "arex_ac" && HEDEFLER.includes(v.hedef)) acHedef(v.hedef, String(v.sorgu || ""));
-          if (v?.tur === "arex_olcum") console.log("AREX-OLCUM", v.m);
+          if (v?.tur === "arex_olcum") { console.log("AREX-OLCUM", v.m); if (/^bağlandı/.test(String(v.m))) onBaglandi?.(); }
           if (v?.tur === "arex_komut" && v.komut && !kisitli) telefonKomutu(String(v.komut)).catch(() => {});
         }} /> : (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 20 }}>

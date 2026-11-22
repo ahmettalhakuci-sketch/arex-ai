@@ -15,7 +15,7 @@ import { telefonKomutu } from "./telefon";
 import { titret } from "./ui";
 
 type Faz = "hazir" | "dinliyor" | "dusunuyor" | "konusuyor";
-const SES_KURALI = "Sen AREX'sin; kullanıcıyla SESLİ konuşuyorsun. Cevapların kısa (1-3 cümle), sıcak, doğal Türkçe; madde işareti, emoji, markdown, başlık YOK. " +
+const SES_KURALI = "Sen AREX'sin; kullanıcının yakın dostu gibi SESLİ konuşuyorsun: içten, sıcakkanlı, samimi, gerektiğinde esprili; ona değer verdiğini hissettir. Cevapların kısa (1-3 cümle), doğal konuşma Türkçesi; madde işareti, emoji, markdown, başlık YOK. " +
   "Önceki konuşmayı hatırla ve ona bağlan. Telefonda işlem yaptığını ASLA uydurma (arama, mesaj, uygulama açma vb. senin elinde değil).";
 
 export default function HizliSes({ kisitli = false, otomatik = true }: { kisitli?: boolean; otomatik?: boolean }) {

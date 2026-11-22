@@ -49,7 +49,16 @@ function Panel() {
   /** Varsayılan: küçük komut çubuğu. 🎙 ya da yukarı kaydır → Canlı sohbet (kart büyür) */
   const [canli, setCanli] = useState(false);
   /** Ses motoru: ⚡ Hızlı (Groq, kota derdi yok, varsayılan) ya da ✨ Gemini Live */
-  const [motor, setMotor] = useState<"hizli" | "live">("hizli");
+  const [motor, setMotor] = useState<"hizli" | "live">("live");  // Live: daha doğal/sıcak ses (kullanıcı tercihi)
+  const baglandi = useRef(false);
+  const [bilgi, setBilgi] = useState("");
+  // Live 7 sn içinde bağlanamazsa (kota/ağ) kendiliğinden ⚡ Hızlı moda geç — kullanıcı beklemesin
+  useEffect(() => {
+    if (motor !== "live" || !canli) return;
+    baglandi.current = false;
+    const t = setTimeout(() => { if (!baglandi.current) { setMotor("hizli"); setBilgi("Live şu an yanıt vermiyor — ⚡ Hızlı moda geçtim"); setTimeout(() => setBilgi(""), 5000); } }, 7000);
+    return () => clearTimeout(t);
+  }, [motor, canli]);
   // "AREX" ile uyandıysa: konuşan sahip mi? (ses imzası, cihaz içi) — değilse kişisel özellikler kilitli
   // "AREX" ile mi uyandı? (bir kez okunur) → sahipse TAM EKRAN premium ses modu, değilse kilitli
   const ilkUyanma = useRef(Erisim.sonUyanma()).current;
@@ -255,7 +264,8 @@ function Panel() {
                     </Pressable>
                   ) : null}
                   {motor === "hizli" ? <HizliSes key={kisitli ? "hk" : "ht"} kisitli={kisitli} />
-                    : <CanliEkrani key={kisitli ? "k" : "t"} mini tam={tam} kisitli={kisitli} sohbeteGonder={sohbeteGonder} />}
+                    : <CanliEkrani key={kisitli ? "k" : "t"} mini tam={tam} kisitli={kisitli} sohbeteGonder={sohbeteGonder} onBaglandi={() => { baglandi.current = true; }} />}
+                  {bilgi ? <Text style={{ color: "#ffd08a", fontSize: 12, textAlign: "center", marginBottom: 4 }}>{bilgi}</Text> : null}
                   {/* Ses motoru seçici: altta zarif segment */}
                   <View style={{ flexDirection: "row", alignSelf: "center", padding: 3, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.05)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 10, marginTop: 4 }}>
                     {([["hizli", "⚡ Hızlı"], ["live", "✨ Gemini Live"]] as const).map(([k, ad]) => (
