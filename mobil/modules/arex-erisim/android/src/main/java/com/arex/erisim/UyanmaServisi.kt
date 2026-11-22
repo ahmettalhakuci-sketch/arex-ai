@@ -60,7 +60,24 @@ class UyanmaServisi : Service() {
     val parca = ShortArray(uzunluk)
     var bas = (halkaYaz - uzunluk + halka.size) % halka.size
     for (i in 0 until uzunluk) { parca[i] = halka[bas]; bas = (bas + 1) % halka.size }
+    sonParca = parca
     return GucluImza.vektor(this, parca)
+  }
+  private var sonParca: ShortArray? = null
+  /** Kalibrasyon: uyanma anının 2 sn sesi (yalnız bu telefonda, Android/data/com.arex.ai/files/ses) */
+  private fun uyanmaSesiKaydet(sahip: Boolean, b: Double) {
+    val p = sonParca ?: return
+    try {
+      val dir = File(getExternalFilesDir(null), "ses").apply { mkdirs() }
+      val f = File(dir, "${System.currentTimeMillis()}_uyanma${if (sahip) "kabul" else "ret"}${(b * 100).toInt()}.wav")
+      val pcm = ByteArray(p.size * 2); for (i in p.indices) { pcm[2 * i] = (p[i].toInt() and 0xff).toByte(); pcm[2 * i + 1] = ((p[i].toInt() shr 8) and 0xff).toByte() }
+      f.outputStream().use { o ->
+        val bb = java.nio.ByteBuffer.allocate(44).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        bb.put("RIFF".toByteArray()).putInt(36 + pcm.size).put("WAVE".toByteArray()).put("fmt ".toByteArray()).putInt(16).putShort(1).putShort(1)
+          .putInt(16000).putInt(32000).putShort(2).putShort(16).put("data".toByteArray()).putInt(pcm.size)
+        o.write(bb.array()); o.write(pcm)
+      }
+    } catch (_: Exception) {}
   }
   private var is_: Thread? = null
 
@@ -158,20 +175,27 @@ class UyanmaServisi : Service() {
     val imzaVar = SesAyar.imza(this) != null || SesAyar.eskiImzaVar(this)
     val k = if (vek != null) SesAyar.karar(this, vek) else null
     val benzerlik = k?.benzerlik ?: -1.0
-    val sahip = when {
-      !imzaVar -> true                 // imza yoksa herkes sahip sayılır (Ayarlar'da uyarı)
-      k == null -> false               // ses imzası çıkarılamadı → güvenli taraf
-      else -> k.sahip
+    // OLASILIKSAL KARAR (3 seviye): 2 = kesin sen, 1 = muhtemelen sen (kişisel işlemler parmak izi ister), 0 = yabancı
+    val seviye = when {
+      !imzaVar -> 2
+      k == null -> 0
+      k.sahip -> 2
+      k.benzerlik >= k.esik - 0.12 && (k.yabanciBenzerlik < 0 || k.benzerlik > k.yabanciBenzerlik) -> 1
+      else -> 0
     }
-    android.util.Log.i("AREX-SES", "uyanma metin='${j.optString("text")}' benzerlik=${"%.3f".format(benzerlik)} yabanci=${"%.3f".format(k?.yabanciBenzerlik ?: -1.0)} esik=${"%.3f".format(k?.esik ?: -1.0)} sahip=$sahip vek=${vek != null}")
+    val sahip = seviye > 0
+    // ÖĞRENME: çok emin olunan uyanmalar imzaya eklenir (farklı ton/ortam); ilk kayıtlar korunur, en fazla 20
+    if (seviye == 2 && vek != null && k != null && k.benzerlik >= 0.75) SesAyar.ornekOgren(this, vek)
+    android.util.Log.i("AREX-SES", "uyanma seviye=$seviye metin='${j.optString("text")}' benzerlik=${"%.3f".format(benzerlik)} yabanci=${"%.3f".format(k?.yabanciBenzerlik ?: -1.0)} esik=${"%.3f".format(k?.esik ?: -1.0)} sahip=$sahip vek=${vek != null}")
     SesAyar.sonKarar(this, benzerlik, k?.yabanciBenzerlik ?: -1.0, k?.esik ?: -1.0, sahip)
+    uyanmaSesiKaydet(sahip, benzerlik)
     if (!sahip) yabanciUyari(benzerlik) // sahibin sesi değil: cevap YOK; yalnız parmak izi kilidi açılır (8 sn) + sahibine haber
-    sonUyanma = JSONObject().put("zaman", System.currentTimeMillis()).put("sahip", sahip).put("benzerlik", benzerlik).put("imzaVar", imzaVar)
+    sonUyanma = JSONObject().put("zaman", System.currentTimeMillis()).put("sahip", sahip).put("seviye", seviye).put("benzerlik", benzerlik).put("imzaVar", imzaVar)
     duraklat = true // kart açılıyor: mikrofonu ona bırak (AsistanActivity kapanınca devam eder; açılmazsa 6 sn sonra)
     uyanmaZamani = SystemClock.elapsedRealtime()
     val i = Intent().setClassName(packageName, "$packageName.AsistanActivity")
       .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-      .putExtra("uyanma", true).putExtra("sahip", sahip)
+      .putExtra("uyanma", true).putExtra("sahip", sahip).putExtra("seviye", seviye)
     try {
       // Arka plandan etkinlik açma: bağlı erişilebilirlik servisi ya da "diğer uygulamaların üzerinde göster" izni ile anında
       (ArexErisimServisi.ornek ?: this).startActivity(i)
@@ -266,7 +290,7 @@ object SesAyar {
   fun imza(ctx: Context): Pair<DoubleArray, Double>? {
     if (p(ctx).getString("imzaModel", "") != GucluImza.MODEL) return null  // eski (Vosk) imza → yeniden kayıt gerekir
     val s = p(ctx).getString("imza", null) ?: return null
-    val j = JSONObject(s); return SesImza.dizi(j.getJSONArray("v")) to j.getDouble("esik")
+    val j = JSONObject(s); return SesImza.dizi(j.getJSONArray("v")) to maxOf(0.62, j.getDouble("esik") + 0.08)  // eski formüldeki -0.08 payı geri al
   }
   fun imzaYaz(ctx: Context, v: DoubleArray, esik: Double) {
     p(ctx).edit().putString("imza", JSONObject().put("v", JSONArray(v.toList())).put("esik", esik).toString()).putString("imzaModel", GucluImza.MODEL).remove("yabancilar").apply()
@@ -281,6 +305,12 @@ object SesAyar {
     p(ctx).edit().putString(ad, JSONArray(l.map { JSONArray(it.toList()) }).toString()).apply()
   }
   fun ornekler(ctx: Context) = liste(ctx, "ornekler")
+  /** Kesin tanınan uyanmayı imzaya ekle: ilk 6 kayıt hep kalır, öğrenilenler en fazla 14 (toplam ≤ 20) */
+  fun ornekOgren(ctx: Context, v: DoubleArray) {
+    val l = ornekler(ctx); if (l.size < 3) return
+    val ilk = l.take(6); val ogrenilen = (l.drop(6) + listOf(v)).takeLast(14)
+    orneklerYaz(ctx, ilk + ogrenilen)
+  }
   fun orneklerYaz(ctx: Context, l: List<DoubleArray>) = listeYaz(ctx, "ornekler", l)
   fun yabancilar(ctx: Context) = liste(ctx, "yabancilar")
   fun yabanciEkle(ctx: Context, v: DoubleArray) = listeYaz(ctx, "yabancilar", (yabancilar(ctx) + listOf(v)).takeLast(15))

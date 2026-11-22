@@ -149,7 +149,7 @@ export async function kisiKomutu(metin: string): Promise<string | null> {
 
 // ---------- Uygulama içi eylemler: "YouTube'da X aç/oynat" → ilk videoyu doğrudan oynatır; "Instagram'da X'i takip et" ----------
 /** YouTube aramasında ilk videonun kimliği (anahtarsız; bilgisayar tarayıcısı kimliğiyle) */
-async function ilkVideo(sorgu: string): Promise<string | null> {
+export async function ilkVideo(sorgu: string): Promise<string | null> {
   try {
     const r = await fetch(`https://www.youtube.com/results?search_query=${encodeURIComponent(sorgu)}&hl=tr`, {
       headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36", "Accept-Language": "tr-TR", Cookie: "SOCS=CAI" } });
@@ -162,7 +162,7 @@ export async function uygulamaIciKomut(metin: string): Promise<string | null> {
   let m: RegExpMatchArray | null;
   // YouTube: oynat/aç/izle/çal → ilk videoyu doğrudan oynat ("ara/bul" ise arama sayfası — eski yol)
   if ((m = t.match(/^(?:youtube|yutup)['’]?(?:da|dan|de|den|ta|tan)?\s+(.+?)\s+(?:videosunu\s+|şarkısını\s+|klibini\s+)?(?:aç|oynat|izle|çal|başlat|dinle)$/))
-    || (m = t.match(/^(.+?)\s+(?:videosunu|şarkısını|klibini|türküsünü|ilahisini)\s+(?:aç|oynat|izle|çal|dinle)$/))
+    || (m = t.match(/^(.+?)\s+(?:videosunu|şarkısını|klibini|türküsünü|ilahisini|neşidini|nasheedini|marşını)\s+(?:aç|oynat|izle|çal|dinle)$/))
     // "Yenileceksiniz youtubeden aç", "tarkan şımarık youtube'da oynat" (önce ad, sonra YouTube)
     || (m = t.match(/^(.+?)['’]?(?:y[ıiuü]|[ıiuü])?\s+(?:youtube|yutup|yutub)['’]?(?:dan|den|da|de|tan|ten|ta|te)?\s+(?:aç|oynat|izle|çal|dinle|başlat|açar mısın)$/))) {
     const sorgu = m[1].trim();

@@ -58,11 +58,13 @@ const OPENROUTER = ["openrouter/free", "nvidia/nemotron-3-ultra-550b-a55b:free",
 // Açıksa ve Mac'e ulaşılabiliyorsa önce Ollama denenir; ulaşılamazsa sessizce Groq/Gemini'ye geçilir.
 export const OLLAMA_SOHBET = "gemma3:4b", OLLAMA_GORSEL = "gemma3:4b";  // Llama 3.2 Türkçeyi İngilizceyle karıştırıyordu (test edildi); Gemma 3 akıcı
 let ollama = { acik: false, adres: "192.168.1.45:11434" };
+/** Ollama SON YEDEK olarak her zaman denenir: Groq/Gemini/OpenRouter cevap veremezse (kota, internet) Mac'teki model */
+const OLLAMA_YEDEK = true;
 let ollamaDurum: { zaman: number; var: boolean; modeller: string[] } = { zaman: 0, var: false, modeller: [] };
 export function ollamaBildir(acik: boolean, adres?: string) { ollama = { acik, adres: (adres || ollama.adres).replace(/^https?:\/\//, "").replace(/\/$/, "") }; ollamaDurum.zaman = 0; }
 /** Mac'teki Ollama ayakta mı + hangi modeller var (60 sn önbellek, 1.5 sn zaman aşımı) */
 export async function ollamaHazir(zorla = false): Promise<{ var: boolean; modeller: string[] }> {
-  if (!ollama.acik) return { var: false, modeller: [] };
+  if (!ollama.acik && !OLLAMA_YEDEK) return { var: false, modeller: [] };
   if (!zorla && Date.now() - ollamaDurum.zaman < 60_000) return ollamaDurum;
   try {
     const r = await zamanliFetch(`http://${ollama.adres}/api/tags`, {}, 1500);
@@ -128,6 +130,11 @@ export async function sohbetTamamla(mesajlar: Rol[], opt: { sistem?: string; sic
   for (const f of sira) {
     const s = await f();
     if (s) return s;
+  }
+  // Son yedek: Mac'teki Ollama (ev Wi-Fi'si) — tüm çevrimiçi API'ler bitince
+  if (!opt.anahtarsiz && OLLAMA_YEDEK) {
+    const t = await ollamaSohbet(tam, OLLAMA_SOHBET, Math.min(maks, 700), sicaklik);
+    if (t) return { metin: t, motor: "Ollama (Mac)" };
   }
   return { metin: null, motor: "" };
 }

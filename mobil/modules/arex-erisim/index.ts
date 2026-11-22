@@ -42,7 +42,7 @@ export const uyanmaBaslat = () => { try { N?.uyanmaBaslat(); } catch {} };
 export const uyanmaDurdur = () => { try { N?.uyanmaDurdur(); } catch {} };
 export const uyanmaSurdur = () => { try { N?.uyanmaSurdur(); } catch {} };
 export const uyanmaDurum = (): UyanmaDurum => { try { return N?.uyanmaDurum() || { acik: false, calisiyor: false, imzaVar: false, esik: 0 }; } catch { return { acik: false, calisiyor: false, imzaVar: false, esik: 0 }; } };
-export const sonUyanma = (): { zaman: number; sahip: boolean; benzerlik: number; imzaVar: boolean } | null => { try { return N?.sonUyanma() ?? null; } catch { return null; } };
+export const sonUyanma = (): { zaman: number; sahip: boolean; seviye?: number; benzerlik: number; imzaVar: boolean } | null => { try { return N?.sonUyanma() ?? null; } catch { return null; } };
 export const imzaOrnek = async (saniye = 4, etiket = "sahip"): Promise<{ vektor?: number[] | null; metin?: string; ses?: number; hata?: string }> => { try { return await N.imzaOrnek(saniye, etiket); } catch (e: any) { return { hata: String(e?.message || e) }; } };
 export const imzaKaydet = (ornekler: number[][]): { esik?: number; enDusuk?: number; ortalama?: number; hata?: string } => { try { return N.imzaKaydet(ornekler); } catch (e: any) { return { hata: String(e?.message || e) }; } };
 export const imzaSil = () => { try { N?.imzaSil(); } catch {} };

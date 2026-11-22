@@ -50,8 +50,13 @@ function Panel() {
   // "AREX" ile uyandıysa: konuşan sahip mi? (ses imzası, cihaz içi) — değilse kişisel özellikler kilitli
   // "AREX" ile mi uyandı? (bir kez okunur) → sahipse TAM EKRAN premium ses modu, değilse kilitli
   const ilkUyanma = useRef(Erisim.sonUyanma()).current;
-  const tam = !!ilkUyanma && ilkUyanma.sahip;
-  const [yabanci, setYabanci] = useState(() => !!ilkUyanma && !ilkUyanma.sahip);
+  // Olasılıksal ses kararı: 2 = kesin sen, 1 = muhtemelen sen (kişisel işlemler parmak izi), 0 = yabancı
+  const seviye = ilkUyanma ? (ilkUyanma.seviye ?? (ilkUyanma.sahip ? 2 : 0)) : 2;
+  const tam = !!ilkUyanma && seviye >= 1;
+  const [yabanci, setYabanci] = useState(() => !!ilkUyanma && seviye === 0);
+  const [kisitli, setKisitli] = useState(() => !!ilkUyanma && seviye === 1);
+  const kisitliRef = useRef(kisitli); kisitliRef.current = kisitli;
+  const dogrula = async () => { if (await biyometrikZorunlu("Sensen parmak izinle doğrula")) { titret(); setKisitli(false); return true; } return false; };
   // Kilit ekranındaysa Android'in kendi kilit açma ekranı (PIN/parmak izi), değilse AREX biyometrik doğrulama
   const kilidiAc = async () => {
     // Ses tanınmadıysa: YALNIZ parmak izi (PIN yok). Kilit ekranındaysa ardından telefonun kilidi de açılır.
@@ -75,6 +80,7 @@ function Panel() {
     if (!k.trim() || isliyor) return;
     if (kilitli) { canliAc(); return; }  // kilitliyken telefon komutu yok: önce kilidi aç
     if (yabanci) { kilidiAc(); return; }  // ses tanınmadı: önce parmak izi
+    if (kisitliRef.current && !(await dogrula())) { setSonuc("🟡 Sesinden tam emin olamadım — bu işlem için parmak izi gerekli."); return; }
     // Kilit ekranında: arama/mesaj/ekran komutları için önce telefonun kilidi açılmalı (Gemini gibi)
     if (Erisim.ekranKilitli() && !(await Erisim.kilidiKaldir())) { setSonuc("🔒 Bu komut için önce telefonun kilidini aç."); return; }
     titret();
@@ -221,7 +227,15 @@ function Panel() {
           <View style={{ flex: 1 }}>
             {!hazir ? <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={R.acc2} /></View>
               : kilitli ? <KilitEkrani acildi={() => setKilitli(false)} />
-              : <CanliEkrani mini tam={tam} sohbeteGonder={sohbeteGonder} />}
+              : <View style={{ flex: 1 }}>
+                  {kisitli ? (
+                    <Pressable onPress={dogrula} style={{ flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "center", marginTop: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18, backgroundColor: "rgba(255,184,77,0.14)", borderWidth: 1, borderColor: "rgba(255,184,77,0.5)" }}>
+                      <Ionicons name="finger-print" size={16} color="#ffb84d" />
+                      <Text style={{ color: "#ffd08a", fontSize: 12.5, fontWeight: "700" }}>Muhtemelen sensin • kişisel işlemler için parmak izi</Text>
+                    </Pressable>
+                  ) : null}
+                  <CanliEkrani key={kisitli ? "k" : "t"} mini tam={tam} kisitli={kisitli} sohbeteGonder={sohbeteGonder} />
+                </View>}
           </View>
           )}
         </View>

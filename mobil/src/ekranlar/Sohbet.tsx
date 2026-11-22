@@ -180,7 +180,8 @@ export default function SohbetEkrani({ disaridanMesaj, temizle, canliyaGit }: { 
           {ben ? <Text style={[st.benYazi, { fontSize: 16 * (R.olcek || 1), lineHeight: 23 * (R.olcek || 1) }, rtl && { textAlign: "right" }]}>{m.metin}</Text> : <MdMetin rtl={rtl}>{m.metin}</MdMetin>}
           {!ben && (
             <View style={st.altSatir}>
-              <Text style={st.etiket} numberOfLines={1}>{m.etiket}</Text>
+              {/* Hangi yapay zekânın cevapladığı (Groq/Gemini/…) gösterilmez; yalnız özellik etiketi (📱 Telefon, 📖 Kur'an…) */}
+              <Text style={st.etiket} numberOfLines={1}>{/groq|gemini|openrouter|ollama|pollinations|gpt|llama|gemma|nemotron|claude/i.test(m.etiket || "") ? "" : m.etiket}</Text>
               <Pressable hitSlop={8} onPress={() => dinle(m)}><Text style={st.ikon}>{konusan === m.id ? "⏹" : "🔊"}</Text></Pressable>
               <Pressable hitSlop={8} onPress={() => { Clipboard.setStringAsync(m.metin); titret(); }}><Text style={st.ikon}>📋</Text></Pressable>
             </View>

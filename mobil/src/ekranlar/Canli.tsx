@@ -15,7 +15,7 @@ import { Dugme, Hap, s as us } from "../ui";
 import WebSayfa from "../WebSayfa";
 import { acHedef, HEDEFLER, telefonKomutu } from "../telefon";
 
-export default function CanliEkrani({ sohbeteGonder, mini = false, tam = false }: { sohbeteGonder: (metin: string, cevap: string) => void; mini?: boolean; tam?: boolean }) {
+export default function CanliEkrani({ sohbeteGonder, mini = false, tam = false, kisitli = false }: { sohbeteGonder: (metin: string, cevap: string) => void; mini?: boolean; tam?: boolean; kisitli?: boolean }) {
   const ic = useSafeAreaInsets();
   const { ayar, guncelle } = useAyar();
   const [sekme, setSekme] = useState<"canli" | "yerel">("canli");
@@ -48,10 +48,11 @@ export default function CanliEkrani({ sohbeteGonder, mini = false, tam = false }
     if ((ayar.kullanimModu || "kisisel") === "genel") { setHata("🔒 Canlı sohbet misafir modunda kapalı (kişisel API kullanılmaz). 👤 Kişisel moda geçince açılır."); return; }
     if (!anahtar("GEMINI_API_KEY")) { setHata("Canlı sohbet için Gemini anahtarı gerekli (⚙️ Ayarlar)."); return; }
     const t = await canliToken();
-    const kisisel = (ayar.kullanimModu || "kisisel") === "kisisel";
+    // Ses tam doğrulanmadıysa (kisitli): kişisel profil/notlar ve telefon araçları verilmez
+    const kisisel = !kisitli && (ayar.kullanimModu || "kisisel") === "kisisel";
     const [p, oz, notlar] = await Promise.all([profilOku(), profilOzeti(), notlariOku()]);
     // Geçici token alınamazsa doğrudan anahtarla (yalnızca bu cihazda) bağlanır
-    setCfg({ ...(t ? { t } : { k: anahtar("GEMINI_API_KEY") }), mod: "asistan", kmod: ayar.cocukModu ? "cocuk" : (ayar.kullanimModu || "kisisel"),
+    setCfg({ ...(t ? { t } : { k: anahtar("GEMINI_API_KEY") }), mod: "asistan", kmod: kisitli ? "genel" : ayar.cocukModu ? "cocuk" : (ayar.kullanimModu || "kisisel"),
       dil: ayar.yanitDili, yas: ayar.yas, profil: kisisel ? oz : "", ad: kisisel ? p.ad : "", goz: ayar.gozKoruma,
       notlar: kisisel ? notlar.slice(-20).map((n) => n.metin.slice(0, 200)) : [], acc: R.acc, acc2: R.acc2, otomatik: mini, tamEkran: tam });
   };
@@ -71,11 +72,11 @@ export default function CanliEkrani({ sohbeteGonder, mini = false, tam = false }
         </View>
       ) : sekme === "canli" ? (
         cfg ? <WebSayfa key={JSON.stringify(cfg).length + String(cfg.kmod)} html={CANLI_HTML} ayar={cfg} onMesaj={(v) => {
-          if (v?.tur === "arex_not" && v.metin) notKaydet(String(v.metin), "canlı");
+          if (v?.tur === "arex_not" && v.metin && !kisitli) notKaydet(String(v.metin), "canlı");
           if (v?.tur === "arex_goz") guncelle({ gozKoruma: !!v.acik });
           if (v?.tur === "arex_ac" && HEDEFLER.includes(v.hedef)) acHedef(v.hedef, String(v.sorgu || ""));
           if (v?.tur === "arex_olcum") console.log("AREX-OLCUM", v.m);
-          if (v?.tur === "arex_komut" && v.komut) telefonKomutu(String(v.komut)).catch(() => {});
+          if (v?.tur === "arex_komut" && v.komut && !kisitli) telefonKomutu(String(v.komut)).catch(() => {});
         }} /> : (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 20 }}>
             {hata ? <><Text style={{ color: R.kirmizi, textAlign: "center" }}>{hata}</Text><Dugme yazi="Tekrar dene" onPress={hazirla} style={{ marginTop: 12 }} /></> : <ActivityIndicator color={R.acc2} size="large" />}

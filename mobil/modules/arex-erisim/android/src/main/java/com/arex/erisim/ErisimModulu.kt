@@ -221,7 +221,7 @@ class ErisimModulu : Module() {
       "ustteGoster" to (Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(ctx))) }
     /** Son uyanma bilgisini bir kez verir (kart açılınca: sahip mi?) */
     Function("sonUyanma") { val j = UyanmaServisi.sonUyanma; UyanmaServisi.sonUyanma = null
-      if (j == null) null else mapOf("zaman" to j.optLong("zaman"), "sahip" to j.optBoolean("sahip"), "benzerlik" to j.optDouble("benzerlik"), "imzaVar" to j.optBoolean("imzaVar")) }
+      if (j == null) null else mapOf("zaman" to j.optLong("zaman"), "sahip" to j.optBoolean("sahip"), "seviye" to j.optInt("seviye", if (j.optBoolean("sahip")) 2 else 0), "benzerlik" to j.optDouble("benzerlik"), "imzaVar" to j.optBoolean("imzaVar")) }
     /** Kart kapanınca dinlemeye devam */
     Function("uyanmaDevam") { UyanmaServisi.duraklat = false; true }
     /** Uygulama mikrofonu kullanırken (Canlı, sesle yazma) "AREX" dinlemeyi duraklat */
@@ -274,7 +274,7 @@ class ErisimModulu : Module() {
       if (l.size < 3) return@Function mapOf("hata" to "en az 3 örnek gerekli")
       val ort = SesImza.ortalama(l)
       val loo = l.indices.map { i -> l.filterIndexed { j, _ -> j != i }.map { SesImza.kosinus(l[i], it) }.sortedDescending().take(2).average() }
-      val esik = (loo.minOrNull()!! - 0.08).coerceIn(0.35, 0.80)  // ERes2Net: aynı ses ~0.7, farklı ~0.2 (Mac ölçümü)
+      val esik = (loo.minOrNull()!! - 0.0).coerceIn(0.62, 0.85)  // telefonda: sahip 0.71-0.81, Mac yapay sesi 0.63 (oda/mikrofon benzerliği) → kendi en düşük tutarlılığın
       SesAyar.imzaYaz(ctx, ort, esik); SesAyar.orneklerYaz(ctx, l)
       mapOf("esik" to esik, "enDusuk" to loo.minOrNull()!!, "ortalama" to loo.average())
     }

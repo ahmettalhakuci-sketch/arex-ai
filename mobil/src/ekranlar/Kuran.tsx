@@ -21,7 +21,7 @@ import { AnahtarSatiri, Dugme, Girdi, Hap, Kart, s as us, Secici, titret } from 
 const ayetDugme = { flexDirection: "row" as const, alignItems: "center" as const, gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: "rgba(232,200,114,0.35)", backgroundColor: "rgba(232,200,114,0.08)" };
 const yuvarlak = { width: 38, height: 38, borderRadius: 19, borderWidth: 1, borderColor: "rgba(255,255,255,0.18)", backgroundColor: "rgba(255,255,255,0.06)", alignItems: "center" as const, justifyContent: "center" as const };
 
-type Sekme = "bugun" | "oku" | "hafizlik" | "pomodoro" | "teknik";
+type Sekme = "bugun" | "oku" | "nesid" | "hafizlik" | "pomodoro" | "teknik";
 type Mod = "sure" | "cuz" | "sayfa" | "ayet";
 type OkuAyar = { mod: Mod; sure: number; cuz: number; sayfa: number; meal: string; mealGoster: boolean; ezber: boolean; yazi: number; ayet?: number; ayetDevam?: boolean };
 const OKU_VARSAYILAN: OkuAyar = { mod: "sure", sure: 36, cuz: 1, sayfa: 440, meal: "tr.vakfi", mealGoster: true, ezber: false, yazi: 1 };
@@ -59,7 +59,7 @@ export default function KuranEkrani() {
           </View>
         </LinearGradient>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 12 }}>
-          {([["bugun", "🌅 Bugün"], ["oku", "📖 Oku & Dinle"], ["hafizlik", "🧠 Hafızlık"], ["pomodoro", "🍅 Pomodoro"], ["teknik", "💡 Teknikler"]] as [Sekme, string][]).map(([k, a]) => (
+          {([["bugun", "🌅 Bugün"], ["oku", "📖 Oku & Dinle"], ["nesid", "🎵 Neşid & İlahi"], ["hafizlik", "🧠 Hafızlık"], ["pomodoro", "🍅 Pomodoro"], ["teknik", "💡 Teknikler"]] as [Sekme, string][]).map(([k, a]) => (
             <Hap key={k} yazi={a} secili={sekme === k} onPress={() => setSekme(k)} />
           ))}
         </ScrollView>
@@ -68,6 +68,7 @@ export default function KuranEkrani() {
         {sekme === "hafizlik" && <HafizlikEkrani />}
         {sekme === "pomodoro" && <Pomodoro />}
         {sekme === "teknik" && <Teknikler />}
+        {sekme === "nesid" && <Nesidler />}
       </ScrollView>
       <MiniCalar />
     </View>
@@ -747,6 +748,68 @@ function Teknikler() {
         </Kart>
       ))}
       <Text style={[us.alt, { fontSize: 12 }]}>Bu öneriler genel çalışma teknikleridir; kendi hocanın yöntemini esas al.</Text>
+    </View>
+  );
+}
+
+// ---------- 🎵 Neşid & İlahi: dokununca YouTube'da ilk sonuç doğrudan oynar (sözler uygulamada tutulmaz) ----------
+// 4. alan: true → ilk video doğrudan çalar (YouTube adı doğrulandı), false → arama sonuçları açılır (adı farklı olabilir; yanlış video çalmasın)
+const NESIDLER: { b: string; liste: [string, string, string, boolean][] }[] = [
+  { b: "🔥 Dava & Direniş", liste: [
+    ["Dava Aşkı", "dava aşkı neşid", "Sabır ve kararlılık", false], ["Yenileceksiniz", "yenileceksiniz neşid", "Diriliş ve umut", true],
+    ["Başkaldırı", "başkaldırı neşid", "Zulme karşı duruş", true], ["Tevhid Aşkı", "tevhid aşkı neşid", "Birlik ve iman", false],
+    ["Kudüs", "kudüs neşid türkçe", "Mescid-i Aksa sevgisi", false], ["Gazze", "gazze neşid", "Dayanışma", false] ] },
+  { b: "🌙 Aşk & Huzur", liste: [
+    ["Aşk Tepelerine Dolunay Yağdı", "aşk tepelerine dolunay yağdı ilahi", "Muhabbet ve hasret", false], ["Tala'al Bedru Aleyna", "tala al bedru aleyna", "Medine'nin karşılaması", true],
+    ["Ya Nebi Selam Aleyke", "ya nebi selam aleyke", "Salavat", true], ["Esmaül Hüsna", "esmaül hüsna ilahi", "Allah'ın güzel isimleri", true],
+    ["Hasbi Rabbi", "hasbi rabbi cellallah", "Tevekkül", true], ["Medine'ye Varamadım", "medineye varamadım ilahi", "Peygamber özlemi", false] ] },
+  { b: "🕊️ Sakin & Derin", liste: [
+    ["Mevlana Sözleri ile Ney", "ney taksim huzur", "Ney ile tefekkür", false], ["Kalbim Seni Arar", "kalbim seni arar ilahi", "İç yolculuk", false],
+    ["Allah Allah Diyelim", "allah allah diyelim ilahi", "Zikir", true], ["Sübhanallah Zikri", "subhanallah zikir neşid", "Tesbih", false] ] },
+];
+function Nesidler() {
+  const [ara, setAra] = useState("");
+  const [bekle, setBekle] = useState("");
+  const cal = async (ad: string, sorgu: string, kesin = true) => {
+    titret(); setBekle(ad);
+    const { ilkVideo } = await import("../telefon");
+    const id = kesin ? await ilkVideo(sorgu) : null;
+    const { Linking } = await import("react-native");
+    try { await Linking.openURL(id ? `vnd.youtube://${id}` : `https://www.youtube.com/results?search_query=${encodeURIComponent(sorgu)}`); }
+    catch { await Linking.openURL(id ? `https://www.youtube.com/watch?v=${id}` : `https://www.youtube.com/results?search_query=${encodeURIComponent(sorgu)}`).catch(() => {}); }
+    setBekle("");
+  };
+  return (
+    <View>
+      <LinearGradient colors={["#2a1748", "#0e1a33"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 22, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: ALTIN + "44" }}>
+        <Text style={{ color: "#fff", fontSize: 18, fontWeight: "800" }}>🎵 Neşid & İlahi</Text>
+        <Text style={{ color: "#c9cfee", fontSize: 12.5, marginTop: 4 }}>Dokun → YouTube'da hemen çalar. Sesle de: "Dava aşkı neşidini aç".</Text>
+        <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+          <TextInput value={ara} onChangeText={setAra} onSubmitEditing={() => ara.trim() && cal(ara.trim(), ara.trim() + " neşid")} returnKeyType="search" placeholder="Başka bir neşid / ilahi ara…" placeholderTextColor={R.soluk}
+            style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", color: "#fff", paddingHorizontal: 14, paddingVertical: 10 }} />
+          <Pressable onPress={() => ara.trim() && cal(ara.trim(), ara.trim() + " neşid")} style={{ width: 44, borderRadius: 14, backgroundColor: ALTIN, alignItems: "center", justifyContent: "center" }}>
+            <Ionicons name="play" size={20} color="#1a1408" />
+          </Pressable>
+        </View>
+      </LinearGradient>
+      {NESIDLER.map((g) => (
+        <View key={g.b} style={{ marginBottom: 6 }}>
+          <Text style={[us.etiket, { marginTop: 6 }]}>{g.b}</Text>
+          {g.liste.map(([ad, sorgu, alt, kesin]) => (
+            <Pressable key={ad} onPress={() => cal(ad, sorgu, kesin)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderRadius: 18, marginBottom: 8,
+              backgroundColor: pressed ? ALTIN + "22" : R.kart, borderWidth: 1, borderColor: R.cizgi })}>
+              <LinearGradient colors={[ALTIN, "#b8862f"]} style={{ width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center" }}>
+                {bekle === ad ? <ActivityIndicator color="#1a1408" /> : <Ionicons name="play" size={18} color="#1a1408" style={{ marginLeft: 2 }} />}
+              </LinearGradient>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>{ad}</Text>
+                <Text style={{ color: R.soluk, fontSize: 12 }}>{alt}</Text>
+              </View>
+              {kesin ? <Ionicons name="logo-youtube" size={20} color="#ff4d4d" /> : <Ionicons name="search" size={18} color={R.soluk} />}
+            </Pressable>
+          ))}
+        </View>
+      ))}
     </View>
   );
 }
