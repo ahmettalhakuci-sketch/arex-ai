@@ -16,6 +16,21 @@ import { telefonKomutu } from "./telefon";
 import { titret } from "./ui";
 
 type Faz = "hazir" | "dinliyor" | "dusunuyor" | "konusuyor";
+/** Cihazdaki EN KALİTELİ Türkçe ses (Google TTS "Enhanced"/ağ sesleri çok daha doğal) — Gemini TTS kotası dolunca kullanılır */
+let enIyiSes: { erkek?: string; kadin?: string; herhangi?: string } | null = null;
+async function cihazSesiSec() {
+  if (enIyiSes) return enIyiSes;
+  try {
+    const l = (await Speech.getAvailableVoicesAsync()).filter((v) => /^tr/i.test(v.language));
+    const puan = (v: any) => (v.quality === "Enhanced" ? 10 : 0) + (/network/i.test(v.identifier) ? 5 : 0) - (/local/i.test(v.identifier) ? 1 : 0);
+    const sirali = l.sort((a, b) => puan(b) - puan(a));
+    const erkek = sirali.find((v) => /male|erkek|-tmc|-dfm|#male/i.test(v.identifier + v.name) && !/female/i.test(v.identifier + v.name));
+    const kadin = sirali.find((v) => /female|kadın|-efm|-cfs|#female/i.test(v.identifier + v.name));
+    enIyiSes = { erkek: erkek?.identifier, kadin: kadin?.identifier, herhangi: sirali[0]?.identifier };
+  } catch { enIyiSes = {}; }
+  return enIyiSes;
+}
+const KADIN_KARAKTER = new Set(["asistanKiz", "abla", "anne"]);
 /** Ses karakterleri: doğal insan sesi (Gemini TTS) + üslup */
 const KARAKTERLER: Record<string, { ad: string; anlatici: string; uslup: string }> = {
   asistan: { ad: "✨ AREX ♂", anlatici: "asistan", uslup: "" },
@@ -120,8 +135,10 @@ export default function HizliSes({ kisitli = false, otomatik = true }: { kisitli
       const bayt = await bekle(sozler[i], i === 0 ? 7000 : 9000);
       if (kapali.current || fazRef.current !== "konusuyor") return;
       if (bayt) { await baytlariCal(bayt as Uint8Array); continue; }
-      // doğal ses yetişmezse yalnız BU parça cihaz sesiyle
-      await new Promise<void>((r) => Speech.speak(parcalar[i], { language: "tr-TR", rate: 1.0, onDone: () => r(), onStopped: () => r(), onError: () => r() }));
+      // doğal ses yetişmezse (kota/ağ) yalnız BU parça cihazın en kaliteli Türkçe sesiyle
+      const ses = await cihazSesiSec();
+      const voice = (KADIN_KARAKTER.has(karRef.current) ? ses.kadin : ses.erkek) || ses.herhangi;
+      await new Promise<void>((r) => Speech.speak(parcalar[i], { language: "tr-TR", voice, rate: 1.0, pitch: 1.0, onDone: () => r(), onStopped: () => r(), onError: () => r() }));
     }
     if (!kapali.current && fazRef.current === "konusuyor") { setFaz("hazir"); dinle(); }
   };
