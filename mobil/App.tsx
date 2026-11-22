@@ -15,6 +15,7 @@ import AyarlarEkrani from "./src/ekranlar/Ayarlar";
 import CanliEkrani from "./src/ekranlar/Canli";
 import CocukEkrani from "./src/ekranlar/Cocuk";
 import KuranEkrani from "./src/ekranlar/Kuran";
+import { bekleyenSohbet } from "./src/Asistan";
 import KilitEkrani, { kilitAcikMi } from "./src/Kilit";
 import SohbetEkrani from "./src/ekranlar/Sohbet";
 import { R } from "./src/tema";
@@ -42,8 +43,9 @@ function Uygulama() {
       else if (u.startsWith("arex://canli")) { setAsistan(false); setSekme("canli"); }
       else if (u.startsWith("arex://ayarlar")) { setAsistan(false); setSekme("ayarlar"); }
       else if (u.startsWith("arex://sohbet")) {
-        const q = (ad: string) => { const m = u.match(new RegExp("[?&]" + ad + "=([^&]*)")); return m ? decodeURIComponent(m[1]) : ""; };
-        if (q("m") || q("c")) { setDisMesaj({ metin: q("m"), cevap: q("c") }); }
+        // Mesaj yalnız asistan kartının bellekte bıraktığı veriden alınır; URL'deki parametreler yok sayılır (sahte mesaj engeli)
+        const b = bekleyenSohbet.deger; bekleyenSohbet.deger = null;
+        if (b) setDisMesaj(b);
         setSekme("sohbet");
       }
     };

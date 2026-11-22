@@ -124,7 +124,7 @@ function KariSecici({ acik, kapat }: { acik: boolean; kapat: () => void }) {
   const [filtre, setFiltre] = useState<"Tümü" | "Murattal" | "Mücevved">("Tümü");
   const [ara, setAra] = useState("");
   const liste = KARILER.filter((k) => (filtre === "Tümü" || k.tarz === filtre) && (!ara || k.ad.toLocaleLowerCase("tr").includes(ara.toLocaleLowerCase("tr"))));
-  const sec = (k: string) => { titret(); T.ayarla({ kari: k }); kariYaz(k); kapat(); };
+  const sec = (k: string) => { titret(); if (t.onizleme) T.durdur(); T.ayarla({ kari: k }); kariYaz(k); kapat(); };
   const dinle = (k: string) => {
     titret();
     if (t.onizleme === k && t.aktif) { T.durdur(); return; }

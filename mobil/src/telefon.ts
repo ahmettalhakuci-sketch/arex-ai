@@ -63,7 +63,7 @@ export async function erisimKomutu(metin: string): Promise<string | null> {
   if (ekranMi) {
     if (!gerek()) return ERISIM_YOK;
     const metinEkran = E.ekranOku();
-    if (!metinEkran.trim()) return "📱 Ekranda okunabilir yazı bulamadım.";
+    if (!metinEkran.trim()) return "📱 Okunacak başka bir uygulama ekranı yok. Başka bir uygulamadayken **yan tuşa basılı tut** → kartta **📖 Ekranı özetle**.";
     if (/özetle|anlat|açıkla|ne var|neler/.test(t)) {
       const r = await sohbetTamamla([{ role: "user", content: "Telefon ekranındaki öğeler (🔘 dokunulabilir, ✏️ yazı alanı):\n" + metinEkran.slice(0, 5000) + "\n\nBu ekranda ne olduğunu Türkçe, kısa ve maddeler halinde özetle; önemli düğmeleri belirt." }], { sicaklik: 0.3, maks: 600 });
       if (r.metin) return "### 📱 Ekran özeti\n\n" + r.metin;
