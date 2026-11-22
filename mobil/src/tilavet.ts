@@ -36,10 +36,11 @@ export function besmeleEkle(l: Parca[]): Parca[] {
 }
 
 async function hazirla() {
-  if (oynatici) return oynatici;
+  // Tilavet her başladığında arka plan modunu aç (durdurulunca kapanır)
   try {
     await setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: true, interruptionMode: "doNotMix" });
   } catch {}
+  if (oynatici) return oynatici;
   oynatici = createAudioPlayer(null, { updateInterval: 250 } as any);
   (oynatici as any).addListener("playbackStatusUpdate", (s: any) => {
     if (s.didJustFinish) { ilerle(); return; }
@@ -119,6 +120,8 @@ export function sonraki() { if (d.aktif) { if (d.sira + 1 < kuyruk.length) oynat
 export function onceki() { if (d.aktif) oynat(Math.max(0, d.sira - 1)); }
 export function durdur() {
   try { oynatici?.pause(); if (kilitAcik) oynatici?.clearLockScreenControls(); } catch {}
+  // Arka plan modunu kapat: başka sesler (masal, sohbet) kalıcı medya bildirimi açmasın
+  setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: false, interruptionMode: "mixWithOthers" }).catch(() => {});
   kilitAcik = false; kuyruk = []; devamFn = null;
   if (onYuklenen) { const u = onYuklenen; guvenli(() => clearPreloadedSource(u)); onYuklenen = null; }
   yay({ aktif: false, caliyor: false, yukleniyor: false, parca: null, sira: -1, toplam: 0, onizleme: null });
