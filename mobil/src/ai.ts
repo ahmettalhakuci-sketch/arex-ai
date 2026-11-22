@@ -251,19 +251,32 @@ export async function dogalSes(metin: string, uslup = "masal", anlatici = "masal
 export async function sesiYaziyaDok(uri: string): Promise<string> {
   const k = anahtar("GROQ_API_KEY");
   if (!k) return "";
-  const form = new FormData();
-  if (Platform.OS === "web") {
-    const blob = await (await fetch(uri)).blob();
-    form.append("file", blob, "ses.webm");
-  } else {
-    form.append("file", { uri, name: "ses.m4a", type: "audio/m4a" } as any);
-  }
-  form.append("model", "whisper-large-v3-turbo");
-  form.append("language", "tr");  // Türkçe sabit: kısa kayıtlarda yanlış dil algılamasını önler
   try {
-    const r = await zamanliFetch("https://api.groq.com/openai/v1/audio/transcriptions", {
-      method: "POST", headers: { Authorization: "Bearer " + k }, body: form,
-    }, 60_000);
+    let govde: any, basliklar: Record<string, string> = { Authorization: "Bearer " + k };
+    if (Platform.OS === "web") {
+      const form = new FormData();
+      form.append("file", await (await fetch(uri)).blob(), "ses.webm");
+      form.append("model", "whisper-large-v3-turbo"); form.append("language", "tr");
+      govde = form;
+    } else {
+      // Expo SDK 57'nin fetch'i {uri,name,type} biçimli FormData parçasını desteklemiyor ("Unsupported FormDataPart
+      // implementation" — telefonda bulundu). Dosya baytlarını okuyup multipart gövdeyi elle kuruyoruz.
+      const { File } = await import("expo-file-system");
+      const ses = await new File(uri).bytes();
+      const sinir = "----arex" + Date.now().toString(16);
+      const enc = new TextEncoder();
+      const alan = (ad: string, deger: string) => enc.encode(`--${sinir}\r\nContent-Disposition: form-data; name="${ad}"\r\n\r\n${deger}\r\n`);
+      const parcalar = [
+        alan("model", "whisper-large-v3-turbo"), alan("language", "tr"),
+        enc.encode(`--${sinir}\r\nContent-Disposition: form-data; name="file"; filename="ses.m4a"\r\nContent-Type: audio/mp4\r\n\r\n`),
+        ses, enc.encode(`\r\n--${sinir}--\r\n`),
+      ];
+      const toplam = parcalar.reduce((a, p) => a + p.length, 0);
+      govde = new Uint8Array(toplam); let o = 0;
+      for (const p of parcalar) { govde.set(p, o); o += p.length; }
+      basliklar["Content-Type"] = "multipart/form-data; boundary=" + sinir;
+    }
+    const r = await zamanliFetch("https://api.groq.com/openai/v1/audio/transcriptions", { method: "POST", headers: basliklar, body: govde }, 60_000);
     if (!r.ok) { sonHatalar["ses-yazı"] = "HTTP " + r.status + " " + (await r.text().catch(() => "")).slice(0, 120); return ""; }
     const t = ((await r.json()).text || "").trim();
     if (!t) sonHatalar["ses-yazı"] = "boş metin (ses çok kısa/sessiz olabilir)";
