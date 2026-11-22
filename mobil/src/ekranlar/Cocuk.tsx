@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ANLATICILAR, sohbetTamamla, type Rol } from "../ai";
+import CocukOyunlari from "./CocukOyun";
 import { useAyar } from "../ayar";
 import { baslikBul, DEGERLER, hikayeIstemi, KARAKTERLER, maceraSistemi, OYUNLAR, resimAdresi, secenekleriAyikla, sohbetSistemi, TEMALAR, tercihDil, TONLAR, TURLER, YAS } from "../cocuk";
 import { kitapligaEkle, kitaplikOku, kitapliktanSil, oku, yaz, type KitapKaydi } from "../depo";
@@ -11,7 +12,7 @@ import { anlat, sesiDurdur } from "../ses";
 import { DILLER, R, RTL_DILLER } from "../tema";
 import { Baslik, Dugme, Girdi, Hap, Kart, MdMetin, s as us, Secici } from "../ui";
 
-type Sekme = "atolye" | "macera" | "arkadas" | "kitaplik";
+type Sekme = "atolye" | "macera" | "arkadas" | "kitaplik" | "oyun";
 const USLUP_TUR: Record<string, string> = { uyku: "uyku", komik: "komik", macera: "macera", bilim: "bilgi" };
 
 const YAS_RENK: Record<string, [string, string]> = { "3-6": ["#ffb347", "#ff7eb3"], "7-9": ["#5ee7df", "#7c5cff"], "10-12": ["#4facfe", "#7c5cff"] };
@@ -20,6 +21,7 @@ const DOSEMELER: [Sekme, string, string, [string, string]][] = [
   ["macera", "🎭", "Sen seç macerası", ["#a18cd1", "#7c5cff"]],
   ["arkadas", "💬", "Arkadaşımla konuş", ["#43e97b", "#16a085"]],
   ["kitaplik", "🗂️", "Kitaplığım", ["#f6d365", "#fda085"]],
+  ["oyun", "🎮", "Eğitici oyunlar", ["#4facfe", "#00c6fb"]],
 ];
 
 export default function CocukEkrani() {
@@ -73,7 +75,7 @@ export default function CocukEkrani() {
       {!sekme ? (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
           {DOSEMELER.map(([k, ikon, ad2, renk]) => (
-            <Pressable key={k} style={{ width: "47.5%" }} onPress={() => setSekme(k)}>
+            <Pressable key={k} style={{ width: k === "oyun" ? "100%" : "47.5%" }} onPress={() => setSekme(k)}>
               <LinearGradient colors={renk} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 24, height: 130, padding: 16, justifyContent: "space-between" }}>
                 <Text style={{ fontSize: 40 }}>{ikon}</Text>
                 <Text style={{ color: "#fff", fontWeight: "800", fontSize: 16 }}>{ad2}</Text>
@@ -86,6 +88,7 @@ export default function CocukEkrani() {
       {sekme === "macera" && <Macera yas={yas} dil={dil} ad={ad} sesli={sesli} konusuyor={konusuyor} />}
       {sekme === "arkadas" && <Arkadas yas={yas} dil={dil} ad={ad} sesli={sesli} />}
       {sekme === "kitaplik" && <Kitaplik sesli={sesli} />}
+      {sekme === "oyun" && <CocukOyunlari yas={yas} />}
     </ScrollView>
   );
 }
