@@ -261,7 +261,8 @@ export async function dogalSes(metin: string, uslup = "masal", anlatici = "masal
   const k = anahtar("GEMINI_API_KEY");
   if (!k || (kota["gemini:tts"] || 0) > Date.now()) return null;
   const ses = (ANLATICILAR[anlatici] || ANLATICILAR.masalci).ses;
-  const talimat = USLUPLAR[uslup] || USLUPLAR.masal;
+  // "duz": talimat yok — yalnız metin okunur (Hızlı mod: talimatı yüksek sesle okuyordu)
+  const talimat = uslup === "duz" ? "" : USLUPLAR[uslup] || USLUPLAR.masal;
   try {
     const parcalar = await Promise.all(parcala(seseUygun(metin)).map(async (p) => {
       // Gemini TTS modelleri zaman zaman kapanıyor/yoğunlaşıyor → sırayla dene (ilk çalışan kazanır)
@@ -270,7 +271,7 @@ export async function dogalSes(metin: string, uslup = "masal", anlatici = "masal
         const r = await zamanliFetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
           method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": k },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: `${talimat}:\n\n${p}` }] }],
+            contents: [{ parts: [{ text: talimat ? `${talimat}:\n\n${p}` : p }] }],
             generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: ses } } } },
           }),
         }, 60_000).catch(() => null);

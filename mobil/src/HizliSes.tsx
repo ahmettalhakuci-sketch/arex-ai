@@ -113,8 +113,8 @@ export default function HizliSes({ kisitli = false, otomatik = true }: { kisitli
     const parcalar: string[] = [];
     if (cumleler.length) parcalar.push(cumleler[0]);
     const kalan = cumleler.slice(1).join(" ");
-    if (kalan) { if (kalan.length > 160) { const k = Math.ceil(cumleler.length / 2); parcalar.push(cumleler.slice(1, k).join(" "), cumleler.slice(k).join(" ")); } else parcalar.push(kalan); }
-    const sozler = parcalar.filter(Boolean).map((p) => dogalSes(p, "sohbet", anlatici).catch(() => null));  // hepsi AYNI ANDA başlar
+    if (kalan) parcalar.push(kalan);  // en fazla 2 parça: her geçiş kısa bir kesinti yapıyordu ("sinyal gidiyor" hissi)
+    const sozler = parcalar.filter(Boolean).map((p) => dogalSes(p, "duz", anlatici).catch(() => null));  // hepsi AYNI ANDA başlar
     const bekle = <T,>(p: Promise<T>, ms: number) => Promise.race([p, new Promise<null>((r) => setTimeout(() => r(null), ms))]);
     for (let i = 0; i < sozler.length; i++) {
       const bayt = await bekle(sozler[i], i === 0 ? 7000 : 9000);
