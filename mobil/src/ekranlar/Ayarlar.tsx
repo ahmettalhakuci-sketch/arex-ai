@@ -41,6 +41,9 @@ function Anahtar({ etiket, deger, onChange }: { etiket: string; deger: boolean; 
   );
 }
 
+/** Android 13+ fotoğraf seçici izin istemez */
+const galeriIzinsiz = Platform.OS === "android" && Number(Platform.Version) >= 33;
+
 /** 🔐 İzinler: her iznin durumu + doğrudan o ayar sayfasına giden bağlantı. Uygulamaya dönünce durumlar yenilenir. */
 function IzinlerKarti() {
   const [d, setD] = useState(Erisim.durumlar());
@@ -251,7 +254,9 @@ function GuvenlikBolumu({ Bolum, Anahtar }: { Bolum: any; Anahtar: any }) {
     if (Platform.OS === "web") { setIzin({ mikrofon: true, kamera: true, galeri: true }); }
     else {
       const [m, k, g] = await Promise.all([getRecordingPermissionsAsync(), Camera.getCameraPermissionsAsync(), ImagePicker.getMediaLibraryPermissionsAsync()]);
-      setIzin({ mikrofon: m.granted, kamera: k.granted, galeri: g.granted });
+      // Android 13+ (S25 FE): galeri Android'in kendi fotoğraf seçicisiyle izinsiz çalışır; READ_MEDIA izni uygulamada yok,
+      // bu yüzden "İzin ver" asla sonuç vermezdi → gerekmez olarak göster
+      setIzin({ mikrofon: m.granted, kamera: k.granted, galeri: galeriIzinsiz || g.granted });
     }
     setKilit(await kilitAcikMi()); setBio(await biyometrikVarMi());
   };
@@ -259,7 +264,7 @@ function GuvenlikBolumu({ Bolum, Anahtar }: { Bolum: any; Anahtar: any }) {
   const iste = async (k: string) => {
     if (k === "mikrofon") await izinIste("Mikrofon", requestRecordingPermissionsAsync);
     if (k === "kamera") await izinIste("Kamera", Camera.requestCameraPermissionsAsync);
-    if (k === "galeri") await izinIste("Fotoğraflar", () => ImagePicker.requestMediaLibraryPermissionsAsync());
+    if (k === "galeri" && !galeriIzinsiz) await izinIste("Fotoğraflar", () => ImagePicker.requestMediaLibraryPermissionsAsync());
     yenile();
   };
   const IZINLER: [string, string, string][] = [["mikrofon", "🎙️ Mikrofon", "Sesli yazma ve canlı sohbet"], ["kamera", "📷 Kamera", "Fotoğraf, canlı görüntü, yüz analizi"], ["galeri", "🖼️ Fotoğraflar", "Galeriden fotoğraf/video analizi"]];
@@ -272,7 +277,7 @@ function GuvenlikBolumu({ Bolum, Anahtar }: { Bolum: any; Anahtar: any }) {
             <Text style={{ color: R.yazi, fontSize: 15 }}>{ad}</Text>
             <Text style={{ color: R.soluk, fontSize: 12 }}>{a}</Text>
           </View>
-          {izin[k] ? <Text style={{ color: R.yesil, fontWeight: "700" }}>✓ Açık</Text> : <Dugme kucuk yazi="İzin ver" onPress={() => iste(k)} />}
+          {izin[k] ? <Text style={{ color: R.yesil, fontWeight: "700" }}>{k === "galeri" && galeriIzinsiz ? "✓ İzin gerekmez" : "✓ Açık"}</Text> : <Dugme kucuk yazi="İzin ver" onPress={() => iste(k)} />}
         </View>
       ))}
       {Platform.OS !== "web" ? <Dugme kucuk ikincil yazi="⚙️ Telefon ayarlarında AREX izinlerini aç" onPress={() => Linking.openSettings()} style={{ marginTop: 6 }} /> : null}
