@@ -54,10 +54,44 @@ const GROQ = ["openai/gpt-oss-120b", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"];
 const GEMINI_METIN = ["gemini-3.5-flash-lite", "gemini-3.5-flash"];
 const OPENROUTER = ["openrouter/free", "nvidia/nemotron-3-ultra-550b-a55b:free", "google/gemma-4-31b-it:free"];
 
+// ---------- 🖥️ Mac'teki Ollama (ev Wi-Fi'si; ücretsiz, yerel) ----------
+// Açıksa ve Mac'e ulaşılabiliyorsa önce Ollama denenir; ulaşılamazsa sessizce Groq/Gemini'ye geçilir.
+export const OLLAMA_SOHBET = "llama3.2", OLLAMA_GORSEL = "gemma3:4b";
+let ollama = { acik: false, adres: "192.168.1.45:11434" };
+let ollamaDurum: { zaman: number; var: boolean; modeller: string[] } = { zaman: 0, var: false, modeller: [] };
+export function ollamaBildir(acik: boolean, adres?: string) { ollama = { acik, adres: (adres || ollama.adres).replace(/^https?:\/\//, "").replace(/\/$/, "") }; ollamaDurum.zaman = 0; }
+/** Mac'teki Ollama ayakta mı + hangi modeller var (60 sn önbellek, 1.5 sn zaman aşımı) */
+export async function ollamaHazir(zorla = false): Promise<{ var: boolean; modeller: string[] }> {
+  if (!ollama.acik) return { var: false, modeller: [] };
+  if (!zorla && Date.now() - ollamaDurum.zaman < 60_000) return ollamaDurum;
+  try {
+    const r = await zamanliFetch(`http://${ollama.adres}/api/tags`, {}, 1500);
+    const j = await r.json();
+    ollamaDurum = { zaman: Date.now(), var: r.ok, modeller: (j.models || []).map((m: any) => String(m.name)) };
+  } catch { ollamaDurum = { zaman: Date.now(), var: false, modeller: [] }; }
+  return ollamaDurum;
+}
+async function ollamaSohbet(mesajlar: any[], model: string, maks: number, sicaklik: number): Promise<string | null> {
+  const d = await ollamaHazir();
+  if (!d.var || !d.modeller.some((x) => x === model || x.startsWith(model + ":") || x.split(":")[0] === model.split(":")[0])) return null;
+  try {
+    const r = await zamanliFetch(`http://${ollama.adres}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model, stream: false, messages: mesajlar, options: { temperature: sicaklik, num_predict: maks } }) }, 120_000);
+    if (!r.ok) { sonHatalar.ollama = "HTTP " + r.status; return null; }
+    const t = temizle((await r.json())?.message?.content || "");
+    if (t) sonHatalar.ollama = "OK " + model;
+    return t || null;
+  } catch (e: any) { sonHatalar.ollama = e?.name || "hata"; ollamaDurum.zaman = 0; return null; }
+}
+
 export async function sohbetTamamla(mesajlar: Rol[], opt: { sistem?: string; sicaklik?: number; maks?: number; tercih?: "gemini" | "groq" | ""; anahtarsiz?: boolean } = {}):
   Promise<{ metin: string | null; motor: string }> {
   const { sistem = "", sicaklik = 0.75, maks = 1800, tercih = "" } = opt;
   const tam = [...(sistem ? [{ role: "system", content: sistem }] : []), ...mesajlar.filter((m) => m.content)];
+  if (ollama.acik && !opt.anahtarsiz) {
+    const t = await ollamaSohbet(tam, OLLAMA_SOHBET, maks, sicaklik);
+    if (t) return { metin: t, motor: "Ollama " + OLLAMA_SOHBET + " (Mac)" };
+  }
   const groq = async () => {
     const k = anahtar("GROQ_API_KEY");
     if (!k) return null;
@@ -102,6 +136,12 @@ export async function sohbetTamamla(mesajlar: Rol[], opt: { sistem?: string; sic
 export async function medyaAnaliz(b64: string, mime: string, talimat: string, opt: { sistem?: string; gecmis?: Rol[]; derin?: boolean; maks?: number } = {}):
   Promise<{ metin: string | null; motor: string }> {
   const { sistem = "", gecmis = [], derin = false, maks = 2500 } = opt;
+  // Mac'teki Ollama (Gemma 3 görsel) — yalnız fotoğraf; video Gemini'de kalır
+  if (ollama.acik && mime.startsWith("image")) {
+    const ms: any[] = [...(sistem ? [{ role: "system", content: sistem }] : []), { role: "user", content: talimat, images: [b64] }];
+    const t = await ollamaSohbet(ms, OLLAMA_GORSEL, maks, 0.3);
+    if (t) return { metin: t, motor: "Ollama " + OLLAMA_GORSEL + " (Mac)" };
+  }
   const k = anahtar("GEMINI_API_KEY");
   if (k) {
     const icerik: any[] = gecmis.slice(-6).filter((m) => m.role !== "system").map((m) => ({
@@ -288,14 +328,23 @@ export async function sesiYaziyaDok(uri: string): Promise<string> {
 }
 
 // ---------- Gemini Live geçici token ----------
-export async function canliToken(dakika = 30): Promise<string> {
+/** Gemini Live geçici anahtarı önbellekli (25 dk) — "AREX" deyince bağlanma beklemesin diye önceden alınır */
+let tokenOnbellek: { t: string; bitis: number } | null = null;
+let tokenSoz: Promise<string> | null = null;
+export function canliToken(dakika = 30): Promise<string> {
+  if (tokenOnbellek && tokenOnbellek.bitis > Date.now()) return Promise.resolve(tokenOnbellek.t);
+  if (tokenSoz) return tokenSoz;
+  tokenSoz = canliTokenAl(dakika).then((t) => { if (t) tokenOnbellek = { t, bitis: Date.now() + 25 * 60_000 }; tokenSoz = null; return t; });
+  return tokenSoz;
+}
+async function canliTokenAl(dakika = 30): Promise<string> {
   const k = anahtar("GEMINI_API_KEY");
   if (!k) return "";
   const bitis = new Date(Date.now() + dakika * 60_000).toISOString().replace(/\.\d+Z$/, "Z");
   try {
     const r = await zamanliFetch("https://generativelanguage.googleapis.com/v1alpha/auth_tokens", {
       method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": k },
-      body: JSON.stringify({ uses: 20, expireTime: bitis, newSessionExpireTime: bitis }),
+      body: JSON.stringify({ uses: 50, expireTime: bitis, newSessionExpireTime: bitis }),
     }, 20_000);
     if (!r.ok) return "";
     return (await r.json()).name || "";

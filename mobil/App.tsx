@@ -61,7 +61,8 @@ function Uygulama() {
   useEffect(() => {
     Erisim.onar().catch(() => {});
     Erisim.medyaBildirimTemizle();
-    Erisim.uyanmaSurdur();  // "AREX" dinleme açıksa yeniden başlat  // eski sürümden asılı kalan "çalıyor" bildirimi
+    Erisim.uyanmaSurdur();  // "AREX" dinleme açıksa yeniden başlat
+    import("./src/ai").then((m) => setTimeout(() => m.canliToken().catch(() => {}), 3000));  // Canlı anahtarını ısıt  // eski sürümden asılı kalan "çalıyor" bildirimi
     const a = AppState.addEventListener("change", (x) => { if (x === "active") Erisim.onar().catch(() => {}); });
     return () => a.remove();
   }, []);

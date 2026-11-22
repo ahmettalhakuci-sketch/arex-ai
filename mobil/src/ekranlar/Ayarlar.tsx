@@ -73,6 +73,7 @@ function IzinlerKarti() {
     { ad: "📷 Kamera", alt: "Canlı görüntü ve fotoğraf analizi", ok: kam, ac: async () => { await izinIste("Kamera", Camera.requestCameraPermissionsAsync, Camera.getCameraPermissionsAsync); yenile(); } },
     { ad: "📇 Rehber", alt: "\"Babamı ara\", \"ablama WhatsApp'tan yaz\" için kişileri bulur", ok: rehber, ac: async () => { await izinIste("Rehber", async () => ({ granted: (await PermissionsAndroid.request("android.permission.READ_CONTACTS" as any)) === "granted", canAskAgain: true }), async () => ({ granted: await PermissionsAndroid.check("android.permission.READ_CONTACTS" as any) })); yenile(); } },
     { ad: "📞 Telefon (doğrudan arama)", alt: "Kapalıysa çevirici açılır, yeşil tuşa sen basarsın", ok: arama, ac: async () => { await izinIste("Telefon", async () => ({ granted: (await PermissionsAndroid.request("android.permission.CALL_PHONE" as any)) === "granted", canAskAgain: true }), async () => ({ granted: await PermissionsAndroid.check("android.permission.CALL_PHONE" as any) })); yenile(); } },
+    { ad: "⚡ Üstte göster (anında açılış)", alt: "\"AREX\" deyince kart beklemeden açılsın", ok: Erisim.uyanmaDurum().ustteGoster ?? null, ac: () => Erisim.ayarAc("ustte") },
     { ad: "✨ Yan tuş asistanı", alt: "Dijital asistan uygulaması → AREX AI", ok: d.asistanBiliniyor ? d.asistan : null, ac: () => Erisim.ayarAc("asistan") },
     { ad: "🔋 Pil kısıtlaması yok", alt: "Ekran kapalıyken tilavet kesilmesin", ok: d.pil, ac: () => Erisim.ayarAc("pil") },
     { ad: "🔔 Bildirimler", alt: "Hatırlatıcı ve pomodoro uyarıları", ok: null, ac: () => Erisim.ayarAc("bildirim") },
@@ -102,12 +103,10 @@ function IzinlerKarti() {
 }
 
 // ---------- 🎙️ "AREX" deyince uyan + ses imzası (yalnız seni tanır; cihaz içi, internetsiz) ----------
-const IMZA_CUMLELERI = [
-  "AREX, bugün hava nasıl olacak?",
-  "Annemi ara ve akşam geleceğimi söyle.",
-  "Yarın sabah yedide beni uyandır lütfen.",
-  "Kur'an'dan Yâsîn suresini açar mısın?",
-  "En sevdiğim renk lacivert, bunu unutma.",
+// Kısa "AREX" örnekleri: uyanırken de kısa kelimeyle karşılaştırılır (kısa-kısa eşleşme çok daha isabetli)
+const IMZA_CUMLELERI: [string, number][] = [
+  ["AREX", 2], ["AREX", 2], ["AREX, bugün hava nasıl olacak?", 4], ["AREX", 2],
+  ["Annemi ara ve akşam geleceğimi söyle.", 4], ["AREX", 2],
 ];
 function SesTanima() {
   const [d, setD] = useState(Erisim.uyanmaDurum());
@@ -131,7 +130,7 @@ function SesTanima() {
     if (kayit) return;
     if (!(await izinIste("Mikrofon", requestRecordingPermissionsAsync, getRecordingPermissionsAsync))) return;
     setKayit(true); setMesaj("🎙️ Dinliyorum… cümleyi normal sesinle oku");
-    const r = await Erisim.imzaOrnek(4);
+    const r = await Erisim.imzaOrnek(IMZA_CUMLELERI[Math.min(adim, IMZA_CUMLELERI.length - 1)][1]);
     setKayit(false);
     if (r.hata || !r.vektor || (r.ses || 0) < 400) { setMesaj("⚠️ Sesini net alamadım (" + (r.hata || "çok kısık ya da kısa") + "). Telefona biraz yakın, tekrar oku."); return; }
     const yeni = [...ornekler, r.vektor];
@@ -139,15 +138,25 @@ function SesTanima() {
     if (adim + 1 < IMZA_CUMLELERI.length) { setAdim(adim + 1); setMesaj("✅ Güzel! Sıradaki cümle."); return; }
     const k = Erisim.imzaKaydet(yeni);
     if (k.hata) { setMesaj("⚠️ " + k.hata); return; }
-    setMesaj(`✅ Ses imzan kaydedildi. Artık "AREX" diyenin sen olup olmadığını anlarım. (tutarlılık %${Math.round((k.ortalama || 0) * 100)}, eşik %${Math.round((k.esik || 0) * 100)})`);
+    setMesaj(`✅ Ses imzan kaydedildi. Artık "AREX" diyenin sen olup olmadığını anlarım. (tutarlılık %${Math.round((k.ortalama || 0) * 100)}, eşik %${Math.round((k.esik || 0) * 100)}) Ailede sesi benzeyen biri varsa "👥 Başkasının sesini öğret" ile onu da tanıt.`);
     yenile();
   };
+  /** Başka birine (ör. abi) 3 kez "AREX" dedir → "bu ben değilim" olarak öğrenilir */
+  const yabanciOgret = async () => {
+    for (let i = 1; i <= 3; i++) {
+      setMesaj(`👥 ${i}/3 — Diğer kişi telefona "AREX" desin (2 sn)…`); setKayit(true);
+      const r = await Erisim.imzaOrnek(2); setKayit(false);
+      if (!r.vektor || (r.ses || 0) < 400) { setMesaj("⚠️ Ses alınamadı, tekrar dene."); return; }
+      Erisim.yabanciEkle(r.vektor);
+    }
+    yenile(); setMesaj("✅ Bu kişinin sesi öğrenildi: \"AREX\" dese de cevap vermem, sana haber veririm.");
+  };
   const testEt = async () => {
-    setMesaj("🎙️ 3 saniye bir şey söyle…"); setKayit(true);
-    const r = await Erisim.imzaOrnek(3); setKayit(false);
+    setMesaj("🎙️ \"AREX\" de (2 sn)…"); setKayit(true);
+    const r = await Erisim.imzaOrnek(2); setKayit(false);
     if (!r.vektor) { setMesaj("⚠️ Ses alınamadı, tekrar dene."); return; }
     const k = Erisim.imzaKarsilastir(r.vektor);
-    setMesaj(k.hata ? "⚠️ " + k.hata : k.sahip ? `✅ Seni tanıdım (benzerlik %${Math.round((k.benzerlik || 0) * 100)}, eşik %${Math.round((k.esik || 0) * 100)})` : `🔒 Seni tanıyamadım (benzerlik %${Math.round((k.benzerlik || 0) * 100)}, eşik %${Math.round((k.esik || 0) * 100)}). Sessiz bir yerde imzayı yenile.`);
+    setMesaj(k.hata ? "⚠️ " + k.hata : k.sahip ? `✅ Seni tanıdım (benzerlik %${Math.round((k.benzerlik || 0) * 100)}, eşik %${Math.round((k.esik || 0) * 100)}${(k.yabanci ?? -1) >= 0 ? `, yabancı %${Math.round((k.yabanci || 0) * 100)}` : ""})` : `🔒 Seni tanıyamadım (benzerlik %${Math.round((k.benzerlik || 0) * 100)}, eşik %${Math.round((k.esik || 0) * 100)}). Sessiz bir yerde imzayı yenile.`);
   };
 
   return (
@@ -160,21 +169,28 @@ function SesTanima() {
         {d.acik ? (d.calisiyor ? "● Dinliyor — \"AREX\" de, yarım saniye bekle, isteğini söyle." : "Başlatılıyor…") : "Kapalı."} Ses yalnız bu telefonda işlenir; hiçbir yere gönderilmez. Bildirim çubuğunda küçük 🎙 simgesi görünür (Android zorunluluğu).
       </Text>
       <View style={{ flexDirection: "row", gap: 8 }}>
-        <Dugme kucuk ikincil={d.imzaVar} yazi={d.imzaVar ? "🔁 Ses imzasını yenile" : "🧬 Sesimi tanıt (5 cümle)"} onPress={() => { setAdim(0); setOrnekler([]); setMesaj(""); setSihirbaz(true); }} style={{ flex: 1 }} />
+        <Dugme kucuk ikincil={d.imzaVar} yazi={d.imzaVar ? "🔁 Ses imzasını yenile" : "🧬 Sesimi tanıt (6 kısa kayıt)"} onPress={() => { setAdim(0); setOrnekler([]); setMesaj(""); setSihirbaz(true); }} style={{ flex: 1 }} />
         {d.imzaVar ? <Dugme kucuk ikincil yazi="🧪 Beni tanıyor mu?" onPress={testEt} style={{ flex: 1 }} /> : null}
       </View>
+      {d.imzaVar ? (
+        <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+          <Dugme kucuk ikincil yazi={`👥 Başkasının sesini öğret${d.yabanciSayi ? ` (${d.yabanciSayi})` : ""}`} onPress={yabanciOgret} style={{ flex: 2 }} />
+          {d.yabanciSayi ? <Dugme kucuk ikincil yazi="🗑️ Sil" onPress={() => { Erisim.yabancilariSil(); yenile(); setMesaj("Öğretilen yabancı sesler silindi."); }} style={{ flex: 1 }} /> : null}
+        </View>
+      ) : null}
+      {d.acik && !d.ustteGoster ? <Pressable onPress={() => Erisim.ayarAc("ustte")}><Text style={{ color: R.sari, fontSize: 12.5, marginTop: 8 }}>⚡ Anında açılması için "Diğer uygulamaların üzerinde göster" iznini aç → dokun</Text></Pressable> : null}
       {!d.imzaVar ? <Text style={{ color: R.sari, fontSize: 12, marginTop: 6 }}>⚠️ Ses imzası yok: şu an "AREX" diyen herkes seni sayılır. Sesini tanıt.</Text> : null}
       {mesaj && !sihirbaz ? <Text style={{ color: R.yazi, fontSize: 13, marginTop: 8 }}>{mesaj}</Text> : null}
       <Modal visible={sihirbaz} transparent animationType="slide" onRequestClose={() => setSihirbaz(false)}>
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
           <View style={{ backgroundColor: R.bg2, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 34, borderWidth: 1, borderColor: R.cizgi }}>
             <Text style={{ color: "#fff", fontSize: 20, fontWeight: "800" }}>🧬 Sesini tanıt</Text>
-            <Text style={[us.alt, { marginBottom: 14 }]}>Sessiz bir yerde, telefonu normal tuttuğun gibi tut ve cümleyi her zamanki sesinle oku. ({Math.min(adim + 1, 5)}/5)</Text>
+            <Text style={[us.alt, { marginBottom: 14 }]}>Sessiz bir yerde, telefonu normal tuttuğun gibi tut ve cümleyi her zamanki sesinle oku. ({Math.min(adim + 1, IMZA_CUMLELERI.length)}/{IMZA_CUMLELERI.length})</Text>
             <View style={{ flexDirection: "row", gap: 6, marginBottom: 14 }}>
               {IMZA_CUMLELERI.map((_, i) => <View key={i} style={{ flex: 1, height: 5, borderRadius: 3, backgroundColor: i < ornekler.length ? R.yesil : i === adim ? R.acc : "rgba(255,255,255,0.12)" }} />)}
             </View>
             <View style={{ backgroundColor: "rgba(124,92,255,0.12)", borderRadius: 18, padding: 18, borderWidth: 1, borderColor: "rgba(162,140,255,0.35)", marginBottom: 14 }}>
-              <Text style={{ color: "#fff", fontSize: 19, fontWeight: "700", textAlign: "center", lineHeight: 28 }}>“{IMZA_CUMLELERI[Math.min(adim, 4)]}”</Text>
+              <Text style={{ color: "#fff", fontSize: 22, fontWeight: "800", textAlign: "center", lineHeight: 30 }}>“{IMZA_CUMLELERI[Math.min(adim, IMZA_CUMLELERI.length - 1)][0]}”</Text>
             </View>
             {mesaj ? <Text style={{ color: R.yazi, fontSize: 13.5, marginBottom: 12, textAlign: "center" }}>{mesaj}</Text> : null}
             {ornekler.length >= IMZA_CUMLELERI.length && d.imzaVar ? (
@@ -182,13 +198,41 @@ function SesTanima() {
             ) : (
               <View style={{ flexDirection: "row", gap: 8 }}>
                 <Dugme ikincil yazi="Vazgeç" onPress={() => setSihirbaz(false)} style={{ flex: 1 }} />
-                <Dugme yazi={kayit ? "🎙️ Dinliyorum…" : "🎙️ Oku (4 sn)"} yukleniyor={kayit} onPress={kaydet} style={{ flex: 2 }} />
+                <Dugme yazi={kayit ? "🎙️ Dinliyorum…" : `🎙️ Oku (${IMZA_CUMLELERI[Math.min(adim, IMZA_CUMLELERI.length - 1)][1]} sn)`} yukleniyor={kayit} onPress={kaydet} style={{ flex: 2 }} />
               </View>
             )}
           </View>
         </View>
       </Modal>
     </View>
+  );
+}
+
+/** 🖥️ Mac'teki Ollama: ev Wi-Fi'sinde ücretsiz, yerel yapay zekâ (Llama 3.2 sohbet + Gemma 3 görsel) */
+function OllamaBolumu() {
+  const { ayar, guncelle } = useAyar();
+  const [adres, setAdres] = useState(ayar.ollamaAdres || "192.168.1.45:11434");
+  const [durum, setDurum] = useState("");
+  const [bekle, setBekle] = useState(false);
+  const test = async () => {
+    setBekle(true); setDurum("");
+    guncelle({ ollamaAdres: adres.trim(), ollamaAcik: true });
+    const { ollamaBildir, ollamaHazir, OLLAMA_SOHBET, OLLAMA_GORSEL } = await import("../ai");
+    ollamaBildir(true, adres.trim());
+    const d = await ollamaHazir(true);
+    const var_ = (m: string) => d.modeller.some((x) => x.split(":")[0] === m.split(":")[0]);
+    setDurum(!d.var ? "❌ Mac'e ulaşılamadı. Mac açık mı, aynı Wi-Fi'de misin, adres doğru mu?" :
+      `✅ Bağlandı • Sohbet (${OLLAMA_SOHBET}): ${var_(OLLAMA_SOHBET) ? "hazır" : "Mac'te yok"} • Görsel (${OLLAMA_GORSEL}): ${var_(OLLAMA_GORSEL) ? "hazır" : "Mac'te yok"}`);
+    setBekle(false);
+  };
+  return (
+    <Bolum baslik="🖥️ Mac'teki Ollama (yerel yapay zekâ)">
+      <Text style={[us.alt, { marginBottom: 8 }]}>Evde, aynı Wi-Fi'deyken sohbet (Llama 3.2) ve fotoğraf analizi (Gemma 3) Mac'te, ücretsiz ve internete çıkmadan yapılır. Mac kapalıysa ya da dışarıdaysan otomatik olarak Groq/Gemini'ye geçer.</Text>
+      <Anahtar etiket="🖥️ Önce Mac'teki Ollama'yı kullan" deger={!!ayar.ollamaAcik} onChange={(v) => guncelle({ ollamaAcik: v })} />
+      <Girdi etiket="Mac adresi (IP:port)" value={adres} onChangeText={setAdres} autoCapitalize="none" placeholder="192.168.1.45:11434" />
+      <Dugme kucuk yazi="🔌 Bağlantıyı test et" onPress={test} yukleniyor={bekle} />
+      {durum ? <Text style={{ color: R.yazi, marginTop: 8, fontSize: 13 }}>{durum}</Text> : null}
+    </Bolum>
   );
 }
 
@@ -301,6 +345,7 @@ export default function AyarlarEkrani() {
         <Secici etiket="Anlatıcı" deger={ayar.anlatici} onChange={(v) => guncelle({ anlatici: v })} secenekler={Object.entries(ANLATICILAR).map(([k, v]) => ({ k, ad: v.ad }))} />
       </Bolum>
 
+      <OllamaBolumu />
       <Bolum baslik="🔑 API anahtarları">
         <Text style={[us.alt, { marginBottom: 10 }]}>Anahtarlar cihazın güvenli deposunda saklanır; güncelleme veya yeniden başlatma silmez. Boş bırakılan alan mevcut anahtarı değiştirmez.</Text>
         {(Object.keys(ANAHTAR_ADLARI) as AnahtarAdi[]).map((ad) => (

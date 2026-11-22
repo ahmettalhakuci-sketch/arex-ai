@@ -24,6 +24,9 @@ class AsistanActivity : ReactActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(null)
     overridePendingTransition(0, 0)
+    // Kilit ekranında da açıl ("AREX" deyince ekran kapalı/kilitliyken bile); hassas işlemler için JS kilidi açtırır
+    if (android.os.Build.VERSION.SDK_INT >= 27) { setShowWhenLocked(true); setTurnScreenOn(true) }
+    else window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
     // Gemini gibi: pencere ekranın tamamını DEĞİL, yalnız alttaki kart kadar yeri kaplar.
     // Tam ekran (şeffaf da olsa) pencere arkadaki uygulamayı erişilebilirlik listesinden düşürüyordu → "ekranı oku" göremiyordu.
     window.setGravity(Gravity.BOTTOM)

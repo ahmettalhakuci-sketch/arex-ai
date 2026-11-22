@@ -48,12 +48,19 @@ function Panel() {
   /** Varsayılan: küçük komut çubuğu. 🎙 ya da yukarı kaydır → Canlı sohbet (kart büyür) */
   const [canli, setCanli] = useState(false);
   // "AREX" ile uyandıysa: konuşan sahip mi? (ses imzası, cihaz içi) — değilse kişisel özellikler kilitli
-  const [yabanci, setYabanci] = useState(() => { const u = Erisim.sonUyanma(); return !!u && !u.sahip; });
-  const kilidiAc = async () => { if (await biyometrikDogrula()) { titret(); setYabanci(false); } };
+  // "AREX" ile mi uyandı? (bir kez okunur) → sahipse TAM EKRAN premium ses modu, değilse kilitli
+  const ilkUyanma = useRef(Erisim.sonUyanma()).current;
+  const tam = !!ilkUyanma && ilkUyanma.sahip;
+  const [yabanci, setYabanci] = useState(() => !!ilkUyanma && !ilkUyanma.sahip);
+  // Kilit ekranındaysa Android'in kendi kilit açma ekranı (PIN/parmak izi), değilse AREX biyometrik doğrulama
+  const kilidiAc = async () => {
+    const ok = Erisim.ekranKilitli() ? await Erisim.kilidiKaldir() : await biyometrikDogrula();
+    if (ok) { titret(); setYabanci(false); }
+  };
   const canliRef = useRef(false);
   const yabanciRef = useRef(yabanci); yabanciRef.current = yabanci;
   const canliAc = () => {
-    if (yabanciRef.current) { biyometrikDogrula().then((ok) => { if (ok) { setYabanci(false); titret(); } }); return; }  // ses tanınmadıysa önce parmak izi
+    if (yabanciRef.current) { kilidiAc(); return; }  // ses tanınmadıysa önce kilit/parmak izi
     titret(); canliRef.current = true; setCanli(true);
   };
   // Yan tuşa basınca hemen dinle (Ayarlar'dan kapatılabilir). Kilitliyse önce kilit ekranı gelir.
@@ -65,6 +72,8 @@ function Panel() {
     if (!k.trim() || isliyor) return;
     if (kilitli) { canliAc(); return; }  // kilitliyken telefon komutu yok: önce kilidi aç
     if (yabanci) { kilidiAc(); return; }  // ses tanınmadı: önce parmak izi
+    // Kilit ekranında: arama/mesaj/ekran komutları için önce telefonun kilidi açılmalı (Gemini gibi)
+    if (Erisim.ekranKilitli() && !(await Erisim.kilidiKaldir())) { setSonuc("🔒 Bu komut için önce telefonun kilidini aç."); return; }
     titret();
     // Geri / ana ekran / bildirim… : önce kart kapanır, eylem sonra arkadaki uygulamaya uygulanır
     const ge = genelEylem(k);
@@ -81,6 +90,7 @@ function Panel() {
   useEffect(() => {
     Promise.all([anahtarlariYukle(), kilitAcikMi().then(setKilitli)]).finally(() => setHazir(true));
     Erisim.onar().catch(() => {});  // yan tuşla açılınca servis bağlantısını tazele
+    import("./ai").then((m) => anahtarlariYukle().then(() => m.canliToken().catch(() => {})));  // Canlı bağlantısı için anahtar önceden
     Animated.parallel([
       Animated.spring(y, { toValue: 0, useNativeDriver: true, damping: 18, stiffness: 180, mass: 0.9 }),
       Animated.timing(perde, { toValue: 1, duration: 260, useNativeDriver: true }),
@@ -129,13 +139,16 @@ function Panel() {
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: perde }]} pointerEvents="none">
         <LinearGradient colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.18)", "rgba(0,0,0,0.55)"]} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
       </Animated.View>
-      <Pressable style={{ flex: 1 }} onPress={kapat} />
-      <Animated.View onLayout={(e) => Erisim.pencereBoyu(e.nativeEvent.layout.height + Math.max(ic.bottom, 8) + 6)} style={{ transform: [{ translateY: y }], marginHorizontal: 8, marginBottom: Math.max(ic.bottom, 8) }}>
+      {!tam ? <Pressable style={{ flex: 1 }} onPress={kapat} /> : null}
+      <Animated.View onLayout={(e) => Erisim.pencereBoyu(tam ? Dimensions.get("screen").height : e.nativeEvent.layout.height + Math.max(ic.bottom, 8) + 6)}
+        style={tam ? { flex: 1, transform: [{ translateY: y }] } : { transform: [{ translateY: y }], marginHorizontal: 8, marginBottom: Math.max(ic.bottom, 8) }}>
         {/* Gemini tarzı renkli ışıltı */}
-        <Animated.View pointerEvents="none" style={{ position: "absolute", left: -2, right: -2, top: -2, bottom: -2, borderRadius: 32, opacity: parlaklik }}>
+        <Animated.View pointerEvents="none" style={{ position: "absolute", left: -2, right: -2, top: -2, bottom: -2, borderRadius: tam ? 0 : 32, opacity: tam ? 0 : parlaklik }}>
           <LinearGradient colors={PARILTI as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, borderRadius: 32 }} />
         </Animated.View>
-        <View style={{ height: canli ? yukseklik : undefined, borderRadius: 28, overflow: "hidden", backgroundColor: "#0a0e22", margin: 1.5 }}>
+        <View style={tam ? { flex: 1, overflow: "hidden", backgroundColor: "#04061a", paddingTop: ic.top, paddingBottom: ic.bottom }
+          : { height: canli ? yukseklik : undefined, borderRadius: 28, overflow: "hidden", backgroundColor: "#0a0e22", margin: 1.5 }}>
+          {tam ? <LinearGradient pointerEvents="none" colors={["#1a1150", "#070a24", "#04061a"]} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFill} /> : null}
           <View {...surukle.panHandlers} style={{ paddingTop: 7, paddingBottom: 2, paddingHorizontal: 14 }}>
             <View style={{ alignSelf: "center", width: 34, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.22)", marginBottom: 8 }} />
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>

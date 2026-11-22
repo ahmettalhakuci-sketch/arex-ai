@@ -187,8 +187,44 @@ export async function uygulamaIciKomut(metin: string): Promise<string | null> {
   return null;
 }
 
+// ---------- ⏰ Saat / sayaç / alarm: "saat kaç", "5 dakikalık sayaç kur", "sabah 7'ye alarm kur", "yarın 6.30'da uyandır" ----------
+const SAYI: Record<string, number> = { bir: 1, iki: 2, üç: 3, dört: 4, beş: 5, altı: 6, yedi: 7, sekiz: 8, dokuz: 9, on: 10, "on beş": 15, yirmi: 20, otuz: 30, kırk: 40, "kırk beş": 45, elli: 50, yarım: 0.5, çeyrek: 0.25 };
+const sayiOku = (x: string) => { const t = x.trim(); return /^\d+([.,]\d+)?$/.test(t) ? parseFloat(t.replace(",", ".")) : SAYI[t] ?? NaN; };
+export async function saatKomutu(metin: string): Promise<string | null> {
+  const t = metin.trim().toLocaleLowerCase("tr").replace(/[.!?]+$/, "").replace(/\s+/g, " ");
+  let m: RegExpMatchArray | null;
+  if (/^(?:şu an )?saat kaç|^saati söyle|^saat ne$/.test(t)) {
+    const d = new Date(); return `🕒 Saat **${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}** — ${d.toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long" })}`;
+  }
+  if (Platform.OS !== "android" || !E.destekVar()) return null;
+  if (/^alarmlar(ı|ım|ımı)?\s*(göster|aç)?$/.test(t)) { E.alarmlariGoster(); return "⏰ Alarmların açıldı."; }
+  // Sayaç: "5 dakikalık sayaç kur", "on dakika sayaç", "30 saniye geri sayım başlat", "yarım saat zamanlayıcı"
+  if ((m = t.match(/^(\d+(?:[.,]\d+)?|[a-zçğıöşü]+(?: beş)?)\s*(saniye|sn|dakika|dk|saat)(?:l[ıi]k|luk|lük)?\s*(?:bir\s+)?(?:sayaç|zamanlayıcı|geri sayım|timer)(?:\s*(?:kur|başlat|ayarla|aç))?$/))
+    || (m = t.match(/^(?:sayaç|zamanlayıcı|geri sayım)\s*(?:kur|başlat)?\s*[:\-]?\s*(\d+(?:[.,]\d+)?|[a-zçğıöşü]+(?: beş)?)\s*(saniye|sn|dakika|dk|saat)$/))) {
+    const n = sayiOku(m[1]); if (!(n > 0)) return null;
+    const sn = Math.round(n * (/^sa/.test(m[2]) && m[2] !== "saniye" ? 3600 : /^d/.test(m[2]) ? 60 : 1));
+    if (sn > 24 * 3600) return "⏱️ En fazla 24 saatlik sayaç kurabilirim.";
+    E.sayac(sn, "AREX sayaç");
+    const yaz = sn >= 3600 ? `${+(sn / 3600).toFixed(2)} saat` : sn >= 60 ? `${+(sn / 60).toFixed(1)} dakika` : `${sn} saniye`;
+    return `⏱️ **${yaz}**${/saniye|saat/.test(yaz) ? "lik" : "lık"} sayaç kuruldu ✅`;
+  }
+  // Alarm: "sabah 7'ye alarm kur", "7:30 alarm", "akşam 9'da uyandır", "yarın 6.15'te beni uyandır", "alarm kur 06:45"
+  if ((m = t.match(/^(?:yarın\s+)?(sabah|öğlen|öğle|akşam|gece)?\s*(\d{1,2})(?:[:.](\d{2}))?\s*(?:['’]?(?:y?[ae]|d[ae]|t[ae]))?\s*(?:bir\s+)?(?:alarm(?:ı)?\s*(?:kur|ayarla|koy)?|(?:beni\s+)?uyandır)$/))
+    || (m = t.match(/^(?:alarm|uyandır)\s*(?:kur|ayarla)?\s*[:\-]?\s*(sabah|öğlen|öğle|akşam|gece)?\s*(\d{1,2})(?:[:.](\d{2}))?$/))) {
+    let saat = Number(m[2]); const dk = Number(m[3] || 0); const dilim = m[1] || "";
+    if (saat > 23 || dk > 59) return null;
+    if ((dilim === "akşam" || dilim === "öğlen" || dilim === "öğle") && saat < 12) saat += 12;
+    if (dilim === "gece" && saat < 5) { /* gece 2 → 02:00 */ } else if (dilim === "gece" && saat < 12) saat += 12;
+    E.alarm(saat, dk, "AREX");
+    return `⏰ **${String(saat).padStart(2, "0")}:${String(dk).padStart(2, "0")}** alarmı kuruldu ✅`;
+  }
+  return null;
+}
+
 /** Sohbet metninden telefon komutu çıkarır ve çalıştırır; komut değilse null. */
 export async function telefonKomutu(metin: string): Promise<string | null> {
+  const saatCevap = await saatKomutu(metin);
+  if (saatCevap) return saatCevap;
   const uygCevap = await uygulamaIciKomut(metin);
   if (uygCevap) return uygCevap;
   const kisiCevap = await kisiKomutu(metin);

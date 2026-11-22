@@ -11,7 +11,7 @@ export const yaz = (metin: string): boolean => { try { return !!N?.yaz(metin); }
 export const kaydir = (ileri: boolean): boolean => { try { return !!N?.kaydir(ileri); } catch { return false; } };
 export const genel = (eylem: "geri" | "ana" | "son" | "bildirim" | "hizli" | "kilit" | "ekranGoruntusu"): boolean => { try { return !!N?.genel(eylem); } catch { return false; } };
 export const uygulamaAc = (ad: string): string => { try { return N?.uygulamaAc(ad) || ""; } catch { return ""; } };
-export type IzinTuru = "erisim" | "uygulama" | "bildirim" | "pil" | "asistan" | "kurulum" | "guvenlik";
+export type IzinTuru = "erisim" | "uygulama" | "bildirim" | "pil" | "asistan" | "kurulum" | "guvenlik" | "ustte";
 export const ayarAc = (tur: IzinTuru): boolean => { try { return !!N?.ayarAc(tur); } catch { return false; } };
 export const durumlar = (): { erisim: boolean; pil: boolean; asistan: boolean; asistanBiliniyor: boolean } => {
   try { return N?.durumlar() || { erisim: false, pil: false, asistan: false, asistanBiliniyor: false }; } catch { return { erisim: false, pil: false, asistan: false, asistanBiliniyor: false }; }
@@ -37,7 +37,7 @@ export const sonraTikla = (metinler: string[], ms = 3000, deneme = 6): boolean =
 /** Asılı kalmış medya bildirimini temizler (açılışta) */
 export const medyaBildirimTemizle = (): number => { try { return N?.medyaBildirimTemizle() || 0; } catch { return 0; } };
 // ---------- "AREX" uyandırma + ses imzası (cihaz içi) ----------
-export type UyanmaDurum = { acik: boolean; calisiyor: boolean; imzaVar: boolean; esik: number };
+export type UyanmaDurum = { acik: boolean; calisiyor: boolean; imzaVar: boolean; esik: number; yabanciSayi?: number; ustteGoster?: boolean };
 export const uyanmaBaslat = () => { try { N?.uyanmaBaslat(); } catch {} };
 export const uyanmaDurdur = () => { try { N?.uyanmaDurdur(); } catch {} };
 export const uyanmaSurdur = () => { try { N?.uyanmaSurdur(); } catch {} };
@@ -46,5 +46,17 @@ export const sonUyanma = (): { zaman: number; sahip: boolean; benzerlik: number;
 export const imzaOrnek = async (saniye = 4): Promise<{ vektor?: number[] | null; metin?: string; ses?: number; hata?: string }> => { try { return await N.imzaOrnek(saniye); } catch (e: any) { return { hata: String(e?.message || e) }; } };
 export const imzaKaydet = (ornekler: number[][]): { esik?: number; enDusuk?: number; ortalama?: number; hata?: string } => { try { return N.imzaKaydet(ornekler); } catch (e: any) { return { hata: String(e?.message || e) }; } };
 export const imzaSil = () => { try { N?.imzaSil(); } catch {} };
-export const imzaKarsilastir = (v: number[]): { benzerlik?: number; esik?: number; sahip?: boolean; hata?: string } => { try { return N.imzaKarsilastir(v); } catch (e: any) { return { hata: String(e?.message || e) }; } };
+export const imzaKarsilastir = (v: number[]): { benzerlik?: number; esik?: number; sahip?: boolean; yabanci?: number; hata?: string } => { try { return N.imzaKarsilastir(v); } catch (e: any) { return { hata: String(e?.message || e) }; } };
 export const uyanmaDuraklat = (b: boolean) => { try { N?.uyanmaDuraklat(b); } catch {} };
+/** Kilit ekranı açık mı */
+export const ekranKilitli = (): boolean => { try { return !!N?.ekranKilitli(); } catch { return false; } };
+/** Android kilit açma ekranını gösterir (PIN/parmak izi). true → kilit açıldı */
+export const kilidiKaldir = async (): Promise<boolean> => { try { return !!(await N?.kilidiKaldir()); } catch { return false; } };
+// ---------- ⏰ Saat / sayaç / alarm ----------
+export const sayac = (saniye: number, etiket = "AREX"): boolean => { try { return !!N?.sayac(Math.round(saniye), etiket); } catch { return false; } };
+export const alarm = (saat: number, dakika: number, etiket = "AREX"): boolean => { try { return !!N?.alarm(saat, dakika, etiket); } catch { return false; } };
+export const alarmlariGoster = () => { try { N?.alarmlariGoster(); } catch {} };
+export const yabanciDurum = (): { sayi: number; son: number } => { try { return N?.yabanciDurum() || { sayi: 0, son: 0 }; } catch { return { sayi: 0, son: 0 }; } };
+/** Başka birinin sesini "bu ben değilim" olarak öğret → toplam yabancı örnek sayısı */
+export const yabanciEkle = (v: number[]): number => { try { return N?.yabanciEkle(v) || 0; } catch { return 0; } };
+export const yabancilariSil = () => { try { N?.yabancilariSil(); } catch {} };
