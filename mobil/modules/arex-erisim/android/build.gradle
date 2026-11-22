@@ -1,0 +1,19 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+group = 'com.arex.erisim'
+version = '1.0.0'
+android {
+  namespace "com.arex.erisim"
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
+
+dependencies {
+  // "AREX" uyandırma + ses imzası: Vosk (Apache-2.0), tamamen cihaz içi
+  implementation 'com.alphacephei:vosk-android:0.3.75@aar'
+  implementation 'net.java.dev.jna:jna:5.18.1@aar'
+}

@@ -1,0 +1,9 @@
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+  android:description="@string/arex_erisim_aciklama"
+  android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
+  android:accessibilityFeedbackType="feedbackGeneric"
+  android:accessibilityFlags="flagRetrieveInteractiveWindows|flagReportViewIds|flagIncludeNotImportantViews"
+  android:canRetrieveWindowContent="true"
+  android:canPerformGestures="true"
+  android:canTakeScreenshot="true"
+  android:notificationTimeout="200" />

@@ -1,0 +1,3 @@
+<resources>
+  <string name="arex_erisim_aciklama">AREX AI asistanın ekranı okuyabilmesi, senin komutunla dokunma, yazma, kaydırma, geri/ana ekran ve uygulama açma yapabilmesi için. AREX yalnız sen bir komut verdiğinde işlem yapar; ekran içeriğini kaydetmez ve hiçbir yere göndermez (yalnız "ekranı oku/özetle" dediğinde sohbet yapay zekâsına iletilir).</string>
+</resources>

@@ -39,9 +39,11 @@ yarn-error.*
 # generated native folders
 /ios
 /android
-android/
+/android/
 ios/
 dist/
 *.apk
 src/gomuluHtml.ts
 modules/arex-erisim/android/src/main/assets/vosk-*/
+modules/arex-erisim/android/build/
+modules/arex-erisim/android/.cxx/
