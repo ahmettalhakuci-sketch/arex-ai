@@ -103,32 +103,56 @@ export default function HizliSes({ kisitli = false, otomatik = true }: { kisitli
     else if (faz === "hazir") dinle();
   };
 
-  const parlak = nefes.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.55, 1, 0.55] });
-  const yazi = { hazir: "Konuşmak için dokun", dinliyor: "Dinliyorum…", dusunuyor: "Düşünüyorum…", konusuyor: "Konuşuyorum…" }[faz];
-  const renk: [string, string, string] = faz === "dinliyor" ? ["#22d3ee", "#7c5cff", "#ff5fa2"] : faz === "dusunuyor" ? ["#ffb84d", "#a259ff", "#4f8cff"] : ["#7c5cff", "#4f8cff", "#22d3ee"];
+  const parlak = nefes.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.45, 0.9, 0.45] });
+  const don = nefes.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
+  const yazi = { hazir: "Seni dinlemeye hazırım", dinliyor: "Dinliyorum", dusunuyor: "Düşünüyorum", konusuyor: "Konuşuyorum" }[faz];
+  const alt = { hazir: "Küreye dokun ve konuş", dinliyor: "Susunca kendiliğinden anlarım", dusunuyor: "Bir saniye…", konusuyor: "Sözümü kesmek için dokun" }[faz];
+  const renk: [string, string, string] = faz === "dinliyor" ? ["#22d3ee", "#7c5cff", "#ff5fa2"] : faz === "dusunuyor" ? ["#ffb84d", "#a259ff", "#4f8cff"] : faz === "konusuyor" ? ["#a259ff", "#ff5fa2", "#ffb84d"] : ["#6d5cff", "#4f8cff", "#22d3ee"];
+  const seviye = faz === "dinliyor" ? Math.max(0, Math.min(1, ((durum.metering ?? -60) + 55) / 45)) : faz === "konusuyor" ? 0.55 : 0.08;
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 20 }}>
-      <View style={{ position: "absolute", top: 8, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" }}>
-        <Ionicons name="flash" size={13} color="#ffd166" /><Text style={{ color: "#dfe3ff", fontSize: 12, fontWeight: "700" }}>Hızlı Ses{kisitli ? " • kısıtlı" : ""}</Text>
-      </View>
-      <Pressable onPress={dokun}>
-        <Animated.View style={{ opacity: parlak, position: "absolute", left: -30, right: -30, top: -30, bottom: -30, borderRadius: 999 }}>
-          <LinearGradient colors={[renk[0] + "55", renk[1] + "22", "transparent"]} style={{ flex: 1, borderRadius: 999 }} />
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 22 }}>
+      {/* Küre: dönen ışık halkası + parlama + gradyan çekirdek */}
+      <Pressable onPress={dokun} style={{ alignItems: "center", justifyContent: "center" }}>
+        <Animated.View style={{ position: "absolute", width: 300, height: 300, borderRadius: 150, opacity: parlak }}>
+          <LinearGradient colors={[renk[1] + "40", renk[0] + "10", "transparent"]} style={{ flex: 1, borderRadius: 150 }} />
         </Animated.View>
-        <Animated.View style={{ transform: [{ scale: olcek }] }}>
-          <LinearGradient colors={renk} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={{ width: 190, height: 190, borderRadius: 95, alignItems: "center", justifyContent: "center",
-            shadowColor: renk[1], shadowOpacity: 0.8, shadowRadius: 40, elevation: 18 }}>
-            <View style={{ position: "absolute", top: 22, left: 34, width: 70, height: 40, borderRadius: 40, backgroundColor: "rgba(255,255,255,0.35)", transform: [{ rotate: "-20deg" }] }} />
-            <Ionicons name={faz === "dinliyor" ? "mic" : faz === "dusunuyor" ? "ellipsis-horizontal" : faz === "konusuyor" ? "volume-high" : "mic-outline"} size={46} color="#fff" />
+        <Animated.View style={{ position: "absolute", width: 232, height: 232, borderRadius: 116, transform: [{ rotate: don }] }}>
+          <LinearGradient colors={[renk[0], "transparent", renk[2], "transparent"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, borderRadius: 116, opacity: 0.85 }} />
+        </Animated.View>
+        <View style={{ width: 222, height: 222, borderRadius: 111, backgroundColor: "#060a20" }} />
+        <Animated.View style={{ position: "absolute", transform: [{ scale: olcek }] }}>
+          <LinearGradient colors={renk} start={{ x: 0.15, y: 0.05 }} end={{ x: 0.85, y: 1 }} style={{ width: 186, height: 186, borderRadius: 93, alignItems: "center", justifyContent: "center",
+            shadowColor: renk[1], shadowOpacity: 0.9, shadowRadius: 45, elevation: 20 }}>
+            <LinearGradient colors={["rgba(255,255,255,0.32)", "rgba(255,255,255,0)"]} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 0.6 }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 93 }} />
+            <Ionicons name={faz === "dinliyor" ? "mic" : faz === "dusunuyor" ? "sparkles" : faz === "konusuyor" ? "volume-high" : "mic-outline"} size={44} color="#fff" />
           </LinearGradient>
         </Animated.View>
       </Pressable>
-      <Text style={{ color: "#fff", fontSize: 24, fontWeight: "300", letterSpacing: 0.5, marginTop: 30 }}>{yazi}</Text>
-      {sure ? <Text style={{ color: "#7d86ad", fontSize: 11, marginTop: 4 }}>{sure}</Text> : null}
-      <ScrollView style={{ maxHeight: 190, width: "100%", marginTop: 18 }} contentContainerStyle={{ gap: 8 }}>
-        {sen ? <Text style={{ color: "#9aa3c7", fontSize: 15, textAlign: "center" }}>“{sen}”</Text> : null}
-        {arex ? <Text style={{ color: "#eef2ff", fontSize: 17, lineHeight: 25, textAlign: "center" }}>{arex}</Text> : null}
+      {/* Ekolayzer: sesine göre */}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 4, height: 54, marginTop: 34 }}>
+        {Array.from({ length: 23 }, (_, i) => {
+          const orta = 1 - Math.abs(i - 11) / 11;
+          const h = 6 + seviye * 46 * (0.35 + 0.65 * orta) * (0.6 + 0.4 * Math.abs(Math.sin(i * 1.7 + Date.now() / 160)));
+          return <LinearGradient key={i} colors={["#ff5fa2", renk[1], renk[0]]} style={{ width: 5, height: h, borderRadius: 3, opacity: faz === "hazir" ? 0.35 : 0.95 }} />;
+        })}
+      </View>
+      <Text style={{ color: "#fff", fontSize: 26, fontWeight: "300", letterSpacing: 0.8, marginTop: 14 }}>{yazi}{faz !== "hazir" ? "…" : ""}</Text>
+      <Text style={{ color: "#8f98c4", fontSize: 13, marginTop: 4 }}>{alt}</Text>
+      {/* Konuşma: cam kartlar */}
+      <ScrollView style={{ maxHeight: 200, width: "100%", marginTop: 22 }} contentContainerStyle={{ gap: 10, paddingBottom: 6 }}>
+        {sen ? (
+          <View style={{ alignSelf: "flex-end", maxWidth: "88%", backgroundColor: "rgba(124,92,255,0.18)", borderRadius: 18, borderBottomRightRadius: 6, paddingHorizontal: 14, paddingVertical: 9, borderWidth: 1, borderColor: "rgba(162,140,255,0.3)" }}>
+            <Text style={{ color: "#e6e3ff", fontSize: 15 }}>{sen}</Text>
+          </View>
+        ) : null}
+        {arex ? (
+          <View style={{ alignSelf: "flex-start", maxWidth: "92%", backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 18, borderBottomLeftRadius: 6, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" }}>
+            <Text style={{ color: "#f3f5ff", fontSize: 16, lineHeight: 23 }}>{arex}</Text>
+          </View>
+        ) : null}
       </ScrollView>
+      {sure ? <Text style={{ color: "#5d6690", fontSize: 10.5, marginTop: 4 }}>{sure}</Text> : null}
+      {kisitli ? <Text style={{ color: "#ffb84d", fontSize: 11.5, marginTop: 6 }}>🟡 Kısıtlı mod — kişisel işlemler parmak izi ister</Text> : null}
     </View>
   );
 }

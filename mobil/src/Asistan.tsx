@@ -55,7 +55,9 @@ function Panel() {
   const ilkUyanma = useRef(Erisim.sonUyanma()).current;
   // Olasılıksal ses kararı: 2 = kesin sen, 1 = muhtemelen sen (kişisel işlemler parmak izi), 0 = yabancı
   const seviye = ilkUyanma ? (ilkUyanma.seviye ?? (ilkUyanma.sahip ? 2 : 0)) : 2;
-  const tam = !!ilkUyanma && seviye >= 1;
+  // Web önizleme (?asistan-onizleme&tam): tasarım kontrolü için tam ekran
+  const webTam = Platform.OS === "web" && typeof location !== "undefined" && location.search.includes("tam");
+  const tam = webTam || (!!ilkUyanma && seviye >= 1);
   const [yabanci, setYabanci] = useState(() => !!ilkUyanma && seviye === 0);
   const [kisitli, setKisitli] = useState(() => !!ilkUyanma && seviye === 1);
   const kisitliRef = useRef(kisitli); kisitliRef.current = kisitli;
@@ -163,6 +165,20 @@ function Panel() {
           {tam ? <LinearGradient pointerEvents="none" colors={["#1a1150", "#070a24", "#04061a"]} locations={[0, 0.5, 1]} style={StyleSheet.absoluteFill} /> : null}
           <View {...surukle.panHandlers} style={{ paddingTop: 7, paddingBottom: 2, paddingHorizontal: 14 }}>
             <View style={{ alignSelf: "center", width: 34, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.22)", marginBottom: 8 }} />
+            {tam ? (
+              // Tam ekran: sade, ortalı premium başlık
+              <View style={{ flexDirection: "row", alignItems: "center", paddingTop: 4 }}>
+                <Pressable onPress={buyut} hitSlop={10} style={st.yuvarlak}><Ionicons name="open-outline" size={15} color="#cfd5f5" /></Pressable>
+                <View style={{ flex: 1, alignItems: "center" }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+                    <Ionicons name="sparkles" size={14} color="#b89bff" />
+                    <Text style={{ color: "#fff", fontSize: 17, fontWeight: "800", letterSpacing: 6 }}>AREX</Text>
+                  </View>
+                  <Text style={{ color: "#8f98c4", fontSize: 11.5, marginTop: 2, letterSpacing: 0.3 }}>{selam()}</Text>
+                </View>
+                <Pressable onPress={kapat} hitSlop={10} style={st.yuvarlak}><Ionicons name="close" size={17} color="#cfd5f5" /></Pressable>
+              </View>
+            ) : (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <LinearGradient colors={["#4f8cff", "#a259ff", "#ff5fa2"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" }}>
                 <Ionicons name="sparkles" size={15} color="#fff" />
@@ -174,6 +190,7 @@ function Panel() {
               <Pressable onPress={buyut} hitSlop={10} style={st.yuvarlak}><Ionicons name="open-outline" size={15} color="#cfd5f5" /></Pressable>
               <Pressable onPress={kapat} hitSlop={10} style={st.yuvarlak}><Ionicons name="close" size={17} color="#cfd5f5" /></Pressable>
             </View>
+            )}
           </View>
           {yabanci ? (
             <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 16, alignItems: "center" }}>
@@ -237,15 +254,16 @@ function Panel() {
                       <Text style={{ color: "#ffd08a", fontSize: 12.5, fontWeight: "700" }}>Muhtemelen sensin • kişisel işlemler için parmak izi</Text>
                     </Pressable>
                   ) : null}
-                  <View style={{ flexDirection: "row", alignSelf: "center", gap: 6, marginTop: 6 }}>
+                  {motor === "hizli" ? <HizliSes key={kisitli ? "hk" : "ht"} kisitli={kisitli} />
+                    : <CanliEkrani key={kisitli ? "k" : "t"} mini tam={tam} kisitli={kisitli} sohbeteGonder={sohbeteGonder} />}
+                  {/* Ses motoru seçici: altta zarif segment */}
+                  <View style={{ flexDirection: "row", alignSelf: "center", padding: 3, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.05)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginBottom: 10, marginTop: 4 }}>
                     {([["hizli", "⚡ Hızlı"], ["live", "✨ Gemini Live"]] as const).map(([k, ad]) => (
-                      <Pressable key={k} onPress={() => { titret(); setMotor(k); }} style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14, backgroundColor: motor === k ? "rgba(162,89,255,0.35)" : "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: motor === k ? "#a259ff" : "rgba(255,255,255,0.12)" }}>
-                        <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>{ad}</Text>
+                      <Pressable key={k} onPress={() => { titret(); setMotor(k); }} style={{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 13, backgroundColor: motor === k ? "rgba(162,89,255,0.4)" : "transparent" }}>
+                        <Text style={{ color: motor === k ? "#fff" : "#9aa3c7", fontSize: 12, fontWeight: "700" }}>{ad}</Text>
                       </Pressable>
                     ))}
                   </View>
-                  {motor === "hizli" ? <HizliSes key={kisitli ? "hk" : "ht"} kisitli={kisitli} />
-                    : <CanliEkrani key={kisitli ? "k" : "t"} mini tam={tam} kisitli={kisitli} sohbeteGonder={sohbeteGonder} />}
                 </View>}
           </View>
           )}
