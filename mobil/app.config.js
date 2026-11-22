@@ -58,6 +58,7 @@ module.exports = {
       "expo-local-authentication",
       "./plugins/asistan.js",
       "./plugins/ev-agi.js",
+      "./plugins/sherpa-depo.js",
       ["expo-build-properties", { android: { usesCleartextTraffic: false } }],
     ],
     extra: { kasa: karistir(kasaOku()), surumKodu: 158 },

@@ -37,7 +37,7 @@ export const sonraTikla = (metinler: string[], ms = 3000, deneme = 6): boolean =
 /** Asılı kalmış medya bildirimini temizler (açılışta) */
 export const medyaBildirimTemizle = (): number => { try { return N?.medyaBildirimTemizle() || 0; } catch { return 0; } };
 // ---------- "AREX" uyandırma + ses imzası (cihaz içi) ----------
-export type UyanmaDurum = { acik: boolean; calisiyor: boolean; imzaVar: boolean; esik: number; yabanciSayi?: number; ustteGoster?: boolean };
+export type UyanmaDurum = { acik: boolean; calisiyor: boolean; imzaVar: boolean; esik: number; yabanciSayi?: number; ustteGoster?: boolean; yenidenKayit?: boolean };
 export const uyanmaBaslat = () => { try { N?.uyanmaBaslat(); } catch {} };
 export const uyanmaDurdur = () => { try { N?.uyanmaDurdur(); } catch {} };
 export const uyanmaSurdur = () => { try { N?.uyanmaSurdur(); } catch {} };

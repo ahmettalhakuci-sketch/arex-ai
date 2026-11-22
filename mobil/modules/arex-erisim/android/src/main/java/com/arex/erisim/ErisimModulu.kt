@@ -217,7 +217,7 @@ class ErisimModulu : Module() {
     Function("uyanmaDurdur") { SesAyar.otomatikYaz(ctx, false); UyanmaServisi.durdur(ctx); true }
     /** Açılışta: kullanıcı açtıysa servisi yeniden başlat */
     Function("uyanmaSurdur") { if (SesAyar.otomatik(ctx) && !UyanmaServisi.calisiyor) { try { UyanmaServisi.baslat(ctx) } catch (_: Exception) {} }; SesAyar.otomatik(ctx) }
-    Function("uyanmaDurum") { mapOf("acik" to SesAyar.otomatik(ctx), "calisiyor" to UyanmaServisi.calisiyor, "imzaVar" to (SesAyar.imza(ctx) != null), "esik" to (SesAyar.imza(ctx)?.second ?: 0.0), "yabanciSayi" to SesAyar.yabancilar(ctx).size,
+    Function("uyanmaDurum") { mapOf("acik" to SesAyar.otomatik(ctx), "calisiyor" to UyanmaServisi.calisiyor, "imzaVar" to (SesAyar.imza(ctx) != null), "yenidenKayit" to SesAyar.eskiImzaVar(ctx), "esik" to (SesAyar.imza(ctx)?.second ?: 0.0), "yabanciSayi" to SesAyar.yabancilar(ctx).size,
       "ustteGoster" to (Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(ctx))) }
     /** Son uyanma bilgisini bir kez verir (kart açılınca: sahip mi?) */
     Function("sonUyanma") { val j = UyanmaServisi.sonUyanma; UyanmaServisi.sonUyanma = null
@@ -238,6 +238,7 @@ class ErisimModulu : Module() {
         val ar = android.media.AudioRecord(android.media.MediaRecorder.AudioSource.VOICE_RECOGNITION, 16000, android.media.AudioFormat.CHANNEL_IN_MONO, android.media.AudioFormat.ENCODING_PCM_16BIT, maxOf(min, 32000))
         val buf = ShortArray(1600); var top = 0; var tepe = 0.0
         val tum = java.io.ByteArrayOutputStream()
+        val ornekler = ArrayList<Short>(saniye * 16000)
         ar.startRecording()
         val bitis = android.os.SystemClock.elapsedRealtime() + saniye * 1000L
         while (android.os.SystemClock.elapsedRealtime() < bitis) {
@@ -245,6 +246,7 @@ class ErisimModulu : Module() {
           var t = 0.0; for (k in 0 until n) t += buf[k].toDouble() * buf[k]; tepe = maxOf(tepe, kotlin.math.sqrt(t / n)); top += n
           rec.acceptWaveForm(buf, n)
           for (k in 0 until n) { tum.write(buf[k].toInt() and 0xff); tum.write((buf[k].toInt() shr 8) and 0xff) }
+          for (k in 0 until n) ornekler.add(buf[k])
         }
         ar.stop(); ar.release()
         // Model karşılaştırması için kayıt (yalnız bu telefonda: Android/data/com.arex.ai/files/ses) — 16 kHz mono WAV
@@ -260,8 +262,9 @@ class ErisimModulu : Module() {
           }
         } catch (_: Exception) {}
         val j = org.json.JSONObject(rec.finalResult); rec.close()
-        val v = j.optJSONArray("spk")
-        mapOf("vektor" to (if (v != null) SesImza.dizi(v).toList() else null), "metin" to j.optString("text"), "ses" to tepe)
+        // Güçlü model (3D-Speaker ERes2Net) ile imza — Vosk'unki yalnız yedek değil, artık kullanılmıyor
+        val g = GucluImza.vektor(ctx, ornekler.toShortArray())
+        mapOf("vektor" to g?.toList(), "metin" to j.optString("text"), "ses" to tepe)
       } finally { UyanmaServisi.duraklat = eskiDuraklat }
     }
 
@@ -271,7 +274,7 @@ class ErisimModulu : Module() {
       if (l.size < 3) return@Function mapOf("hata" to "en az 3 örnek gerekli")
       val ort = SesImza.ortalama(l)
       val loo = l.indices.map { i -> l.filterIndexed { j, _ -> j != i }.map { SesImza.kosinus(l[i], it) }.sortedDescending().take(2).average() }
-      val esik = (loo.minOrNull()!! - 0.06).coerceIn(0.30, 0.85)  // kısa "AREX" örneklerinde kendi benzerliğin düşük olabilir
+      val esik = (loo.minOrNull()!! - 0.08).coerceIn(0.35, 0.80)  // ERes2Net: aynı ses ~0.7, farklı ~0.2 (Mac ölçümü)
       SesAyar.imzaYaz(ctx, ort, esik); SesAyar.orneklerYaz(ctx, l)
       mapOf("esik" to esik, "enDusuk" to loo.minOrNull()!!, "ortalama" to loo.average())
     }

@@ -47,3 +47,5 @@ src/gomuluHtml.ts
 modules/arex-erisim/android/src/main/assets/vosk-*/
 modules/arex-erisim/android/build/
 modules/arex-erisim/android/.cxx/
+modules/arex-erisim/android/src/main/assets/spk-guclu.onnx
+modules/arex-erisim/android/maven/

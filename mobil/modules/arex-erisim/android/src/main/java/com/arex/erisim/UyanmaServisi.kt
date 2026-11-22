@@ -54,18 +54,13 @@ class UyanmaServisi : Service() {
 
   /** Son 2 sn sesten ses imzası (x-vector). Kısa "AREX" anında kesildiğinde imza çıkmıyordu (telefon kayıtlarında 9 denemenin 6'sı);
    *  kayıt sırasında da 2 sn alındığı için karşılaştırma tutarlı olur. */
-  private fun sonIkiSaniyeImza(): JSONArray? {
+  private fun sonIkiSaniyeImza(): DoubleArray? {
     val uzunluk = minOf(halkaDolu, 16000 * 2)
     if (uzunluk < 8000) return null
     val parca = ShortArray(uzunluk)
     var bas = (halkaYaz - uzunluk + halka.size) % halka.size
     for (i in 0 until uzunluk) { parca[i] = halka[bas]; bas = (bas + 1) % halka.size }
-    return try {
-      val r = Recognizer(SesModelleri.model(this), 16000f).apply { setSpeakerModel(SesModelleri.spk(this@UyanmaServisi)) }
-      r.acceptWaveForm(parca, parca.size)
-      val j = JSONObject(r.finalResult); r.close()
-      j.optJSONArray("spk")
-    } catch (_: Exception) { null }
+    return GucluImza.vektor(this, parca)
   }
   private var is_: Thread? = null
 
@@ -158,9 +153,10 @@ class UyanmaServisi : Service() {
     // Anında geri bildirim: "seni duydum" titreşimi (gecikme hissini kaldırır)
     try { (getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator).vibrate(android.os.VibrationEffect.createOneShot(45, 180)) } catch (_: Exception) {}
     // Ses imzası: son 2 sn tampondan (yetmezse tanıyıcının kendi vektörü)
-    val vek = sonIkiSaniyeImza() ?: j.optJSONArray("spk")
-    val imzaVar = SesAyar.imza(this) != null
-    val k = if (vek != null) SesAyar.karar(this, SesImza.dizi(vek)) else null
+    val vek = sonIkiSaniyeImza()
+    // Eski (Vosk) imza varsa ama yeni modelle yeniden kaydedilmediyse: kimse "sahip" sayılmaz → parmak izi (yeniden kayda kadar)
+    val imzaVar = SesAyar.imza(this) != null || SesAyar.eskiImzaVar(this)
+    val k = if (vek != null) SesAyar.karar(this, vek) else null
     val benzerlik = k?.benzerlik ?: -1.0
     val sahip = when {
       !imzaVar -> true                 // imza yoksa herkes sahip sayılır (Ayarlar'da uyarı)
@@ -234,6 +230,23 @@ object SesModelleri {
   }
 }
 
+/** Güçlü ses imzası: 3D-Speaker ERes2Net (VoxCeleb) / sherpa-onnx — Mac testinde aynı ses 0.73, farklı 0.18 (Vosk: 0.68 / 0.32) */
+object GucluImza {
+  const val MODEL = "eres2net-vox"
+  @Volatile private var ex: com.k2fsa.sherpa.onnx.SpeakerEmbeddingExtractor? = null
+  @Synchronized private fun cikarici(ctx: Context) = ex ?: com.k2fsa.sherpa.onnx.SpeakerEmbeddingExtractor(ctx.assets,
+    com.k2fsa.sherpa.onnx.SpeakerEmbeddingExtractorConfig("spk-guclu.onnx", 2, false, "cpu")).also { ex = it }
+  /** 16 kHz PCM → imza vektörü (en az ~0.5 sn ses) */
+  fun vektor(ctx: Context, pcm: ShortArray): DoubleArray? = try {
+    if (pcm.size < 8000) null else {
+      val e = cikarici(ctx); val st = e.createStream()
+      st.acceptWaveform(FloatArray(pcm.size) { pcm[it] / 32768f }, 16000); st.inputFinished()
+      val v = if (e.isReady(st)) e.compute(st).map { it.toDouble() }.toDoubleArray() else null
+      st.release(); v
+    }
+  } catch (_: Throwable) { null }
+}
+
 /** Ses imzası (x-vector) yardımcıları */
 object SesImza {
   fun dizi(a: JSONArray) = DoubleArray(a.length()) { a.getDouble(it) }
@@ -251,12 +264,14 @@ object SesImza {
 object SesAyar {
   private fun p(ctx: Context) = ctx.getSharedPreferences("arex_ses", Context.MODE_PRIVATE)
   fun imza(ctx: Context): Pair<DoubleArray, Double>? {
+    if (p(ctx).getString("imzaModel", "") != GucluImza.MODEL) return null  // eski (Vosk) imza → yeniden kayıt gerekir
     val s = p(ctx).getString("imza", null) ?: return null
     val j = JSONObject(s); return SesImza.dizi(j.getJSONArray("v")) to j.getDouble("esik")
   }
   fun imzaYaz(ctx: Context, v: DoubleArray, esik: Double) {
-    p(ctx).edit().putString("imza", JSONObject().put("v", JSONArray(v.toList())).put("esik", esik).toString()).apply()
+    p(ctx).edit().putString("imza", JSONObject().put("v", JSONArray(v.toList())).put("esik", esik).toString()).putString("imzaModel", GucluImza.MODEL).remove("yabancilar").apply()
   }
+  fun eskiImzaVar(ctx: Context) = p(ctx).getString("imza", null) != null && p(ctx).getString("imzaModel", "") != GucluImza.MODEL
   fun imzaSil(ctx: Context) { p(ctx).edit().remove("imza").remove("ornekler").apply() }
   private fun liste(ctx: Context, ad: String): List<DoubleArray> {
     val s = p(ctx).getString(ad, null) ?: return emptyList(); val a = JSONArray(s)

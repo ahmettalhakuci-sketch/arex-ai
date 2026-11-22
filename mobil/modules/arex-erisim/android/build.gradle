@@ -12,8 +12,14 @@ android {
   }
 }
 
+repositories {
+  maven { url "$projectDir/maven" }  // sherpa-onnx yerel depo (GitHub sürümünden)
+}
+
 dependencies {
   // "AREX" uyandırma + ses imzası: Vosk (Apache-2.0), tamamen cihaz içi
   implementation 'com.alphacephei:vosk-android:0.3.75@aar'
   implementation 'net.java.dev.jna:jna:5.18.1@aar'
+  // Güçlü ses imzası: sherpa-onnx (Apache-2.0) + 3D-Speaker ERes2Net VoxCeleb — cihaz içi
+  implementation 'com.k2fsa:sherpa-onnx:2.0.3@aar'
 }

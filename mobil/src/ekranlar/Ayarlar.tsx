@@ -194,7 +194,8 @@ function SesTanima() {
       {d.acik && !d.ustteGoster ? <Pressable onPress={() => Erisim.ayarAc("ustte")}><Text style={{ color: R.sari, fontSize: 12.5, marginTop: 8 }}>⚡ Anında açılması için "Diğer uygulamaların üzerinde göster" iznini aç → dokun</Text></Pressable> : null}
       {(() => { const k = Erisim.sonKarar(); if (!k || !k.zaman) return null; const sa = new Date(k.zaman).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
         return <Text style={{ color: k.sahip ? R.yesil : R.sari, fontSize: 12, marginTop: 6 }}>{k.sahip ? "✅" : "🔒"} Son "AREX" ({sa}): benzerlik %{Math.round(k.benzerlik * 100)} • eşik %{Math.round(k.esik * 100)}{k.yabanci >= 0 ? ` • yabancı %${Math.round(k.yabanci * 100)}` : ""} → {k.sahip ? "seni tanıdı" : "tanımadı"}</Text>; })()}
-      {!d.imzaVar ? <Text style={{ color: R.sari, fontSize: 12, marginTop: 6 }}>⚠️ Ses imzası yok: şu an "AREX" diyen herkes seni sayılır. Sesini tanıt.</Text> : null}
+      {d.yenidenKayit ? <Text style={{ color: R.sari, fontSize: 12.5, marginTop: 6, fontWeight: "700" }}>🆕 Ses tanıma güçlendirildi (3D-Speaker). Sesini bir kez yeniden tanıt — o zamana kadar "AREX" parmak izi ister.</Text>
+        : !d.imzaVar ? <Text style={{ color: R.sari, fontSize: 12, marginTop: 6 }}>⚠️ Ses imzası yok: şu an "AREX" diyen herkes seni sayılır. Sesini tanıt.</Text> : null}
       {mesaj && !sihirbaz ? <Text style={{ color: R.yazi, fontSize: 13, marginTop: 8 }}>{mesaj}</Text> : null}
       <Modal visible={sihirbaz} transparent animationType="slide" onRequestClose={() => setSihirbaz(false)}>
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
