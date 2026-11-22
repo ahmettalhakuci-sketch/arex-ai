@@ -36,3 +36,15 @@ export const sms = (numara: string, metin: string): boolean => { try { return !!
 export const sonraTikla = (metinler: string[], ms = 3000, deneme = 6): boolean => { try { return !!N?.sonraTikla(metinler, ms, deneme); } catch { return false; } };
 /** Asılı kalmış medya bildirimini temizler (açılışta) */
 export const medyaBildirimTemizle = (): number => { try { return N?.medyaBildirimTemizle() || 0; } catch { return 0; } };
+// ---------- "AREX" uyandırma + ses imzası (cihaz içi) ----------
+export type UyanmaDurum = { acik: boolean; calisiyor: boolean; imzaVar: boolean; esik: number };
+export const uyanmaBaslat = () => { try { N?.uyanmaBaslat(); } catch {} };
+export const uyanmaDurdur = () => { try { N?.uyanmaDurdur(); } catch {} };
+export const uyanmaSurdur = () => { try { N?.uyanmaSurdur(); } catch {} };
+export const uyanmaDurum = (): UyanmaDurum => { try { return N?.uyanmaDurum() || { acik: false, calisiyor: false, imzaVar: false, esik: 0 }; } catch { return { acik: false, calisiyor: false, imzaVar: false, esik: 0 }; } };
+export const sonUyanma = (): { zaman: number; sahip: boolean; benzerlik: number; imzaVar: boolean } | null => { try { return N?.sonUyanma() ?? null; } catch { return null; } };
+export const imzaOrnek = async (saniye = 4): Promise<{ vektor?: number[] | null; metin?: string; ses?: number; hata?: string }> => { try { return await N.imzaOrnek(saniye); } catch (e: any) { return { hata: String(e?.message || e) }; } };
+export const imzaKaydet = (ornekler: number[][]): { esik?: number; enDusuk?: number; ortalama?: number; hata?: string } => { try { return N.imzaKaydet(ornekler); } catch (e: any) { return { hata: String(e?.message || e) }; } };
+export const imzaSil = () => { try { N?.imzaSil(); } catch {} };
+export const imzaKarsilastir = (v: number[]): { benzerlik?: number; esik?: number; sahip?: boolean; hata?: string } => { try { return N.imzaKarsilastir(v); } catch (e: any) { return { hata: String(e?.message || e) }; } };
+export const uyanmaDuraklat = (b: boolean) => { try { N?.uyanmaDuraklat(b); } catch {} };

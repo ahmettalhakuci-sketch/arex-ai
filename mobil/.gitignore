@@ -44,3 +44,4 @@ ios/
 dist/
 *.apk
 src/gomuluHtml.ts
+modules/arex-erisim/android/src/main/assets/vosk-*/

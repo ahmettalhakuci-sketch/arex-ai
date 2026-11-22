@@ -60,7 +60,8 @@ function Uygulama() {
   // Erişim servisi güncelleme/kapanma sonrası bağlantısız kalabiliyor → açılışta ve uygulamaya her dönüşte onar
   useEffect(() => {
     Erisim.onar().catch(() => {});
-    Erisim.medyaBildirimTemizle();  // eski sürümden asılı kalan "çalıyor" bildirimi
+    Erisim.medyaBildirimTemizle();
+    Erisim.uyanmaSurdur();  // "AREX" dinleme açıksa yeniden başlat  // eski sürümden asılı kalan "çalıyor" bildirimi
     const a = AppState.addEventListener("change", (x) => { if (x === "active") Erisim.onar().catch(() => {}); });
     return () => a.remove();
   }, []);

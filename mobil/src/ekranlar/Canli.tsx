@@ -1,6 +1,7 @@
 // AREX — Canlı: Gemini Live (doğal sesli + kameralı gerçek zamanlı sohbet) ve cihaz içi Yerel Analiz
 import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from "expo-audio";
 import { izinIste as izinIste2 } from "../izin";
+import * as Erisim from "../../modules/arex-erisim";
 import { Camera } from "expo-camera";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Platform, Text, View } from "react-native";
@@ -33,6 +34,8 @@ export default function CanliEkrani({ sohbeteGonder, mini = false }: { sohbeteGo
     if (!mik) setHata("Mikrofon izni gerekli — aşağıdaki düğmeye dokun.");
   };
   useEffect(() => { if (Platform.OS !== "web") izinIste(); }, []);
+  // Canlı açıkken mikrofon onun: "AREX" dinlemesini duraklat, çıkınca sürdür
+  useEffect(() => { Erisim.uyanmaDuraklat(true); return () => Erisim.uyanmaDuraklat(false); }, []);
 
   const hazirla = async () => {
     setHata(""); setCfg(null);

@@ -12,7 +12,7 @@ import { AyarSaglayici, useAyar } from "./ayar";
 import { genelEylem, telefonKomutu } from "./telefon";
 import { anahtarlariYukle } from "./depo";
 import CanliEkrani from "./ekranlar/Canli";
-import KilitEkrani, { kilitAcikMi } from "./Kilit";
+import KilitEkrani, { biyometrikDogrula, kilitAcikMi } from "./Kilit";
 import { R } from "./tema";
 import { titret } from "./ui";
 
@@ -47,16 +47,24 @@ function Panel() {
   const [isliyor, setIsliyor] = useState(false);
   /** Varsayılan: küçük komut çubuğu. 🎙 ya da yukarı kaydır → Canlı sohbet (kart büyür) */
   const [canli, setCanli] = useState(false);
+  // "AREX" ile uyandıysa: konuşan sahip mi? (ses imzası, cihaz içi) — değilse kişisel özellikler kilitli
+  const [yabanci, setYabanci] = useState(() => { const u = Erisim.sonUyanma(); return !!u && !u.sahip; });
+  const kilidiAc = async () => { if (await biyometrikDogrula()) { titret(); setYabanci(false); } };
   const canliRef = useRef(false);
-  const canliAc = () => { titret(); canliRef.current = true; setCanli(true); };
+  const yabanciRef = useRef(yabanci); yabanciRef.current = yabanci;
+  const canliAc = () => {
+    if (yabanciRef.current) { biyometrikDogrula().then((ok) => { if (ok) { setYabanci(false); titret(); } }); return; }  // ses tanınmadıysa önce parmak izi
+    titret(); canliRef.current = true; setCanli(true);
+  };
   // Yan tuşa basınca hemen dinle (Ayarlar'dan kapatılabilir). Kilitliyse önce kilit ekranı gelir.
   const otomatikYapildi = useRef(false);
   useEffect(() => {
-    if (hazir && ayar.yanTusOtomatik !== false && !otomatikYapildi.current && (ayar.kullanimModu || "kisisel") === "kisisel") { otomatikYapildi.current = true; canliAc(); }
-  }, [hazir, ayar.yanTusOtomatik, ayar.kullanimModu]);
+    if (hazir && !yabanci && ayar.yanTusOtomatik !== false && !otomatikYapildi.current && (ayar.kullanimModu || "kisisel") === "kisisel") { otomatikYapildi.current = true; canliAc(); }
+  }, [hazir, yabanci, ayar.yanTusOtomatik, ayar.kullanimModu]);
   const calistir = async (k: string) => {
     if (!k.trim() || isliyor) return;
     if (kilitli) { canliAc(); return; }  // kilitliyken telefon komutu yok: önce kilidi aç
+    if (yabanci) { kilidiAc(); return; }  // ses tanınmadı: önce parmak izi
     titret();
     // Geri / ana ekran / bildirim… : önce kart kapanır, eylem sonra arkadaki uygulamaya uygulanır
     const ge = genelEylem(k);
@@ -100,7 +108,7 @@ function Panel() {
     Animated.timing(perde, { toValue: 0, duration: 120, useNativeDriver: true }).start();
     anaUygulamayiAc(yol);
   };
-  const buyut = () => anaya("canli");
+  const buyut = () => { if (yabanciRef.current) { canliAc(); return; } anaya("canli"); };
   const sohbeteGonder = (m: string, c: string) => { bekleyenSohbet.deger = { metin: m, cevap: c.slice(0, 6000) }; anaya("sohbet"); };
 
   const surukle = useRef(PanResponder.create({
@@ -142,7 +150,20 @@ function Panel() {
               <Pressable onPress={kapat} hitSlop={10} style={st.yuvarlak}><Ionicons name="close" size={17} color="#cfd5f5" /></Pressable>
             </View>
           </View>
-          {!canli ? (
+          {yabanci ? (
+            <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 16, alignItems: "center" }}>
+              <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: "rgba(255,184,77,0.15)", borderWidth: 1, borderColor: "rgba(255,184,77,0.5)", alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name="finger-print" size={28} color="#ffb84d" />
+              </View>
+              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15.5, marginTop: 10 }}>Sesini tanıyamadım</Text>
+              <Text style={{ color: "#9aa3c7", fontSize: 12.5, textAlign: "center", marginTop: 4 }}>Kişisel özellikler (arama, mesaj, notlar, Canlı) kapalı. Sensen parmak izinle aç.</Text>
+              <Pressable onPress={kilidiAc} style={{ marginTop: 12 }}>
+                <LinearGradient colors={["#4f8cff", "#a259ff", "#ff5fa2"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ paddingHorizontal: 22, paddingVertical: 11, borderRadius: 22, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Ionicons name="finger-print" size={18} color="#fff" /><Text style={{ color: "#fff", fontWeight: "800" }}>Parmak izimle aç</Text>
+                </LinearGradient>
+              </Pressable>
+            </View>
+          ) : !canli ? (
             <View style={{ paddingHorizontal: 12, paddingTop: 10, paddingBottom: 12 }}>
               {/* Hızlı eylemler: simgeli döşemeler (Erişilebilirlik ile arkadaki uygulamaya etki eder) */}
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>

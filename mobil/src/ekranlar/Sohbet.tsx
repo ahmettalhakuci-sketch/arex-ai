@@ -13,6 +13,7 @@ import { notKomutu, sohbetKaydet, sohbetleriOku, sohbettenOgren, yeniId, type Me
 import GecmisPaneli from "../GecmisPaneli";
 import { telefonKomutu } from "../telefon";
 import { izinIste } from "../izin";
+import * as Erisim from "../../modules/arex-erisim";
 import { SYMPY_KURALI, yanitiDogrula } from "../matematik";
 import { medyaSec, type Ek } from "../medya";
 import { anlat, sesiDurdur } from "../ses";
@@ -140,6 +141,7 @@ export default function SohbetEkrani({ disaridanMesaj, temizle, canliyaGit }: { 
     if (kayitta) {
       setKayitta(false);
       await kaydedici.stop();
+      Erisim.uyanmaDuraklat(false);
       const uri = kaydedici.uri;
       if (!uri) return;
       setBekliyor(true);
@@ -151,6 +153,7 @@ export default function SohbetEkrani({ disaridanMesaj, temizle, canliyaGit }: { 
     }
     if (!(await izinIste("Mikrofon", requestRecordingPermissionsAsync, getRecordingPermissionsAsync))) return;
     await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+    Erisim.uyanmaDuraklat(true);  // sesle yazarken "AREX" dinlemesi mikrofonu bıraksın
     await kaydedici.prepareToRecordAsync();
     kaydedici.record();
     setKayitta(true);

@@ -10,7 +10,7 @@ import { KULLANIM_MODLARI, SOHBET_TARZLARI } from "../beyin";
 import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from "expo-audio";
 import { Camera } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
-import { AppState, Linking, PermissionsAndroid, Platform } from "react-native";
+import { AppState, Linking, Modal, PermissionsAndroid, Platform } from "react-native";
 import * as Erisim from "../../modules/arex-erisim";
 import { izinIste } from "../izin";
 import { biyometrikVarMi, kilitAcikMi, pinAyarla } from "../Kilit";
@@ -98,6 +98,97 @@ function IzinlerKarti() {
         </Pressable>
       ))}
     </Kart>
+  );
+}
+
+// ---------- 🎙️ "AREX" deyince uyan + ses imzası (yalnız seni tanır; cihaz içi, internetsiz) ----------
+const IMZA_CUMLELERI = [
+  "AREX, bugün hava nasıl olacak?",
+  "Annemi ara ve akşam geleceğimi söyle.",
+  "Yarın sabah yedide beni uyandır lütfen.",
+  "Kur'an'dan Yâsîn suresini açar mısın?",
+  "En sevdiğim renk lacivert, bunu unutma.",
+];
+function SesTanima() {
+  const [d, setD] = useState(Erisim.uyanmaDurum());
+  const [sihirbaz, setSihirbaz] = useState(false);
+  const [adim, setAdim] = useState(0);
+  const [ornekler, setOrnekler] = useState<number[][]>([]);
+  const [kayit, setKayit] = useState(false);
+  const [mesaj, setMesaj] = useState("");
+  const yenile = () => setD(Erisim.uyanmaDurum());
+  useEffect(() => { const a = AppState.addEventListener("change", (x) => { if (x === "active") yenile(); }); return () => a.remove(); }, []);
+  if (Platform.OS !== "android" || !Erisim.destekVar()) return null;
+
+  const ac = async (v: boolean) => {
+    if (!v) { Erisim.uyanmaDurdur(); setTimeout(yenile, 400); return; }
+    if (!(await izinIste("Mikrofon", requestRecordingPermissionsAsync, getRecordingPermissionsAsync))) return;
+    try { if (Number(Platform.Version) >= 33) await PermissionsAndroid.request("android.permission.POST_NOTIFICATIONS" as any); } catch {}
+    Erisim.uyanmaBaslat(); setTimeout(yenile, 800);
+    if (!Erisim.uyanmaDurum().imzaVar) { setAdim(0); setOrnekler([]); setMesaj(""); setSihirbaz(true); }
+  };
+  const kaydet = async () => {
+    if (kayit) return;
+    if (!(await izinIste("Mikrofon", requestRecordingPermissionsAsync, getRecordingPermissionsAsync))) return;
+    setKayit(true); setMesaj("🎙️ Dinliyorum… cümleyi normal sesinle oku");
+    const r = await Erisim.imzaOrnek(4);
+    setKayit(false);
+    if (r.hata || !r.vektor || (r.ses || 0) < 400) { setMesaj("⚠️ Sesini net alamadım (" + (r.hata || "çok kısık ya da kısa") + "). Telefona biraz yakın, tekrar oku."); return; }
+    const yeni = [...ornekler, r.vektor];
+    setOrnekler(yeni);
+    if (adim + 1 < IMZA_CUMLELERI.length) { setAdim(adim + 1); setMesaj("✅ Güzel! Sıradaki cümle."); return; }
+    const k = Erisim.imzaKaydet(yeni);
+    if (k.hata) { setMesaj("⚠️ " + k.hata); return; }
+    setMesaj(`✅ Ses imzan kaydedildi. Artık "AREX" diyenin sen olup olmadığını anlarım. (tutarlılık %${Math.round((k.ortalama || 0) * 100)}, eşik %${Math.round((k.esik || 0) * 100)})`);
+    yenile();
+  };
+  const testEt = async () => {
+    setMesaj("🎙️ 3 saniye bir şey söyle…"); setKayit(true);
+    const r = await Erisim.imzaOrnek(3); setKayit(false);
+    if (!r.vektor) { setMesaj("⚠️ Ses alınamadı, tekrar dene."); return; }
+    const k = Erisim.imzaKarsilastir(r.vektor);
+    setMesaj(k.hata ? "⚠️ " + k.hata : k.sahip ? `✅ Seni tanıdım (benzerlik %${Math.round((k.benzerlik || 0) * 100)}, eşik %${Math.round((k.esik || 0) * 100)})` : `🔒 Seni tanıyamadım (benzerlik %${Math.round((k.benzerlik || 0) * 100)}, eşik %${Math.round((k.esik || 0) * 100)}). Sessiz bir yerde imzayı yenile.`);
+  };
+
+  return (
+    <View>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 }}>
+        <Text style={[us.etiket, { flex: 1, marginBottom: 0 }]}>🎙️ "AREX" deyince uyan (yalnız seni tanır)</Text>
+        <GorselAnahtar acik={d.acik} onChange={ac} />
+      </View>
+      <Text style={[us.alt, { fontSize: 12.5, marginBottom: 8 }]}>
+        {d.acik ? (d.calisiyor ? "● Dinliyor — \"AREX\" de, yarım saniye bekle, isteğini söyle." : "Başlatılıyor…") : "Kapalı."} Ses yalnız bu telefonda işlenir; hiçbir yere gönderilmez. Bildirim çubuğunda küçük 🎙 simgesi görünür (Android zorunluluğu).
+      </Text>
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        <Dugme kucuk ikincil={d.imzaVar} yazi={d.imzaVar ? "🔁 Ses imzasını yenile" : "🧬 Sesimi tanıt (5 cümle)"} onPress={() => { setAdim(0); setOrnekler([]); setMesaj(""); setSihirbaz(true); }} style={{ flex: 1 }} />
+        {d.imzaVar ? <Dugme kucuk ikincil yazi="🧪 Beni tanıyor mu?" onPress={testEt} style={{ flex: 1 }} /> : null}
+      </View>
+      {!d.imzaVar ? <Text style={{ color: R.sari, fontSize: 12, marginTop: 6 }}>⚠️ Ses imzası yok: şu an "AREX" diyen herkes seni sayılır. Sesini tanıt.</Text> : null}
+      {mesaj && !sihirbaz ? <Text style={{ color: R.yazi, fontSize: 13, marginTop: 8 }}>{mesaj}</Text> : null}
+      <Modal visible={sihirbaz} transparent animationType="slide" onRequestClose={() => setSihirbaz(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
+          <View style={{ backgroundColor: R.bg2, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 34, borderWidth: 1, borderColor: R.cizgi }}>
+            <Text style={{ color: "#fff", fontSize: 20, fontWeight: "800" }}>🧬 Sesini tanıt</Text>
+            <Text style={[us.alt, { marginBottom: 14 }]}>Sessiz bir yerde, telefonu normal tuttuğun gibi tut ve cümleyi her zamanki sesinle oku. ({Math.min(adim + 1, 5)}/5)</Text>
+            <View style={{ flexDirection: "row", gap: 6, marginBottom: 14 }}>
+              {IMZA_CUMLELERI.map((_, i) => <View key={i} style={{ flex: 1, height: 5, borderRadius: 3, backgroundColor: i < ornekler.length ? R.yesil : i === adim ? R.acc : "rgba(255,255,255,0.12)" }} />)}
+            </View>
+            <View style={{ backgroundColor: "rgba(124,92,255,0.12)", borderRadius: 18, padding: 18, borderWidth: 1, borderColor: "rgba(162,140,255,0.35)", marginBottom: 14 }}>
+              <Text style={{ color: "#fff", fontSize: 19, fontWeight: "700", textAlign: "center", lineHeight: 28 }}>“{IMZA_CUMLELERI[Math.min(adim, 4)]}”</Text>
+            </View>
+            {mesaj ? <Text style={{ color: R.yazi, fontSize: 13.5, marginBottom: 12, textAlign: "center" }}>{mesaj}</Text> : null}
+            {ornekler.length >= IMZA_CUMLELERI.length && d.imzaVar ? (
+              <Dugme yazi="Tamam" onPress={() => setSihirbaz(false)} />
+            ) : (
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <Dugme ikincil yazi="Vazgeç" onPress={() => setSihirbaz(false)} style={{ flex: 1 }} />
+                <Dugme yazi={kayit ? "🎙️ Dinliyorum…" : "🎙️ Oku (4 sn)"} yukleniyor={kayit} onPress={kaydet} style={{ flex: 2 }} />
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
@@ -307,6 +398,8 @@ function GuvenlikBolumu({ Bolum, Anahtar }: { Bolum: any; Anahtar: any }) {
       <View style={{ height: 1, backgroundColor: R.cizgi, marginVertical: 14 }} />
       <TelefonErisimi />
       <YanTusAyari />
+      <View style={{ height: 1, backgroundColor: R.cizgi, marginVertical: 14 }} />
+      <SesTanima />
       <View style={{ height: 1, backgroundColor: R.cizgi, marginVertical: 14 }} />
       <Text style={us.etiket}>Uygulama kilidi {kilit ? "🔒 açık" : "🔓 kapalı"}</Text>
       <Text style={[us.alt, { marginBottom: 8 }]}>Açılışta PIN{bio ? " ya da parmak izi / yüz tanıma" : ""} ister; AREX yalnızca sana özel kalır. API anahtarların uygulamada hiçbir yerde açık gösterilmez.</Text>
