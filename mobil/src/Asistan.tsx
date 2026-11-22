@@ -9,7 +9,7 @@ import { ActivityIndicator, Animated, ScrollView, TextInput, BackHandler, Dimens
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Erisim from "../modules/arex-erisim";
 import { AyarSaglayici } from "./ayar";
-import { telefonKomutu } from "./telefon";
+import { genelEylem, telefonKomutu } from "./telefon";
 import { anahtarlariYukle } from "./depo";
 import CanliEkrani from "./ekranlar/Canli";
 import KilitEkrani, { kilitAcikMi } from "./Kilit";
@@ -51,7 +51,14 @@ function Panel() {
   const calistir = async (k: string) => {
     if (!k.trim() || isliyor) return;
     if (kilitli) { canliAc(); return; }  // kilitliyken telefon komutu yok: önce kilidi aç
-    titret(); setIsliyor(true); setKomut("");
+    titret();
+    // Geri / ana ekran / bildirim… : önce kart kapanır, eylem sonra arkadaki uygulamaya uygulanır
+    const ge = genelEylem(k);
+    if (ge && Erisim.destekVar()) {
+      if (!Erisim.etkinMi() && (await Erisim.onar()) !== "onarildi") { setSonuc("♿ Telefon erişimi kapalı — 🔐 İzinler'den aç."); return; }
+      Erisim.genelSonra(ge.eylem, 380); kapat(); return;
+    }
+    setIsliyor(true); setKomut("");
     const r = await telefonKomutu(k).catch(() => null);
     setSonuc(r ? r.replace(/[#*_>]/g, "").trim() : "Bunu telefon komutu olarak anlayamadım. Sesli sormak için aşağıdaki Canlı asistanı kullan.");
     setIsliyor(false);
@@ -109,7 +116,7 @@ function Panel() {
         <LinearGradient colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.18)", "rgba(0,0,0,0.55)"]} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
       </Animated.View>
       <Pressable style={{ flex: 1 }} onPress={kapat} />
-      <Animated.View style={{ transform: [{ translateY: y }], marginHorizontal: 8, marginBottom: Math.max(ic.bottom, 8) }}>
+      <Animated.View onLayout={(e) => Erisim.pencereBoyu(e.nativeEvent.layout.height + Math.max(ic.bottom, 8) + 6)} style={{ transform: [{ translateY: y }], marginHorizontal: 8, marginBottom: Math.max(ic.bottom, 8) }}>
         {/* Gemini tarzı renkli ışıltı */}
         <Animated.View pointerEvents="none" style={{ position: "absolute", left: -2, right: -2, top: -2, bottom: -2, borderRadius: 32, opacity: parlaklik }}>
           <LinearGradient colors={PARILTI as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, borderRadius: 32 }} />

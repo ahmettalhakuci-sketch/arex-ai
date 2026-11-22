@@ -10,6 +10,9 @@ const TEMA = "Theme.AREX.Asistan";
 const KOTLIN = (paket) => `package ${paket}
 
 import android.os.Bundle
+import android.view.Gravity
+import android.view.MotionEvent
+import android.view.WindowManager
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -21,6 +24,23 @@ class AsistanActivity : ReactActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(null)
     overridePendingTransition(0, 0)
+    // Gemini gibi: pencere ekranın tamamını DEĞİL, yalnız alttaki kart kadar yeri kaplar.
+    // Tam ekran (şeffaf da olsa) pencere arkadaki uygulamayı erişilebilirlik listesinden düşürüyordu → "ekranı oku" göremiyordu.
+    window.setGravity(Gravity.BOTTOM)
+    window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, (resources.displayMetrics.density * 300).toInt())
+    window.addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH)
+    window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+  }
+
+  /** JS kartın yüksekliğine göre pencereyi boyutlandırır (dp) */
+  fun pencereBoyu(dp: Int) {
+    runOnUiThread { window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, (resources.displayMetrics.density * dp).toInt()) }
+  }
+
+  /** Kartın dışına dokunuş arkadaki uygulamaya geçer; kart kapanır */
+  override fun onTouchEvent(event: MotionEvent): Boolean {
+    if (event.action == MotionEvent.ACTION_OUTSIDE) { finish(); return true }
+    return super.onTouchEvent(event)
   }
 
   override fun getMainComponentName(): String = "asistan"

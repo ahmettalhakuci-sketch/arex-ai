@@ -20,3 +20,7 @@ export const durumlar = (): { erisim: boolean; pil: boolean; asistan: boolean; a
 export const ayardaAcik = (): boolean => { try { return !!N?.ayardaAcik(); } catch { return false; } };
 /** Açık ama bağlantısı kopmuşsa kendini yeniden bağlar: "bagli" | "onarildi" | "kapali" | "izin-yok" */
 export const onar = async (): Promise<string> => { try { return N ? await N.onar() : "kapali"; } catch { return "kapali"; } };
+/** Yan tuş penceresinin yüksekliği (dp) — yalnız AsistanActivity'de etkili */
+export const pencereBoyu = (dp: number) => { try { N?.pencereBoyu(Math.round(dp)); } catch {} };
+/** Kart kapandıktan sonra (ms) genel eylem — yan tuş kartından "geri"/"ana ekran" için */
+export const genelSonra = (eylem: Parameters<typeof genel>[0], ms = 350): boolean => { try { return !!N?.genelSonra(eylem, ms); } catch { return false; } };

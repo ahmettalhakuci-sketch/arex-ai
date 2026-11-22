@@ -45,6 +45,18 @@ export async function acHedef(hedef: Hedef, sorgu = ""): Promise<string> {
 
 const ERISIM_YOK = "♿ Bunun için **AREX erişim izni** gerekli: ⚙️ Ayarlar → 📱 Telefon erişimi → **Erişimi aç** (Erişilebilirlik → AREX AI Asistan).";
 
+const GENEL_KOMUTLAR: [RegExp, Parameters<typeof E.genel>[0], string][] = [
+  [/^(?:geri(?: git| dön| gel)?|geri tuşu)$/, "geri", "⬅️ Geri"], [/^ana ekran(?:a dön|a git)?$|^ana sayfaya dön$/, "ana", "🏠 Ana ekran"],
+  [/^son uygulamalar|^açık uygulamalar/, "son", "🗂️ Son uygulamalar"], [/^bildirim(?:ler(?:i)?)?\s*(?:aç|göster|indir)?$/, "bildirim", "🔔 Bildirimler"],
+  [/^hızlı ayarlar/, "hizli", "⚡ Hızlı ayarlar"], [/^(?:ekranı |telefonu )?kilitle$/, "kilit", "🔒 Ekran kilitlendi"], [/^ekran görüntüsü al/, "ekranGoruntusu", "📸 Ekran görüntüsü alındı"],
+  ];
+/** Metin bir genel eylem komutu mu ("geri", "ana ekran", "bildirimleri aç"…) → eylem adı ve etiket */
+export function genelEylem(metin: string): { eylem: Parameters<typeof E.genel>[0]; ad: string } | null {
+  const t = metin.trim().toLocaleLowerCase("tr").replace(/[.!?]+$/, "");
+  for (const [re, e, ad] of GENEL_KOMUTLAR) if (re.test(t)) return { eylem: e, ad };
+  return null;
+}
+
 /** Erişilebilirlik komutları: ekranı oku/özetle, X'e dokun, yaz, kaydır, geri, ana ekran, bildirimler, kilitle, uygulama aç. Komut değilse null. */
 export async function erisimKomutu(metin: string): Promise<string | null> {
   if (Platform.OS !== "android" || !E.destekVar()) return null;
@@ -71,11 +83,7 @@ export async function erisimKomutu(metin: string): Promise<string | null> {
     }
     return "### 📱 Ekrandaki yazılar\n\n" + metinEkran.split("\n").slice(0, 80).join("\n\n");
   }
-  const genel: [RegExp, Parameters<typeof E.genel>[0], string][] = [
-    [/^(?:geri(?: git| dön| gel)?|geri tuşu)$/, "geri", "⬅️ Geri"], [/^ana ekran(?:a dön|a git)?$|^ana sayfaya dön$/, "ana", "🏠 Ana ekran"],
-    [/^son uygulamalar|^açık uygulamalar/, "son", "🗂️ Son uygulamalar"], [/^bildirim(?:ler(?:i)?)?\s*(?:aç|göster|indir)?$/, "bildirim", "🔔 Bildirimler"],
-    [/^hızlı ayarlar/, "hizli", "⚡ Hızlı ayarlar"], [/^(?:ekranı |telefonu )?kilitle$/, "kilit", "🔒 Ekran kilitlendi"], [/^ekran görüntüsü al/, "ekranGoruntusu", "📸 Ekran görüntüsü alındı"],
-  ];
+  const genel = GENEL_KOMUTLAR;
   for (const [re, e, ad] of genel) if (re.test(t)) { if (!(await gerek())) return ERISIM_YOK; return E.genel(e) ? ad + " ✅" : ad + " yapılamadı."; }
   if ((m = t.match(/^(?:aşağı|yukarı)\s*(?:kaydır|in|çık)$|^(?:kaydır)$/))) { if (!(await gerek())) return ERISIM_YOK; return E.kaydir(!/yukarı/.test(t)) ? "↕️ Kaydırıldı ✅" : "↕️ Kaydırılacak alan bulunamadı."; }
   if ((m = metin.trim().match(/^(.{1,40}?)\s*(?:'?(?:[ıiuü]|y[ıiuü]|[ae]|y[ae]))?\s+(?:dokun|tıkla|bas)$/i)) || (m = metin.trim().match(/^(?:dokun|tıkla|bas)\s*[:\-]?\s*(.{1,40})$/i))) {
