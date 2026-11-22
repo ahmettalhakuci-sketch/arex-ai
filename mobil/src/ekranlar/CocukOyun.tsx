@@ -260,7 +260,144 @@ export function BilBakalim({ yas }: { yas: string }) {
   );
 }
 
-type Oyun = "mat" | "kelime" | "hafiza" | "renk" | "harf" | "bil";
+// ---------- ⚡ Zamana Karşı (gençler): 60 sn, artan zorluk, seri bonusu, en iyi skor ----------
+export function ZamanaKarsi() {
+  const soru = (seviye: number) => {
+    const t = rnd(Math.min(4, 1 + Math.floor(seviye / 3)) + 1);
+    const m = 5 + seviye * 3;
+    if (t === 0) { const a = 2 + rnd(m), b = 2 + rnd(m); return { q: `${a} + ${b}`, c: a + b }; }
+    if (t === 1) { const a = 5 + rnd(m * 2), b = 1 + rnd(a); return { q: `${a} − ${b}`, c: a - b }; }
+    if (t === 2) { const a = 2 + rnd(Math.min(12, 3 + seviye)), b = 2 + rnd(12); return { q: `${a} × ${b}`, c: a * b }; }
+    if (t === 3) { const b = 2 + rnd(11), c = 2 + rnd(12); return { q: `${b * c} ÷ ${b}`, c }; }
+    const a = 2 + rnd(9), b = 2 + rnd(9), c = 1 + rnd(20); return { q: `${a} × ${b} + ${c}`, c: a * b + c };
+  };
+  const [oyun, setOyun] = useState<"bekle" | "oyna" | "bitti">("bekle");
+  const [kalan, setKalan] = useState(60);
+  const [puan, setPuan] = useState(0);
+  const [seri, setSeri] = useState(0);
+  const [s, setS] = useState(() => soru(0));
+  const [rekor, setRekor] = useState(0);
+  const [isik, setIsik] = useState<"" | "d" | "y">("");
+  useEffect(() => { import("../depo").then((d) => d.oku<number>("arex_oyun_rekor", 0).then(setRekor)); }, []);
+  useEffect(() => {
+    if (oyun !== "oyna") return;
+    const t = setInterval(() => setKalan((k) => { if (k <= 1) { clearInterval(t); setOyun("bitti"); return 0; } return k - 1; }), 1000);
+    return () => clearInterval(t);
+  }, [oyun]);
+  useEffect(() => { if (oyun === "bitti" && puan > rekor) { setRekor(puan); import("../depo").then((d) => d.yaz("arex_oyun_rekor", puan)); soyle("Yeni rekor!"); } }, [oyun]);
+  const secenekler = useMemo(() => karistir(Array.from(new Set([s.c, s.c + 1, s.c - 1, s.c + 10, s.c - 2, s.c + 3].filter((x) => x >= 0))).slice(0, 4)), [s]);
+  const sec = (x: number) => {
+    titret();
+    if (x === s.c) { const yeniSeri = seri + 1; setSeri(yeniSeri); setPuan((p) => p + 10 + Math.min(20, yeniSeri * 2)); setIsik("d"); }
+    else { setSeri(0); setIsik("y"); }
+    setTimeout(() => setIsik(""), 250);
+    setS(soru(Math.floor(puan / 40)));
+  };
+  if (oyun !== "oyna") return (
+    <Kart renk={["#3a1c71", "#14183a"]}>
+      <Text style={{ color: "#fff", fontSize: 24, fontWeight: "900", textAlign: "center" }}>⚡ Zamana Karşı</Text>
+      <Text style={{ color: "#c9cfee", textAlign: "center", marginTop: 6 }}>60 saniye • doğru üst üste gelirse seri bonusu • zorluk artar</Text>
+      {oyun === "bitti" ? <Text style={{ color: "#ffd166", fontSize: 30, fontWeight: "900", textAlign: "center", marginTop: 14 }}>{puan} puan</Text> : null}
+      <Text style={{ color: "#9aa3c7", textAlign: "center", marginTop: 6 }}>🏆 En iyi: {rekor}</Text>
+      <Pressable onPress={() => { titret(); setPuan(0); setSeri(0); setKalan(60); setS(soru(0)); setOyun("oyna"); }} style={{ alignSelf: "center", marginTop: 16 }}>
+        <LinearGradient colors={["#7c5cff", "#ff5fa2"]} style={{ paddingHorizontal: 34, paddingVertical: 14, borderRadius: 24 }}><Text style={{ color: "#fff", fontWeight: "900", fontSize: 16 }}>{oyun === "bitti" ? "Tekrar" : "Başla"}</Text></LinearGradient>
+      </Pressable>
+    </Kart>
+  );
+  return (
+    <View>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
+        <Text style={{ color: kalan <= 10 ? "#ff4d6d" : "#fff", fontSize: 20, fontWeight: "900" }}>⏱ {kalan}</Text>
+        <Text style={{ color: "#ffd166", fontSize: 20, fontWeight: "900" }}>{puan}</Text>
+        <Text style={{ color: "#7cf5c0", fontSize: 16, fontWeight: "800" }}>🔥 x{seri}</Text>
+      </View>
+      <View style={{ height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.08)", marginBottom: 12, overflow: "hidden" }}>
+        <View style={{ width: `${(kalan / 60) * 100}%`, height: "100%", backgroundColor: kalan <= 10 ? "#ff4d6d" : "#7c5cff" }} />
+      </View>
+      <Kart renk={isik === "d" ? ["#0f6b4f", "#14183a"] : isik === "y" ? ["#7a1f33", "#14183a"] : ["#2a1f5c", "#14183a"]}>
+        <Text style={{ color: "#fff", fontSize: 44, fontWeight: "900", textAlign: "center" }}>{s.q}</Text>
+      </Kart>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "space-between" }}>
+        {secenekler.map((x) => <Secenek key={x} yazi={String(x)} onPress={() => sec(x)} />)}
+      </View>
+    </View>
+  );
+}
+
+// ---------- 🌍 Başkentler Yarışı ----------
+const ULKELER: [string, string, string][] = [["🇹🇷", "Türkiye", "Ankara"], ["🇫🇷", "Fransa", "Paris"], ["🇩🇪", "Almanya", "Berlin"], ["🇯🇵", "Japonya", "Tokyo"], ["🇮🇹", "İtalya", "Roma"],
+  ["🇪🇸", "İspanya", "Madrid"], ["🇬🇧", "Birleşik Krallık", "Londra"], ["🇷🇺", "Rusya", "Moskova"], ["🇨🇳", "Çin", "Pekin"], ["🇪🇬", "Mısır", "Kahire"], ["🇸🇦", "Suudi Arabistan", "Riyad"],
+  ["🇦🇿", "Azerbaycan", "Bakü"], ["🇵🇰", "Pakistan", "İslamabad"], ["🇧🇷", "Brezilya", "Brasilia"], ["🇨🇦", "Kanada", "Ottawa"], ["🇦🇺", "Avustralya", "Kanberra"], ["🇮🇩", "Endonezya", "Cakarta"],
+  ["🇲🇾", "Malezya", "Kuala Lumpur"], ["🇶🇦", "Katar", "Doha"], ["🇰🇿", "Kazakistan", "Astana"], ["🇺🇸", "ABD", "Washington"], ["🇬🇷", "Yunanistan", "Atina"], ["🇳🇱", "Hollanda", "Amsterdam"], ["🇲🇦", "Fas", "Rabat"]];
+export function Baskentler() {
+  const yeni = () => { const d = ULKELER[rnd(ULKELER.length)]; return { d, sec: karistir([d[2], ...karistir(ULKELER.filter((u) => u !== d)).slice(0, 3).map((u) => u[2])]) }; };
+  const [s, setS] = useState(yeni);
+  const [secim, setSecim] = useState<string | null>(null);
+  const [puan, setPuan] = useState({ d: 0, t: 0 });
+  const sec = (x: string) => {
+    if (secim) return; titret(); setSecim(x);
+    const ok = x === s.d[2]; setPuan((p) => ({ d: p.d + (ok ? 1 : 0), t: p.t + 1 })); soyle(ok ? "Doğru!" : `${s.d[1]}'nin başkenti ${s.d[2]}`);
+    setTimeout(() => { setSecim(null); setS(yeni()); }, 1400);
+  };
+  return (
+    <View>
+      <Puan dogru={puan.d} toplam={puan.t} />
+      <Kart renk={["#134e5e", "#14183a"]}>
+        <Text style={{ fontSize: 80, textAlign: "center" }}>{s.d[0]}</Text>
+        <Text style={{ color: "#fff", fontSize: 22, fontWeight: "900", textAlign: "center" }}>{s.d[1]}</Text>
+        <Text style={{ color: "#b8f1e6", textAlign: "center", marginTop: 2 }}>Başkenti neresi?</Text>
+      </Kart>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "space-between" }}>
+        {s.sec.map((x) => <Secenek key={x} yazi={x} onPress={() => sec(x)} durum={!secim ? undefined : x === s.d[2] ? "dogru" : x === secim ? "yanlis" : undefined} />)}
+      </View>
+    </View>
+  );
+}
+
+// ---------- 🔀 Kelime Bulmaca (karışık harfler) ----------
+const BULMACA = ["KİTAP", "OKUL", "BULUT", "DENİZ", "KALEM", "YILDIZ", "GEZEGEN", "BİLGİ", "MÜZİK", "ÇİÇEK", "GÜNEŞ", "SABAH", "ROBOT", "DÜNYA", "KÖPRÜ", "ORMAN", "UÇAK", "YAZILIM"];
+export function KelimeBulmaca() {
+  const yeni = () => { const k = BULMACA[rnd(BULMACA.length)]; let h = karistir(k.split("")); if (h.join("") === k) h = h.reverse(); return { k, h: h.map((c, i) => ({ c, i })) }; };
+  const [s, setS] = useState(yeni);
+  const [secilen, setSecilen] = useState<number[]>([]);
+  const [puan, setPuan] = useState(0);
+  const kelime = secilen.map((i) => s.h.find((x) => x.i === i)!.c).join("");
+  useEffect(() => {
+    if (kelime.length !== s.k.length) return;
+    if (kelime === s.k) { setPuan((p) => p + 1); soyle("Harika! " + s.k.toLocaleLowerCase("tr")); setTimeout(() => { setSecilen([]); setS(yeni()); }, 1100); }
+    else { soyle("Olmadı, tekrar dene"); setTimeout(() => setSecilen([]), 700); }
+  }, [kelime]);
+  return (
+    <View>
+      <Text style={{ color: "#ffd166", fontSize: 18, fontWeight: "800", textAlign: "center", marginBottom: 10 }}>⭐ {puan}</Text>
+      <Kart renk={["#4a1d5c", "#14183a"]}>
+        <View style={{ flexDirection: "row", justifyContent: "center", gap: 6, flexWrap: "wrap", minHeight: 52 }}>
+          {Array.from({ length: s.k.length }, (_, i) => (
+            <View key={i} style={{ width: 38, height: 46, borderRadius: 10, borderBottomWidth: 3, borderColor: "#c9a7ff", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.05)" }}>
+              <Text style={{ color: "#fff", fontSize: 24, fontWeight: "900" }}>{kelime[i] || ""}</Text>
+            </View>
+          ))}
+        </View>
+        <Text style={{ color: "#d9c9f5", textAlign: "center", marginTop: 8 }}>İpucu: {s.k[0]} ile başlar • {s.k.length} harf</Text>
+      </Kart>
+      <View style={{ flexDirection: "row", justifyContent: "center", gap: 8, flexWrap: "wrap" }}>
+        {s.h.map((x) => {
+          const kullanildi = secilen.includes(x.i);
+          return (
+            <Pressable key={x.i} disabled={kullanildi} onPress={() => { titret(); setSecilen([...secilen, x.i]); }} style={{ width: 52, height: 56, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: kullanildi ? "rgba(255,255,255,0.04)" : "rgba(162,89,255,0.35)", borderWidth: 1, borderColor: "rgba(255,255,255,0.15)" }}>
+              <Text style={{ color: kullanildi ? "#555b7a" : "#fff", fontSize: 24, fontWeight: "900" }}>{x.c}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Pressable onPress={() => setSecilen(secilen.slice(0, -1))} style={{ alignSelf: "center", marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.07)" }}>
+        <Text style={{ color: "#dfe3ff", fontWeight: "700" }}>⌫ Geri al</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+type Oyun = "mat" | "kelime" | "hafiza" | "renk" | "harf" | "bil" | "zaman" | "baskent" | "bulmaca";
 // ---------- Oyun seçici ----------
 export default function CocukOyunlari({ yas }: { yas: string }) {
   const [oyun, setOyun] = useState<Oyun | null>(null);
@@ -271,6 +408,9 @@ export default function CocukOyunlari({ yas }: { yas: string }) {
     ["renk", "🎨", "Renkler & Şekiller", "Doğru renkli şekli bul", ["#a855f7", "#ec4899"]],
     ["harf", "🔤", "Harf Avı", "Kelimenin ilk harfi", ["#f97316", "#facc15"]],
     ["bil", "💡", "Bil Bakalım", "Doğru mu yanlış mı?", ["#0ea5e9", "#22d3ee"]],
+    ["zaman", "⚡", "Zamana Karşı", "Gençler • 60 sn, rekorunu kır", ["#3a1c71", "#d76d77"]],
+    ["baskent", "🌍", "Başkentler Yarışı", "Gençler • bayraklar ve başkentler", ["#134e5e", "#71b280"]],
+    ["bulmaca", "🔀", "Kelime Bulmaca", "Gençler • karışık harfler", ["#4a1d5c", "#c471ed"]],
   ];
   if (!oyun) return (
     <View style={{ gap: 12 }}>
@@ -299,6 +439,9 @@ export default function CocukOyunlari({ yas }: { yas: string }) {
       {oyun === "renk" && <RenkSekil />}
       {oyun === "harf" && <HarfAvi />}
       {oyun === "bil" && <BilBakalim yas={yas} />}
+      {oyun === "zaman" && <ZamanaKarsi />}
+      {oyun === "baskent" && <Baskentler />}
+      {oyun === "bulmaca" && <KelimeBulmaca />}
     </View>
   );
 }
