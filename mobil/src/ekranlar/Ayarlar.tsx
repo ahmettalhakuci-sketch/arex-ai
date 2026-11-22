@@ -158,7 +158,7 @@ function SesTanima() {
     if (!(await sahipDogrula())) { setMesaj("🔒 Bu işlem için parmak izi doğrulaması gerekli."); return; }
     for (let i = 1; i <= 3; i++) {
       setMesaj(`👥 ${i}/3 — Diğer kişi telefona "AREX" desin (2 sn)…`); setKayit(true);
-      const r = await Erisim.imzaOrnek(2); setKayit(false);
+      const r = await Erisim.imzaOrnek(2, "yabanci"); setKayit(false);
       if (!r.vektor || (r.ses || 0) < 400) { setMesaj("⚠️ Ses alınamadı, tekrar dene."); return; }
       Erisim.yabanciEkle(r.vektor);
     }
@@ -166,7 +166,7 @@ function SesTanima() {
   };
   const testEt = async () => {
     setMesaj("🎙️ \"AREX\" de (2 sn)…"); setKayit(true);
-    const r = await Erisim.imzaOrnek(2); setKayit(false);
+    const r = await Erisim.imzaOrnek(2, "test"); setKayit(false);
     if (!r.vektor) { setMesaj("⚠️ Ses alınamadı, tekrar dene."); return; }
     const k = Erisim.imzaKarsilastir(r.vektor);
     setMesaj(k.hata ? "⚠️ " + k.hata : k.sahip ? `✅ Seni tanıdım (benzerlik %${Math.round((k.benzerlik || 0) * 100)}, eşik %${Math.round((k.esik || 0) * 100)}${(k.yabanci ?? -1) >= 0 ? `, yabancı %${Math.round((k.yabanci || 0) * 100)}` : ""})` : `🔒 Seni tanıyamadım (benzerlik %${Math.round((k.benzerlik || 0) * 100)}, eşik %${Math.round((k.esik || 0) * 100)}). Sessiz bir yerde imzayı yenile.`);
