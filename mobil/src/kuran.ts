@@ -158,3 +158,88 @@ export function tekrarOnerisi(h: Hafizlik): number[] {
   return Array.from({ length: 30 }, (_, i) => i + 1).sort((a, b) => (h.cuzTekrar[a] || "0000").localeCompare(h.cuzTekrar[b] || "0000")).slice(0, 2);
 }
 export { bugun };
+
+// ---------- Mushaf (Medine, 604 sayfa) & cüz ----------
+export const SURE_SAYFA = [1,2,50,77,106,128,151,177,187,208,221,235,249,255,262,267,282,293,305,312,322,332,342,350,359,367,377,385,396,404,411,415,418,428,434,440,446,453,458,467,477,483,489,496,499,502,507,511,515,518,520,523,526,528,531,534,537,542,545,549,551,553,554,556,558,560,562,564,566,568,570,572,574,575,577,578,580,582,583,585,586,587,587,589,590,591,591,592,593,594,595,595,596,596,597,597,598,598,599,599,600,600,601,601,601,602,602,602,603,603,603,604,604,604];
+export const AYET_SAYISI = [7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,112,78,118,64,77,227,93,88,69,60,34,30,73,54,45,83,182,88,75,85,54,53,89,59,37,35,38,29,18,45,60,49,62,55,78,96,29,22,24,13,14,11,11,18,12,12,30,52,52,44,28,28,20,56,40,31,50,40,46,42,29,19,36,25,22,17,19,26,30,20,15,21,11,8,8,19,5,8,8,11,11,8,3,9,5,4,7,3,6,3,5,4,5,6];
+/** Cüzün başladığı mushaf sayfası (1. cüz s.1, sonra her cüz 20 sayfa: 22, 42 … 582) */
+export const cuzBaslangic = (c: number) => (c <= 1 ? 1 : (Math.min(30, c) - 1) * 20 + 2);
+export const cuzBitis = (c: number) => (c >= 30 ? 604 : cuzBaslangic(c + 1) - 1);
+export const sayfaninCuzu = (p: number) => (p < 22 ? 1 : Math.min(30, Math.floor((p - 2) / 20) + 1));
+/** Sayfanın ilk suresi (sayfa başlığı için) */
+export const sayfaninSuresi = (p: number) => { let s = 1; for (let i = 0; i < 114; i++) if (SURE_SAYFA[i] <= p) s = i + 1; return s; };
+
+export type SayfaAyet = Ayet & { cuz: number; sayfa: number; global: number };
+const sayfaOnbellek = new Map<string, SayfaAyet[]>();
+/** Bir mushaf sayfasının ayetleri (Arapça + seçilen meal); önbellekli */
+export async function sayfaGetir(p: number, meal = "tr.vakfi"): Promise<SayfaAyet[]> {
+  const sayfa = Math.min(604, Math.max(1, Math.round(p)));
+  const m = MEALLER[meal] ? meal : "tr.vakfi";
+  const anahtar = sayfa + ":" + m;
+  const hazir = sayfaOnbellek.get(anahtar);
+  if (hazir) return hazir;
+  const [ar, tr] = await Promise.all([json(`https://api.alquran.cloud/v1/page/${sayfa}/quran-uthmani`), json(`https://api.alquran.cloud/v1/page/${sayfa}/${m}`)]);
+  const l: SayfaAyet[] = ar.data.ayahs.map((a: any, i: number) => ({
+    sure: a.surah.number, sureAd: SURELER[a.surah.number - 1], sureArapca: a.surah.name, no: a.numberInSurah,
+    arapca: besmeleAyir(a.text, a.surah.number, a.numberInSurah), meal: tr.data.ayahs[i]?.text || "", ses: "", cuz: a.juz, sayfa, global: a.number,
+  }));
+  sayfaOnbellek.set(anahtar, l);
+  if (sayfaOnbellek.size > 40) sayfaOnbellek.delete(sayfaOnbellek.keys().next().value as string);
+  return l;
+}
+/** quran-uthmani metninde surelerin 1. ayetine eklenen besmeleyi ayırır (besmele ayrı başlık olarak gösterilir) */
+export const BESMELE = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ";
+function besmeleAyir(metin: string, sure: number, no: number) {
+  if (no !== 1 || sure === 1 || sure === 9) return metin;
+  const k = metin.replace(/^\uFEFF/, "").split(" ");
+  return k.length > 4 && k[0].replace(/[\u064B-\u0652\u0670]/g, "") === "بسم" ? k.slice(4).join(" ") : metin;
+}
+
+// ---------- Kâriler (hafızlar) — everyayah.com, ayet ayet MP3, tamamı doğrulandı ----------
+export type Kari = { k: string; ad: string; ulke: string; tarz: "Murattal" | "Mücevved" | "Muallim"; kbps: number };
+export const KARILER: Kari[] = [
+  { k: "Alafasy_128kbps", ad: "Mişari Raşid el-Afasi", ulke: "🇰🇼", tarz: "Murattal", kbps: 128 },
+  { k: "Abdul_Basit_Murattal_192kbps", ad: "Abdulbasit Abdussamed", ulke: "🇪🇬", tarz: "Murattal", kbps: 192 },
+  { k: "Abdul_Basit_Mujawwad_128kbps", ad: "Abdulbasit Abdussamed", ulke: "🇪🇬", tarz: "Mücevved", kbps: 128 },
+  { k: "Abdurrahmaan_As-Sudais_192kbps", ad: "Abdurrahman es-Sudeys", ulke: "🇸🇦", tarz: "Murattal", kbps: 192 },
+  { k: "Saood_ash-Shuraym_128kbps", ad: "Suud eş-Şureym", ulke: "🇸🇦", tarz: "Murattal", kbps: 128 },
+  { k: "MaherAlMuaiqly128kbps", ad: "Mahir el-Muaykılî", ulke: "🇸🇦", tarz: "Murattal", kbps: 128 },
+  { k: "Yasser_Ad-Dussary_128kbps", ad: "Yasir ed-Devserî", ulke: "🇸🇦", tarz: "Murattal", kbps: 128 },
+  { k: "Husary_128kbps", ad: "Mahmud Halil el-Husarî", ulke: "🇪🇬", tarz: "Murattal", kbps: 128 },
+  { k: "Minshawy_Murattal_128kbps", ad: "Muhammed Sıddık el-Minşavî", ulke: "🇪🇬", tarz: "Murattal", kbps: 128 },
+  { k: "Minshawy_Mujawwad_192kbps", ad: "Muhammed Sıddık el-Minşavî", ulke: "🇪🇬", tarz: "Mücevved", kbps: 192 },
+  { k: "Mohammad_al_Tablaway_128kbps", ad: "Muhammed et-Tablavî", ulke: "🇪🇬", tarz: "Mücevved", kbps: 128 },
+  { k: "Mahmoud_Ali_Al_Banna_32kbps", ad: "Mahmud Ali el-Benna", ulke: "🇪🇬", tarz: "Mücevved", kbps: 32 },
+  { k: "Nasser_Alqatami_128kbps", ad: "Nasır el-Katamî", ulke: "🇸🇦", tarz: "Murattal", kbps: 128 },
+  { k: "Abu_Bakr_Ash-Shaatree_128kbps", ad: "Ebubekir eş-Şatırî", ulke: "🇸🇦", tarz: "Murattal", kbps: 128 },
+  { k: "Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net", ad: "Ahmed el-Acemî", ulke: "🇸🇦", tarz: "Murattal", kbps: 128 },
+  { k: "Hani_Rifai_192kbps", ad: "Hani er-Rifaî", ulke: "🇸🇦", tarz: "Murattal", kbps: 192 },
+  { k: "Hudhaify_128kbps", ad: "Ali el-Huzeyfî", ulke: "🇸🇦", tarz: "Murattal", kbps: 128 },
+  { k: "Muhammad_Ayyoub_128kbps", ad: "Muhammed Eyyub", ulke: "🇸🇦", tarz: "Murattal", kbps: 128 },
+  { k: "Abdullah_Basfar_192kbps", ad: "Abdullah Basfar", ulke: "🇸🇦", tarz: "Murattal", kbps: 192 },
+  { k: "Salah_Al_Budair_128kbps", ad: "Salah el-Budeyr", ulke: "🇸🇦", tarz: "Murattal", kbps: 128 },
+  { k: "Abdullah_Matroud_128kbps", ad: "Abdullah el-Matrud", ulke: "🇸🇦", tarz: "Murattal", kbps: 128 },
+  { k: "Khaalid_Abdullaah_al-Qahtaanee_192kbps", ad: "Halid el-Kahtanî", ulke: "🇸🇦", tarz: "Murattal", kbps: 192 },
+  { k: "Abdullaah_3awwaad_Al-Juhaynee_128kbps", ad: "Abdullah el-Cuheynî", ulke: "🇸🇦", tarz: "Murattal", kbps: 128 },
+  { k: "Muhsin_Al_Qasim_192kbps", ad: "Muhsin el-Kasım", ulke: "🇸🇦", tarz: "Murattal", kbps: 192 },
+  { k: "Ali_Jaber_64kbps", ad: "Ali Cabir", ulke: "🇸🇦", tarz: "Murattal", kbps: 64 },
+  { k: "Fares_Abbad_64kbps", ad: "Faris Abbad", ulke: "🇸🇦", tarz: "Murattal", kbps: 64 },
+  { k: "Ghamadi_40kbps", ad: "Saad el-Gamidî", ulke: "🇸🇦", tarz: "Murattal", kbps: 40 },
+  { k: "Muhammad_Jibreel_128kbps", ad: "Muhammed Cibril", ulke: "🇪🇬", tarz: "Murattal", kbps: 128 },
+  { k: "Ahmed_Neana_128kbps", ad: "Ahmed Neana", ulke: "🇪🇬", tarz: "Mücevved", kbps: 128 },
+  { k: "Akram_AlAlaqimy_128kbps", ad: "Ekrem el-Alakımî", ulke: "🇸🇦", tarz: "Murattal", kbps: 128 },
+  { k: "Ayman_Sowaid_64kbps", ad: "Eymen Süveyd", ulke: "🇸🇾", tarz: "Muallim", kbps: 64 },
+  { k: "Ibrahim_Akhdar_32kbps", ad: "İbrahim el-Ahdar", ulke: "🇸🇦", tarz: "Murattal", kbps: 32 },
+  { k: "Karim_Mansoori_40kbps", ad: "Kerim Mansurî", ulke: "🇮🇷", tarz: "Murattal", kbps: 40 },
+  { k: "Sahl_Yassin_128kbps", ad: "Sehl Yasin", ulke: "🇸🇦", tarz: "Murattal", kbps: 128 },
+  { k: "Salaah_AbdulRahman_Bukhatir_128kbps", ad: "Salah Buhatır", ulke: "🇦🇪", tarz: "Murattal", kbps: 128 },
+  { k: "Yaser_Salamah_128kbps", ad: "Yasir Selame", ulke: "🇶🇦", tarz: "Murattal", kbps: 128 },
+  { k: "aziz_alili_128kbps", ad: "Aziz Alili", ulke: "🇲🇰", tarz: "Murattal", kbps: 128 },
+];
+export const VARSAYILAN_KARI = "Alafasy_128kbps";
+export const kariBul = (k: string) => KARILER.find((x) => x.k === k) || KARILER[0];
+const uc = (n: number) => String(n).padStart(3, "0");
+/** Ayet ses dosyası (kâri klasörü + SSSAAA.mp3) */
+export const sesUrl = (kari: string, sure: number, ayet: number) => `https://everyayah.com/data/${kariBul(kari).k}/${uc(sure)}${uc(ayet)}.mp3`;
+export const kariOku = () => oku<string>("arex_kari", VARSAYILAN_KARI);
+export const kariYaz = (k: string) => yaz("arex_kari", k);

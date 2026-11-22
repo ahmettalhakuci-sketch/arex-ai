@@ -2,7 +2,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import React from "react";
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
+import { ActivityIndicator, Animated, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
 import Markdown from "react-native-markdown-display";
 import { ARKA_GRADYAN, GRADYAN, R } from "./tema";
 
@@ -125,3 +125,37 @@ export const s = StyleSheet.create({
   etiket: { color: R.soluk, fontSize: 13, marginBottom: 6, fontWeight: "600" },
   girdi: { backgroundColor: R.kart, borderColor: R.cizgi, borderWidth: 1, borderRadius: 14, color: R.yazi, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16 },
 });
+
+/** Görsel aç/kapat anahtarı: kayan topuz + renkli iz + AÇIK/KAPALI etiketi (animasyonlu) */
+export function Anahtar({ acik, onChange, renk }: { acik: boolean; onChange: (v: boolean) => void; renk?: string }) {
+  const x = React.useRef(new Animated.Value(acik ? 1 : 0)).current;
+  React.useEffect(() => { Animated.spring(x, { toValue: acik ? 1 : 0, useNativeDriver: false, bounciness: 8, speed: 18 }).start(); }, [acik]);
+  const r = renk || R.acc;
+  return (
+    <Pressable onPress={() => { titret(); onChange(!acik); }} hitSlop={8} accessibilityRole="switch" accessibilityState={{ checked: acik }}>
+      <Animated.View style={{ width: 68, height: 32, borderRadius: 16, justifyContent: "center", borderWidth: 1,
+        borderColor: x.interpolate({ inputRange: [0, 1], outputRange: [R.cizgi, r] }),
+        backgroundColor: x.interpolate({ inputRange: [0, 1], outputRange: ["rgba(255,255,255,0.08)", r + "cc"] }) }}>
+        <Text style={{ position: "absolute", left: acik ? 9 : undefined, right: acik ? undefined : 6, fontSize: 8.5, letterSpacing: 0.3, fontWeight: "900", color: acik ? "#fff" : R.soluk }}>{acik ? "AÇIK" : "KAPALI"}</Text>
+        <Animated.View style={{ position: "absolute", left: x.interpolate({ inputRange: [0, 1], outputRange: [3, 41] }), width: 24, height: 24, borderRadius: 12, backgroundColor: "#fff",
+          shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 3 }} />
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+/** Simge + başlık + açıklama + anahtar satırı */
+export function AnahtarSatiri({ simge, baslik, alt, acik, onChange, renk }: { simge: string; baslik: string; alt?: string; acik: boolean; onChange: (v: boolean) => void; renk?: string }) {
+  return (
+    <Pressable onPress={() => { titret(); onChange(!acik); }} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10 }}>
+      <View style={{ width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: acik ? (renk || R.acc) + "33" : "rgba(255,255,255,0.06)" }}>
+        <Text style={{ fontSize: 18 }}>{simge}</Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>{baslik}</Text>
+        {alt ? <Text style={{ color: R.soluk, fontSize: 12, marginTop: 1 }}>{alt}</Text> : null}
+      </View>
+      <Anahtar acik={acik} onChange={onChange} renk={renk} />
+    </Pressable>
+  );
+}

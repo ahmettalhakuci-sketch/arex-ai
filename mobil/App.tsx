@@ -35,7 +35,17 @@ function Uygulama() {
   const [asistan, setAsistan] = useState(false);
   useEffect(() => {
     // Yan tuş / asistan tuşu → arex://asistan → altta mini Canlı paneli
-    const isle = (u?: string | null) => { if (u && u.startsWith("arex://asistan")) setAsistan(true); };
+    const isle = (u?: string | null) => {
+      if (!u) return;
+      if (u.startsWith("arex://asistan")) setAsistan(true);
+      // yan tuş kartından: ⤢ büyüt → Canlı, sohbete aktar → Sohbet
+      else if (u.startsWith("arex://canli")) { setAsistan(false); setSekme("canli"); }
+      else if (u.startsWith("arex://sohbet")) {
+        const q = (ad: string) => { const m = u.match(new RegExp("[?&]" + ad + "=([^&]*)")); return m ? decodeURIComponent(m[1]) : ""; };
+        if (q("m") || q("c")) { setDisMesaj({ metin: q("m"), cevap: q("c") }); }
+        setSekme("sohbet");
+      }
+    };
     Linking.getInitialURL().then(isle).catch(() => {});
     const abone = Linking.addEventListener("url", (e) => isle(e.url));
     return () => abone.remove();

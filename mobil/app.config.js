@@ -34,7 +34,7 @@ module.exports = {
     name: "AREX AI",
     slug: "arex-ai",
     scheme: "arex",
-    version: "15.7.0",
+    version: "15.8.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "dark",
@@ -43,7 +43,7 @@ module.exports = {
       infoPlist: { NSMicrophoneUsageDescription: "Sesli sohbet ve canlı konuşma için", NSCameraUsageDescription: "Canlı görüntülü sohbet ve fotoğraf analizi için" } },
     android: {
       package: "com.arex.ai",
-      versionCode: 157,
+      versionCode: 158,
       adaptiveIcon: { backgroundColor: "#0b1030", foregroundImage: "./assets/android-icon-foreground.png" },
       permissions: ["android.permission.RECORD_AUDIO", "android.permission.CAMERA", "android.permission.MODIFY_AUDIO_SETTINGS", "android.permission.INTERNET"],
       predictiveBackGestureEnabled: false,
@@ -59,6 +59,6 @@ module.exports = {
       "./plugins/asistan.js",
       ["expo-build-properties", { android: { usesCleartextTraffic: false } }],
     ],
-    extra: { kasa: karistir(kasaOku()), surumKodu: 157 },
+    extra: { kasa: karistir(kasaOku()), surumKodu: 158 },
   },
 };

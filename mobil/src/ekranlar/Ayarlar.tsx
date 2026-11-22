@@ -2,7 +2,7 @@
 import * as Clipboard from "expo-clipboard";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useState } from "react";
-import { Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ANLATICILAR, sohbetTamamla, sonHatalar } from "../ai";
 import { useAyar } from "../ayar";
@@ -15,7 +15,7 @@ import { biyometrikVarMi, kilitAcikMi, pinAyarla } from "../Kilit";
 import { guncellemeDenetle, guncellemeyiIndir, mevcutSurum, type Guncelleme } from "../guncelleme";
 import { anahtar, ANAHTAR_ADLARI, anahtarKaydet, maskele, profilKaydet, profilOku, sohbetleriOku, type AnahtarAdi, type Profil } from "../depo";
 import { DILLER, R, TEMALAR } from "../tema";
-import { Baslik, Dugme, Girdi, Kart, s as us, Secici } from "../ui";
+import { Anahtar as GorselAnahtar, Baslik, Dugme, Girdi, Kart, s as us, Secici } from "../ui";
 
 function Bolum({ baslik, children, acik: ilk = false }: { baslik: string; children: React.ReactNode; acik?: boolean }) {
   const [acik, setAcik] = useState(ilk);
@@ -32,10 +32,10 @@ function Bolum({ baslik, children, acik: ilk = false }: { baslik: string; childr
 
 function Anahtar({ etiket, deger, onChange }: { etiket: string; deger: boolean; onChange: (v: boolean) => void }) {
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 8 }}>
+    <Pressable onPress={() => onChange(!deger)} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 9, gap: 10 }}>
       <Text style={{ color: R.yazi, fontSize: 15, flex: 1 }}>{etiket}</Text>
-      <Switch value={deger} onValueChange={onChange} trackColor={{ true: R.acc, false: "#333a5c" }} thumbColor="#fff" />
-    </View>
+      <GorselAnahtar acik={deger} onChange={onChange} />
+    </Pressable>
   );
 }
 

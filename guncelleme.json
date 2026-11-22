@@ -1,10 +1,10 @@
 {
-  "surum": "15.7.0",
-  "kod": 157,
+  "surum": "15.8.0",
+  "kod": 158,
   "apk": "https://github.com/ahmettalhakuci-sketch/arex-ai/releases/latest/download/AREX-AI.apk",
   "notlar": [
-    "API anahtarları şifreli: telefonun Android Keystore deposunda",
-    "Otomatik güncelleme",
-    "Canlı işareti, vektör simgeler, Kur'an & Hafızlık"
+    "Kur'an: Sure / Cüz / Sayfa seçimi, mushaf görünümü, 37 kâri, boşluksuz HD tilavet",
+    "Ayet tekrarı (ezber), hız, ezber modu, kaldığın yer",
+    "Yan tuş: Gemini tarzı yüzen asistan kartı (tam ekran açılmaz)"
   ]
 }
